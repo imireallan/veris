@@ -1,203 +1,169 @@
-# SustainabilityAI - Product Roadmap
+# SustainabilityAI - Product Roadmap (TDi-First Strategy)
 
-## Phase 1: Foundation (Weeks 1-4)
+## Overview
 
-### Goals
-- Set up repo structure and development environment
-- Get auth, theming, and basic UI working
-- Foundation for multi-tenant architecture
+We're building a white-label AI sustainability platform to sell to TDi Sustainability as a reseller. TDi will re-brand and deploy the platform for their own clients (EO100/ARC, Bettercoal, mining companies, etc.).
+
+**Key insight**: TDi doesn't need the full feature set — they need to be impressed by AI capabilities they can't build internally while seeing familiar functionality they already serve clients with.
+
+**Build priority**: Demo-first. We build what impresses TDi first, not what's technically optimal.
+
+---
+
+## Phase 1: Core Platform (Weeks 1-3)
+
+### Focus: "TDi can see their future platform"
 
 ### Deliverables
-- [ ] Monorepo with Docker Compose setup
-- [ ] Django Core API with organization and user models
-- [ ] JWT authentication with role-based access
-- [ ] Theme engine using CSS custom properties + Tailwind
-- [ ] Theme customization UI (color picker, logo upload, font selection)
-- [ ] Basic dashboard with role-based views
-- [ ] Multi-tenant middleware for data isolation
-- [ ] PostgreSQL schema with Organization, User, Theme models
-- [ ] CI/CD pipeline setup (GitHub Actions)
-- [ ] Sentry integration for error tracking
+- [ ] **Monorepo setup**: FastAPI AI + React Router v7 + Django Core
+- [ ] **Multi-tenant architecture**: Organizations, users, roles
+- [ ] **Auth system**: JWT with role-based access
+- [ ] **White-label theme engine**: CSS variables with UI builder
+- [ ] **3 sample tenant configs**: TDi, ARC Resources, Bettercoal (demo ready)
+- [ ] **Basic dashboard**: Role-based views
+- [ ] **TDi-branded demo site ready to show**
 
-### Tech Focus
-```
-django/
-├── organizations/     # Tenant model + middleware
-├── users/            # User model with roles
-├── themes/           # Theme model + API
-└── authentication/   # JWT auth flow
-
-frontend/
-├── app/root.tsx      # ThemeProvider + auth loader
-├── app/routes/
-│   ├── login.tsx
-│   ├── dashboard.tsx
-│   └── settings/theme.tsx
-└── app/components/
-    └── ThemePreview.tsx
-```
+### Why This Matters
+- Shows TDi their platform's future
+- Multi-tenant architecture proves scalability
+- Theme engine = white-label capability for their clients
+- 3 demo configs = immediate conversation with their actual clients
 
 ---
 
-## Phase 2: AI Core (Weeks 5-8)
+## Phase 2: AI Knowledge Base (Weeks 4-6)
 
-### Goals
-- Build AI service layer with RAG pipeline
-- Implement knowledge base document management
-- Create AI chat interface with context awareness
+### Focus: "This replaces 3 of your tools at once"
 
 ### Deliverables
-- [ ] FastAPI AI service with structured endpoints
-- [ ] Document upload pipeline (PDF, DOCX, TXT extraction)
-- [ ] Vector embedding pipeline (OpenAI embeddings)
-- [ ] Pinecone vector database integration
-- [ ] RAG pipeline with semantic search
-- [ ] Chat API with conversation history
-- [ ] Frontend knowledge base document browser
-- [ ] AI chat interface with source citations
-- [ ] Structured output schemas for all AI responses
-- [ ] Provider abstraction for easy LLM swapping
+- [ ] **Document upload pipeline**: PDF, DOCX extraction
+- [ ] **Vector embedding pipeline**: Chunking, OpenAI embeddings, Pinecone
+- [ ] **Knowledge base UI**: Document browser, search, categories
+- [ ] **AI Chat assistant**: Context-aware responses with source citations
+- [ ] **Pre-loaded knowledge**: EO100 Standard, MSCI methodology
+- [ ] **RAG pipeline working end-to-end**
 
-### Tech Focus
-```
-ai_engine/
-├── main.py            # FastAPI app
-├── services/
-│   ├── rag.py        # RAG pipeline
-│   ├── chat.py       # Chat orchestration
-│   ├── embed.py      # Document embedding
-│   └── providers/    # LLM provider abstraction
-├── models/
-│   ├── schemas.py    # Pydantic request/response models
-│   └── prompts.py    # System prompts
-└── vector/
-    └── client.py     # Pinecone client wrapper
-```
-
-### AI Pipeline Flow
-```
-Document Upload ──► Text Extraction ──► Chunking ──► Embedding ──► Pinecone
-User Query ──► Embed Query ──► Semantic Search ──► Context Assembly ──► LLM ──► Response
-```
+### Why This Matters
+- Replaces TDi's ICAT (standards tool) + Search360 (news monitor) + tedd (due diligence tool search)
+- AI chatbot = something TDi can't build in-house
+- Pre-loaded knowledge = immediate value demonstration
 
 ---
 
-## Phase 3: Assessment Engine (Weeks 9-12)
+## Phase 3: Assessment Engine + Multi-Framework (Weeks 7-9)
 
-### Goals
-- Build sustainability assessment workflow
-- Implement scoring and gap analysis
-- Add automated report generation
+### Focus: "One data entry, multiple framework reports"
 
 ### Deliverables
-- [ ] Questionnaire template system
-- [ ] Assessment creation and management
-- [ ] Question response tracking
-- [ ] Scoring engine with configurable methods
-- [ ] AI-assisted question guidance
-- [ ] Gap analysis with recommendations
-- [ ] Automated report generation
-- [ ] Assessment progress tracking
-- [ ] Export to PDF functionality
-- [ ] Dashboard analytics and insights
+- [ ] **Questionnaire templates**: EO100, Bettercoal, basic ESG
+- [ ] **Assessment workflow**: CRUD, status tracking, progress
+- [ ] **Multi-framework mapping UI**: Data entered once, mapped to multiple standards
+- [ ] **AI-guided questionnaire navigation**: Tips, context, suggestions
+- [ ] **Scoring engine**: Framework-specific scoring methods
+- [ ] **Evidence management**: File upload, categorization, link to responses
+- [ ] **Cross-framework gap analysis**: "You're missing X for EO100 Principle 5"
 
-### Tech Focus
-```
-django/
-├── assessments/      # Assessment model + workflow
-├── templates/        # Questionnaire templates
-├── responses/        # Response tracking
-└── scoring/          # Scoring engine
-
-frontend/
-├── routes/
-│   ├── assessments/index.tsx     # List
-│   ├── assessments/$id.tsx       # Detail
-│   └── assessments/$id/questionnaire.tsx
-└── components/
-    ├── AssessmentCard.tsx
-    ├── QuestionRenderer.tsx
-    └── ScoreIndicator.tsx
-```
-
-### Assessment States
-```
-DRAFT ──► IN_PROGRESS ──► UNDER_REVIEW ──► COMPLETED ──► ARCHIVED
-```
+### Why This Matters
+- Replaces TDi's TEDD (due diligence tool) + assessment workflows
+- Multi-framework mapping = huge value prop (ARC reports to 4+ agencies simultaneously)
+- AI guidance = impossible for TDi to build without ML expertise
 
 ---
 
-## Phase 4: Enterprise Features (Weeks 13-16)
+## Phase 4: AI Reports + Demo Package (Weeks 10-12)
 
-### Goals
-- White-label deployment capabilities
-- Advanced customization options
-- External integrations
-- Performance optimization
+### Focus: "Everything TDi needs to sell this to their clients"
 
 ### Deliverables
-- [ ] Custom domain configuration per tenant
-- [ ] Advanced theming (custom CSS injection)
-- [ ] Email template customization
-- [ ] PDF report branding
-- [ ] API gateway for external integrations
-- [ ] Webhook support for event notifications
-- [ ] Bulk data import/export
-- [ ] Audit logging system
-- [ ] Performance optimizations and caching
-- [ ] Production deployment pipeline
+- [ ] **AI report generation**: Assessment data → executive summary, findings
+- [ ] **Multi-format export**: PDF, Excel, branded per-tenant
+- [ ] **Dashboard analytics**: Scores, trends, completion rates, AI insights
+- [ ] **Continuous improvement tracking**: Tasks, deadlines, reminders with AI nudging
+- [ ] **Full ARC Resources demo**: Complete with branding, knowledge base, assessment
+- [ ] **Demo script + video walkthrough** for TDi pitch
 
-### Tech Focus
+---
+
+## Phase 5: TDi Deployment + Iteration (Weeks 13+)
+
+### Focus: "Get TDi to pay and deploy"
+
+### Deliverables
+- [ ] **TDi-specific features**: Based on their feedback
+- [ ] **Production deployment pipeline**: CI/CD, staging
+- [ ] **Client onboarding flow**: How TDi adds their clients
+- [ ] **Billing/license management**
+- [ ] **Performance optimization**
+- [ ] **Additional framework support**: ISO, GRI, CDP, etc.
+
+---
+
+## Demo-First Priority
+
+What TDi needs to see to buy:
+
 ```
-django/
-├── custom_domains/   # Domain mapping + SSL
-├── webhooks/         # Webhook management
-├── audit_log/        # Audit trail
-└── integrations/     # External service connectors
+Priority 1: AI Chat with Knowledge Base
+- Upload EO100 Standard PDF
+- Ask: "What does Principle 3 require for Indigenous consultation?"
+- AI gives structured answer with PDF citations
+- This takes 2000 words to explain manually → done in 2 seconds
 
-infrastructure/
-├── terraform/        # IaC for AWS
-├── k8s/              # Kubernetes manifests
-└── ci/               # GitHub Actions workflows
+Priority 2: White-Label Switching
+- Show ARC Resources branding
+- Click switch → Now shows Bettercoal branding
+- Everything adapts (colors, logo, fonts)
+- This is their core value prop: one platform, many clients
+
+Priority 3: Multi-Framework Data Entry
+- Enter one piece of data: "GHG emissions: 2.3 MtCO2e"
+- System shows: "Maps to EO100 P5, MSCI Environment pillar, ISS Environment score"
+- This replaces their manual cross-referencing work
+
+That's the demo. Build everything else around supporting these 3 moments.
 ```
 
 ---
 
-## Phase 5: Advanced AI & Scale (Weeks 17+)
+## Resource Requirements
 
-### Goals
-- Multi-language support
-- Advanced AI features
-- Supply chain tracking
-- Predictive analytics
+### What You Need from Me (AI Agent):
+- Architecture design
+- Code scaffolding (Django models, FastAPI services, React components)
+- CI/CD setup
+- Testing patterns
 
-### Future Capabilities
-- [ ] Multi-language AI responses
-- [ ] Predictive compliance scoring
-- [ ] Automated regulatory change detection
-- [ ] Supply chain sustainability tracking
-- [ ] Benchmark against industry standards
-- [ ] Mobile app (React Native)
-- [ ] Advanced analytics dashboard
-- [ ] API marketplace for extensions
+### What You Need to Provide:
+- AI API keys (OpenAI, Pinecone)
+- Access to existing TDi/Bettercoal code as reference
+- Relationship access to TDi (who to talk to)
+- Domain knowledge of their specific workflows and pain points
+
+### Infrastructure:
+- Same as ApplyFlow AI: EC2 for dev, ECR for images, EKS for production later
+- Start local for dev: Docker Compose
+- Pinecone: Vector DB for knowledge base
+- GitHub repo for version control
 
 ---
 
-## Key Dependencies & Risks
+## Success Criteria for Phase 1
 
-### Technical Dependencies
-- Pinecone for vector search (alternative: pgvector)
-- OpenAI/Groq for LLM calls (must handle rate limits)
-- AWS infrastructure costs at scale
+1. Can log in as ARC Resources admin with ARC's colors/logo
+2. Can log in as TDi admin with TDi's colors/logo
+3. Can switch between tenants without sharing data
+4. Dashboard loads with real ESG metrics structure
+5. Code is clean enough to show to someone technical (CTO review)
 
-### Risks & Mitigations
-1. **AI Response Accuracy**: Implement human review workflows for critical outputs
-2. **Multi-Tenant Data Leaks**: Extensive testing, ORM-level isolation, audit logging
-3. **Token Costs**: Implement caching, optimize prompts, monitor usage
-4. **Scalability**: Design for horizontal scaling from day one
+---
 
-### Success Criteria Per Phase
-- Phase 1: Can create org, customize theme, login as different roles
-- Phase 2: Can upload docs, search semantically, chat with AI assistant
-- Phase 3: Can complete full assessment with AI assistance and generate report
-- Phase 4: Can deploy custom-branded instance for client with external integrations
+## Risk Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Takes too long to build core | Focus on demo flow only — skip edge cases |
+| AI responses are poor | Pre-load knowledge base with exact documents you know TDi expects |
+| White-label doesn't look right | Base theme on actual ARC/TDi brand guidelines you've seen |
+| TDi already building AI internally | Position as "faster and cheaper than hiring AI team" |
+| Scope creep | Stick to 3 demo moments — everything else is Phase 2+ |
+| Legal/IP concerns | Build clean architecture from scratch, reference only patterns (not code) |

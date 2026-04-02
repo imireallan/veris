@@ -1,78 +1,49 @@
 # SustainabilityAI
 
-AI-powered sustainability assessment and intelligence platform with white-label customization, knowledge base, and AI chatbot capabilities.
+AI-powered, white-label sustainability assessment platform for consultancies (TDi-first).
 
-## Overview
+## What This Is
 
-A multi-tenant SaaS platform that helps organizations navigate sustainability compliance, generate reports, and implement continuous improvement workflows through AI-guided assistance.
+A multi-tenant SaaS that replaces TDi's 5 separate digital tools with one AI-powered platform. TDi re-brands it for each client (EO100, Bettercoal, mining companies, etc.).
 
-## Architecture
+## Value Chain
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     Frontend                                    │
-│                                                                 │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────────────────┐ │
-│  │   Auth  │  │Dashboard│  │Assess-  │  │   Knowledge Base   │ │
-│  │         │  │         │  │ ments   │  │   & AI Chat        │ │
-│  └─────────┘  └─────────┘  └─────────┘  └────────────────────┘ │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │          Theme Engine (Design tokens, CSS vars)          │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-┌─────────────────────────────────────────────────────────────────┐
-│                     Backend Services                            │
-│                                                                 │
-│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌────────────────────┐ │
-│  │  Users  │  │  Orgs & │  │  Asses- │  │  Knowledge/Docs    │ │
-│  │& Roles  │  │ Tenants │  │  sments │  │  Storage & Index   │ │
-│  └─────────┘  └─────────┘  └─────────┘  └────────────────────┘ │
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              AI Service Layer                            │  │
-│  │                                                          │  │
-│  │  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐   │  │
-│  │  │ ChatBot  │  │  Report  │  │  RAG Pipeline        │   │  │
-│  │  │ Engine   │  │Generator │  │  (Semantic Search)   │   │  │
-│  │  └──────────┘  └──────────┘  └──────────────────────┘   │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
+You (freelancer) → SustainabilityAI → TDi → TDi's clients (ARC, Bettercoal, etc.)
 ```
 
-## Tech Stack
+## Quick Stats
 
-- **Frontend**: React Router v7 + TypeScript + Tailwind CSS
-- **Backend**: FastAPI (Python 3.11) for AI services, Django for core CRUD
-- **AI/ML**: LangChain + OpenAI/Groq + Pinecone (vector DB)
-- **Database**: PostgreSQL
-- **Deployment**: Docker Compose (local), AWS EKS (production)
-- **CI/CD**: GitHub Actions
-- **Monitoring**: Sentry + CloudWatch
+- **Target customer**: TDi Sustainability (reseller)
+- **Replaces**: TEDD, ICAT, Country Risk, Commodity Risk, Search360
+- **Key differentiator**: AI capabilities TDi can't build in-house
+- **Deployment model**: White-label per TDi client
 
-## Documentation
+## Docs
 
-- [PRD](./docs/PRD.md) - Product Requirements Document
-- [SDS](./docs/SDS.md) - System Design Specification
+- [PRD](./docs/PRD.md) - Product Requirements
+- [Roadmap](./docs/ROADMAP.md) - TDi-first Phase plan (demo-focused)
+- [GTM](./docs/GTM_STRATEGY.md) - Go-to-market approach
+- [SDS](./docs/SDS.md) - System Design + Data Models
+- [ESG Models](./docs/ESG_FRAMEWORK_MODELS.md) - Real-world ESG data structures
+- [Architecture](./docs/ARCHITECTURE.md) - Diagrams and flow
 - [API](./docs/API.md) - API Reference
-- [OPS](./docs/OPS.md) - Operations Guide
-- [LOCAL_DEV](./docs/LOCAL_DEV.md) - Local Development Setup
-- [TDD](./docs/TDD.md) - Test-Driven Development Guide
-- [ARCHITECTURE](./docs/ARCHITECTURE.md) - Architectural Diagrams and Details
+- [OPS](./docs/OPS.md) - Deployment & Operations
+- [LOCAL_DEV](./docs/LOCAL_DEV.md) - Local Setup
+- [TDD](./docs/TDD.md) - Testing Guide
+- [Competitive Landscape](./docs/COMPETITIVE_LANDSCAPE.md) - ARC/TDi/Bettercoal analysis
 
-## Getting Started
+## Demo-First Priority
 
-```bash
-# Clone and setup
-git clone <repo-url>
-cd SustainabilityAI
-docker compose up --build
-```
+Three moments to impress TDi:
+1. AI Chat answers questions from uploaded EO100 docs
+2. One click switches from ARC branding to Bettercoal
+3. One data entry maps to EO100 + MSCI + ISS simultaneously
 
-## SDLC Phases
+## SDLC
 
-1. **Phase 1: Foundation** - Setup infrastructure, theming engine, basic auth
-2. **Phase 2: AI Core** - AI service layer, knowledge base, RAG pipeline
-3. **Phase 3: Assessment Engine** - Workflows, scoring, report generation
-4. **Phase 4: Enterprise** - Multi-tenant, integrations, scaling
+Phase 1 (Weeks 1-3): Core platform + white-label engine
+Phase 2 (Weeks 4-6): AI knowledge base + RAG pipeline
+Phase 3 (Weeks 7-9): Assessment engine + multi-framework mapping
+Phase 4 (Weeks 10-12): AI reports + Demo package
+Phase 5 (Weeks 13+): TDi deployment + iteration

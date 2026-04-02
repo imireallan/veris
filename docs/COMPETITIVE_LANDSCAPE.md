@@ -16,27 +16,41 @@
 - Holds largest certified production base among Canadian E&Ps
 - Certified across 100% of their production
 
-### Problems They Face
-- **Complex Certification Process**: EO100 requires site-level assessments against 5 principles:
-  - Corporate governance, transparency and ethics
-  - Human rights, social impact and community development
-  - Indigenous Peoples' rights
-  - Fair labour and working conditions
-  - Climate change, biodiversity and environment
-- **Stakeholder Engagement**: Ongoing documentation of dialogue with stakeholders and Indigenous communities
-- **Continuous Improvement**: Tracking improvements across all certified sites over time
-- **Reporting Requirements**: Extensive documentation needed for recertification cycles
-- **Multi-Site Management**: Managing compliance and improvements across many operational sites
-- **Knowledge Management**: Standards change, best practices evolve — need centralized reference
+### Their Actual ESG Framework (from their site)
 
-### How Our Product Helps
-| Current Pain Point | Our Solution |
-|-------------------|-------------|
-| Manual document gathering | AI-powered knowledge base with semantic search |
-| Complex questionnaire navigation | AI-guided assessments with context-aware suggestions |
-| Site-level assessment tracking | Multi-site dashboard with automated progress tracking |
-| Stakeholder engagement documentation | Centralized task management with evidence tracking |
-| Report generation | AI-powered automated report generation |
+ARC's formal ESG materiality assessment identified **6 focus areas** that drive their entire sustainability program:
+
+1. **Ethics** — Business ethics and corporate governance
+2. **Low Emissions** — GHG emissions
+3. **Retirement of Assets** — Reclamation and decommissioning
+4. **Rights** — Indigenous Peoples' rights
+5. **Community Relations** — Social impact and community engagement
+6. **Talent Attraction** — Talent attraction, retention and engagement
+
+These map directly to the EO100 5 Principles:
+- Principle 1: corporate governance, transparency and ethics
+- Principle 2: human rights, social impact and community development
+- Principle 3: Indigenous Peoples' rights
+- Principle 4: fair labour and working conditions
+- Principle 5: climate change, biodiversity and environment
+
+### They Track Multiple Rating Agencies Simultaneously
+- MSCI ESG Rating: AAA (Global Sustainability Index member)
+- Sustainalytics Score: 48.2
+- ISS Scores: Environment 8, Social 7, Governance 1
+- Equitable Origin: EO100 Standard certification
+
+This means they're reporting to 4+ different frameworks at once — a massive data reconciliation problem.
+
+### Problems They Face
+- **Framework Fragmentation**: Data needed for EO100, MSCI, Sustainalytics, ISS — all different formats
+- **Multi-Site Management**: Managing compliance and improvements across many operational sites
+- **Stakeholder Engagement**: Ongoing documentation of dialogue with stakeholders and Indigenous communities
+- **Asset Retirement Planning**: Tracking decommissioning and reclamation obligations over decades
+- **GHG Accounting**: Continuous emissions tracking and reduction target monitoring
+- **Continuous Improvement**: Tracking improvements across all certified sites over time
+- **Recertification Cycles**: EO100 requires periodic reassessment with extensive documentation
+- **Talent Sustainability**: Internal programs tracked under ESG framework
 
 ---
 

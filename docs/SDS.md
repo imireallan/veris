@@ -1,6 +1,28 @@
 # SustainabilityAI - System Design Specification
 
-## Data Models (PostgreSQL)
+### Data Models (PostgreSQL)
+
+See `docs/ESG_FRAMEWORK_MODELS.md` for the complete model definitions based on real-world ESG data. This section gives a high-level view:
+
+### Core Entity Hierarchy
+
+```
+Organization (Tenant)
+├── Theme Configuration
+├── Users (with roles)
+├── ESG Focus Areas (6 per org: Ethics, Emissions, Assets, Rights, Community, Talent)
+│   ├── Framework Mappings (EO100, MSCI, ISS, Sustainalytics)
+│   ├── Assessment Responses
+│   └── AI Insights & Recommendations
+├── Assessments
+│   ├── Questionnaire Responses
+│   ├── Evidence Files
+│   ├── Tasks/Actions
+│   └── Generated Reports
+├── Knowledge Documents (RAG pipeline)
+├── Sites/Locations
+└── External Ratings (MSCI, ISS, Sustainalytics scores tracked over time)
+```
 
 ### 1. Organization Model (Tenant)
 Primary model for white-label customization and data isolation.
@@ -45,7 +67,52 @@ Handles authentication with organization context.
 - created_at: Timestamp
 - updated_at: Timestamp
 
-### 4. Knowledge Document Model
+### 4. ESG Focus Area Model
+The organizing unit for company's ESG program. Modeled on ARC Resources' 6 areas.
+
+- id: UUID (Primary Key)
+- organization_id: UUID (Foreign Key)
+- name: String (Ethics, Low Emissions, Retirement of Assets, Rights, Community Relations, Talent Attraction)
+- internal_label: String (ethics, low_emissions, retirement_of_assets, rights, community_relations, talent_attraction)
+- owner_id: UUID (Foreign Key → User)
+- description: Text
+- current_score: Float
+- trend: Enum — UP, DOWN, STABLE, INSUFFICIENT_DATA
+- last_assessed: Timestamp
+- ai_risk_level: Enum — LOW, MEDIUM, HIGH
+- framework_mappings: JSONB (Maps to EO100, MSCI, ISS, Sustainalytics categories)
+- ai_gaps: JSONB (AI-identified gaps)
+- ai_recommendations: JSONB
+- created_at: Timestamp
+- updated_at: Timestamp
+
+### 5. Framework Registry Model
+Tracks external ESG frameworks and their structure.
+
+- id: UUID (Primary Key)
+- name: String (EO100, MSCI, Sustainalytics, ISS, BETTERCOAL)
+- version: String
+- description: Text
+- categories: JSONB (Their category/pillar structure)
+- scoring_methodology: JSONB (How they calculate scores)
+- reporting_period: String
+- last_synced: Timestamp
+
+### 6. External Rating Model
+Tracks scores from external rating agencies over time.
+
+- id: UUID (Primary Key)
+- organization_id: UUID (Foreign Key)
+- agency: Enum (MSCI, SUSTAINALYTICS, ISS, EQUIABLE_ORIGIN)
+- score: Float
+- score_date: Date
+- category_scores: JSONB ({Environment: 8, Social: 7, Governance: 1})
+- rating_grade: String (AAA, AA, A, etc.)
+- trend_vs_previous: Float
+- ai_analysis: Text
+- created_at: Timestamp
+
+### 7. Knowledge Document Model
 Stores uploaded sustainability documents for the RAG pipeline.
 
 - id: UUID (Primary Key)
@@ -55,23 +122,25 @@ Stores uploaded sustainability documents for the RAG pipeline.
 - file_url: String
 - file_type: String (PDF, DOCX, TXT, etc.)
 - file_size: Integer
-- category: String (Standard, Policy, Procedure, Guideline, etc.)
+- category: String (Standard, Policy, Procedure, Guideline, Report, Rating)
 - embeddings_indexed: Boolean
 - chunk_count: Integer
 - vector_ids: JSONB (List of Pinecone vector IDs)
+- framework_tags: JSONB[] (Which frameworks this document relates to)
 - created_by: UUID (Foreign Key → User)
 - created_at: Timestamp
 - updated_at: Timestamp
 
-### 5. Assessment Model
+### 8. Assessment Model
 Core entity for sustainability assessments.
 
 - id: UUID (Primary Key)
 - organization_id: UUID (Foreign Key)
 - site_id: UUID (Foreign Key, Optional)
 - template_id: UUID (Foreign Key)
+- focus_area_id: UUID (Foreign Key, Optional — can span multiple areas)
 - status: Enum — DRAFT, IN_PROGRESS, UNDER_REVIEW, COMPLETED, ARCHIVED
-- framework: Enum — EO100, BETTERCOAL, ESG, CUSTOM
+- framework_id: UUID (Foreign Key)
 - start_date: Timestamp
 - due_date: Timestamp
 - completed_at: Timestamp
@@ -83,75 +152,71 @@ Core entity for sustainability assessments.
 - created_at: Timestamp
 - updated_at: Timestamp
 
-### 6. Questionnaire Template Model
-Flexible question templates for different frameworks.
-
-- id: UUID (Primary Key)
-- organization_id: UUID (Foreign Key)
-- name: String
-- framework: String
-- version: String
-- description: Text
-- total_questions: Integer
-- scoring_method: Enum — BINARY, LIKERT, WEIGHTED
-- is_public: Boolean
-- created_at: Timestamp
-- updated_at: Timestamp
-
-### 7. Question Model
-Individual questions within templates.
-
-- id: UUID (Primary Key)
-- template_id: UUID (Foreign Key)
-- section: String
-- question_text: Text
-- question_type: Enum — TEXT, MULTIPLE_CHOICE, RATING, FILE_UPLOAD, NUMERIC
-- required: Boolean
-- weight: Float (For weighted scoring)
-- ai_guidance_text: Text (Tips/context for AI to provide)
-- evidence_required: Boolean
-- created_at: Timestamp
-- updated_at: Timestamp
-
-### 8. Response Model
-User responses to assessment questions.
+### 9. Assessment Response Model
+Answers to assessment questions with AI enrichment.
 
 - id: UUID (Primary Key)
 - assessment_id: UUID (Foreign Key)
+- focus_area_id: UUID (Foreign Key)
 - question_id: UUID (Foreign Key)
 - answer_text: Text
 - answer_score: Float
 - evidence_files: JSONB (Array of file URLs)
 - ai_score_suggestion: Float (AI's suggested score based on answer)
 - ai_feedback: Text (AI's feedback on the response)
+- ai_validated: Boolean (AI cross-checked for consistency)
+- frameworks_mapped_to: JSONB[] (Auto-mapped to other frameworks)
 - created_by: UUID (Foreign Key → User)
 - created_at: Timestamp
 - updated_at: Timestamp
 
-### 9. AI Insight Model
+### 10. AI Insight Model
 Separates detailed AI reasoning for performance.
 
 - id: UUID (Primary Key)
+- organization_id: UUID (Foreign Key)
 - assessment_id: UUID (Foreign Key)
 - response_id: UUID (Foreign Key, Optional)
-- insight_type: Enum — GAP_ANALYSIS, RECOMMENDATION, RISK_FLAG, SUMMARY
+- focus_area_id: UUID (Foreign Key)
+- insight_type: Enum — GAP_ANALYSIS, RECOMMENDATION, RISK_FLAG, CROSS_FRAMEWAY, SUMMARY
 - insight_text: Text
 - confidence_score: Float (0-1)
 - source_documents: JSONB (Array of vector IDs used for RAG)
+- action_required: Boolean
 - created_at: Timestamp
+- updated_at: Timestamp
 
-### 10. Task Model
-Continuous improvement tracking.
+### 11. Task Model (Continuous Improvement)
+Tracks improvement actions from assessments.
 
 - id: UUID (Primary Key)
 - assessment_id: UUID (Foreign Key)
+- organization_id: UUID (Foreign Key)
+- focus_area_id: UUID (Foreign Key)
 - title: String
 - description: Text
-- priority: Enum — LOW, MEDIUM, HIGH, URGENCY
+- priority: Enum — LOW, MEDIUM, HIGH, CRITICAL
 - status: Enum — PENDING, IN_PROGRESS, COMPLETED, CANCELLED
 - assigned_to: UUID (Foreign Key → User)
 - due_date: Timestamp (Optional)
 - completed_at: Timestamp (Optional)
+- ai_nudged: Boolean (AI has sent reminders)
+- created_at: Timestamp
+- updated_at: Timestamp
+
+### 12. Site Model
+Physical locations being assessed (operations sites, offices, mine sites, etc.)
+
+- id: UUID (Primary Key)
+- organization_id: UUID (Foreign Key)
+- name: String
+- type: Enum — OPERATION, MINE, OFFICE, FACILITY
+- country_code: String
+- region: String
+- coordinates: JSONB (lat, long)
+- operational_status: Enum — ACTIVE, DECOMMISSIONED, PLANNED
+- certifications: JSONB[] (EO100 certified, ISO 14001, etc.)
+- description: Text
 - created_at: Timestamp
 - updated_at: Timestamp
 

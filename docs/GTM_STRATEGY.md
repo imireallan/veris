@@ -1,131 +1,119 @@
 # Go-To-Market Strategy
 
-## Value Chain
+## Business Model
 
 ```
-You (freelancer) ──► SustainabilityAI Platform ──► Target Consultancy ──► Customer's clients
-                                                        │
-                                      ┌─────────────────┼─────────────────┐
-                                      ▼                 ▼                 ▼
-                                 Coal Industry Program        ESG Certification Standard/ARC       Future clients
-                               (coal industry)   (energy certs)   (mining, oil, etc.)
+You (freelancer) ──► AI Sustainability Platform ──► Consultancy ──► Their clients
+                                                     │
+                                      ┌──────────────┼──────────────┐
+                                      ▼              ▼              ▼
+                                 Energy          Coal          Mining
+                               Operator        Program        Company
 ```
 
-Target Consultancy is our **first customer**. They license, white-label, and deploy the platform to their client portfolio.
+We sell to a sustainability consultancy. They white-label and deploy the platform for their client portfolio across 11 sectors.
 
 ---
 
-## Why This Is the Right Play
+## Why This Works
 
-### Customer's Current Situation
-- 4 digital tools (Search360, ICAT, Country Risk, Commodity Risk)
-- Separate platform (platform-new.[REDACTED]) with 4 logins per client
-- No AI capabilities in any tool — all manual/algorithmic
-- Our Consultancy Client doesn't have AI engineers — building this in-house is expensive
-- Their consulting services (Risk Management, Strategy, Impact) are manual and un-automated
+### The Consultancy's Current Situation
+- 4 separate digital tools (news monitor, standards hub, country risk, commodity risk)
+- No AI capabilities in any tool — all manual or basic algorithmic
+- Clients interact with fragmented experience (separate logins per tool)
+- Consulting services (risk management, strategy, impact) delivered manually
+- Growing demand across 11 sectors (automotive, aerospace, mining, energy, etc.)
 
-### Our Pitch to Our Consultancy Client
-1. "Your 4 tools become one AI-powered platform"
-2. "Your manual consulting workflows become AI-guided processes"
-3. "Your clients get chat, automatic reports, smart analysis instead of static dashboards"
-4. "You already know our system — you've used coal-program, esg-standard, our digital platform"
-5. "You resell it to your 10+ clients — we stay behind the scenes"
+### What We Offer
+1. **4 tools → 1 unified platform** — single intelligent interface for clients
+2. **AI capabilities they can't build internally** — chat, automated reports, smart analysis
+3. **White-label from day one** — one platform, rebranded per client
+4. **Sector-specific configurations** — mining, energy, automotive all supported
+5. **Consulting workflow digitization** — risk identification → management → strategy → impact
 
-### Why Our Consultancy Client Will Buy This
-- **They've seen our work before** — Coal Industry Program, ESG Certification Standard were Customer's customers who used our platform
-- **They've felt the pain** — their current tools are fragmented, manual, and lack AI
-- **They need AI but can't build it** — their team doesn't have AI/ML engineers
-- **Their consulting service scales with it** — they deliver more value with less manual work
-- **We know their domain** — we built their systems, we know their data models, their architecture
+### Why They'll Buy
+- You've built their systems before — you know their data models, architecture, pain points
+- They serve clients across industries that all need different frameworks (OECD, EO standards, RBA, GRI)
+- Their current platform doesn't have AI — and they don't have AI engineers to build it
+- You already know the domain intimately
 
 ---
 
 ## Revenue Model
 
-### Primary: Annual license fee
-- Our Consultancy Client pays fixed amount annually (e.g., $50-100K/year)
+**Primary: Annual license fee**
+- Consultancy pays fixed amount annually
 - Unlimited client deployments (they handle client billing)
 - Includes updates and AI improvements
 
-### Secondary Options (discuss)
-- Per-client pricing (Our Consultancy Client pays per branded instance)
-- Revenue share (percentage of Customer's digital platform contracts)
-- Setup fee per client (for custom configurations)
-
-**Recommendation**: Start with annual license fee. Clean, predictable revenue. Our Consultancy Client knows their cost and margins.
+Clean, predictable. They know their cost and margins.
 
 ---
 
-## The 3 Moments That Sell Our Consultancy Client
+## The 3 Demo Moments
 
-We don't need to build everything to sell. We need to build the 3 moments that prove Our Consultancy Client can't build this themselves:
+We don't need a full product to sell. We need 3 moments that prove value:
 
-### Moment 1: AI Knowledge Base + Chat
-Upload ESG Certification Standard Standard PDF → ask "What does Principle 3 require?" → AI answers with citations
-- **Proves**: We replace ICAT + provide capabilities they don't have
-- **What they currently do**: Manual document lookup or hire consultant
+### 1. AI Knowledge Base + Chat
+Upload a standards document → chatbot answers questions with source citations
+> "What does Principle 3 require for Indigenous consultation?" → instant answer with PDF citations
 
-### Moment 2: AI-Assisted Assessment with Multi-Framework Mapping
-Enter "We conducted 12 community consultations" → shows mapping to ESG Certification Standard P2, MSCI Social, ISS Social + AI analysis
-- **Proves**: We unify their fragmented tools into one intelligent system
-- **What they currently do**: Manually enter data into 4 separate tools
+**What they currently do:** Manual document lookup + consultant hours
 
-### Moment 3: AI Report Generation from Assessment Data
-AI generates structured 20-page compliance report with executive summary, findings, recommendations
-- **Proves**: We enhance their consulting service delivery
-- **What they currently do**: Consultants spend weeks manually writing reports
+### 2. Multi-Framework Data Mapping
+Enter data once → system shows mapping to multiple frameworks simultaneously
+> "GHG emissions: 2.3 MtCO2e" → maps across Energy Standard, MSCI, ISS frameworks
 
----
+**What they currently do:** Manual cross-referencing across 4 separate tools
 
-## Build Timeline for Demo
+### 3. AI Report Generation
+Assessment data → AI generates structured report with executive summary + findings
+> Complete compliance report generated in hours instead of weeks
 
-| Week | Deliverable | Our Consultancy Client Sees |
-|------|-------------|----------|
-| 1-2 | Core platform + theme engine | "This is built professionally" |
-| 3 | AI Knowledge Base + chat | "This replaces our ICAT tool" |
-| 4 | Assessment engine + framework mapping | "This replaces our 4 tools" |
-| 5 | Report generation + demo script | "This enhances our consulting" |
-| 6 | Pitch to Our Consultancy Client with live demo | "We buy it" |
+**What they currently do:** Consultants spend weeks writing reports manually
 
 ---
 
-## Target Client Profile (Customer's Clients)
+## Build Priority for Demo
 
-Our Consultancy Client serves clients across 11 sectors. Our platform should support:
-
-**Primary sectors** (where Our Consultancy Client is strongest):
-- Mining
-- Energy (where ESG Certification Standard/ARC lives)
-- Automotive (supply chain due diligence focus)
-
-**Our platform should handle these from day one:**
-1. Framework Registry that adapts per sector
-2. Assessment templates for mining, energy, automotive
-3. Knowledge base with sector-specific standards
-4. Reports that adapt per sector requirements
+| Week | Deliverable | Purpose |
+|------|-------------|---------|
+| 1-2 | Core platform + white-label engine | Shows professional architecture |
+| 3 | AI knowledge base + chat | Replaces their standards tool |
+| 4 | Assessment engine + multi-framework mapping | Unifies their 4 tools |
+| 5 | Report generation + demo script | Enhances their consulting |
+| 6 | Pitch to consultancy with live demo | Close the sale |
 
 ---
 
-## What This Means for Architecture
+## Sector Support (11 Industries)
 
-1. **Multi-tenant with sector configuration** — not just branding, but sector-specific workflows
-2. **Framework Registry** — pre-loaded with ESG Certification Standard, OECD, RBA, GRI, etc.
-3. **Sector-specific templates** — mining, energy, automotive assessment flows
-4. **AI with sector context** — chat understands mining vs energy vs automotive
-5. **Reports with sector requirements** — output formats adapt per sector
+Our platform must support sector-specific frameworks out of the box:
+
+| Sector | Key Frameworks | Template |
+|--------|---------------|----------|
+| Mining | OECD Due Diligence, FPIC | Mining due diligence |
+| Energy | Energy Standard, GRESB, CDP | Energy sustainability |
+| Automotive | RBA, ISO 14001 | Supply chain due diligence |
+| Electronics | RBA, Conflict Minerals | Supply chain + human rights |
+| Finance | TCFD, EU Taxonomy | ESG reporting |
+| Others | COSMETICS, Jewellery, Renewables, Aerospace, Gov, Standard setters | Sector configs |
+
+### Architecture Implication
+
+Framework Registry loads per-sector configurations. Mining client → OECD + FPIC. Energy client → Energy Standard + GRESB. The platform is always multi-tenant but sector-aware.
 
 ---
 
-## Competitive Positioning
+## Competitive Position
 
-| Feature | Our Consultancy Client Current Platform | Our Platform |
-|---------|---------------------|--------------|
-| AI-powered chat | None | Built-in knowledge base chat |
-| Assessment guidance | Manual/static | AI-guided, context-aware |
-| Cross-framework mapping | Manual cross-referencing | Automatic AI mapping |
-| Report generation | Manual consultant work | AI-assisted, structured output |
-| News monitoring | Database dump (Search360) | AI analysis + prioritization |
-| Knowledge management | Static documents | Semantic search + RAG |
-| Sector support | Separate tools per function | Unified, sector-aware platform |
-| Multi-tenant | Separate deployments | One platform, infinite clients |
-| White-label | Custom per client for extra work | Built-in from day one |
+| Feature | Their Current Platform | Our Platform |
+|---------|----------------------|--------------|
+| AI-powered chat | None | Knowledge base with RAG |
+| Assessment guidance | Static/manual | AI-guided with context |
+| Cross-framework mapping | Manual | Automatic |
+| Report generation | Manual (weeks) | AI-assisted (hours) |
+| News monitoring | Database dump | AI analysis + prioritization |
+| Knowledge management | Static documents | Semantic search |
+| Multi-tenant | Custom per client | Built-in white-label |
+| Sector awareness | Separate configs | Unified per-tenant |

@@ -1,0 +1,11 @@
+node_modules
+.build
+.git
+.vscode
+.env
+.env.local
+*.tgz
+coverage
+test-results
+playwright-report
+.react-router

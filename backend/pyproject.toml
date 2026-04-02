@@ -1,0 +1,42 @@
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+force_grid_wrap = 0
+
+[tool.flake8]
+max-line-length = 88
+ignore = "E501,W503,E203"
+exclude = "migrations,.venv"
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+ignore_missing_imports = true
+show_error_codes = true
+exclude = [".venv/", "migrations/"]
+check_untyped_defs = false
+disallow_subclassing_any = false
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+check_untyped_defs = false
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+DJANGO_SETTINGS_MODULE = "config.settings.testing"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = [".", "config", "organizations", "users", "themes", "assessments", "knowledge"]
+omit = ["migrations/*", "tests/*", "config/wsgi.py", "manage.py"]

@@ -2,23 +2,23 @@
 
 ## Sites Analyzed
 
-1. **ARC Resources** (EO100 Certified Operator) - Energy company seeking certification
-2. **TDi Sustainability** (Consultancy + Digital Platform) - Advisory firm with digital tools
-3. **Bettercoal** (Industry Association Program) - Supplier sustainability assurance program
+1. **Major Energy Operator** (ESG Certification Standard Certified Operator) - Energy company seeking certification
+2. **Target Consultancy** (Consultancy + Digital Platform) - Advisory firm with digital tools
+3. **Coal Industry Program** (Industry Association Program) - Supplier sustainability assurance program
 
 ---
 
-## 1. ARC Resources — The Certified Energy Company
+## 1. Major Energy Operator — The Certified Energy Company
 
 ### What They Do
-- Canadian natural gas producer (ARX.TO)
-- First natural gas producer to achieve EO100 certification
+- Canadian natural gas producer ([REDACTED])
+- First natural gas producer to achieve ESG Certification Standard certification
 - Holds largest certified production base among Canadian E&Ps
 - Certified across 100% of their production
 
 ### Their Actual ESG Framework (from their site)
 
-ARC's formal ESG materiality assessment identified **6 focus areas** that drive their entire sustainability program:
+The Operator's formal ESG materiality assessment identified **6 focus areas** that drive their entire sustainability program:
 
 1. **Ethics** — Business ethics and corporate governance
 2. **Low Emissions** — GHG emissions
@@ -27,7 +27,7 @@ ARC's formal ESG materiality assessment identified **6 focus areas** that drive 
 5. **Community Relations** — Social impact and community engagement
 6. **Talent Attraction** — Talent attraction, retention and engagement
 
-These map directly to the EO100 5 Principles:
+These map directly to the ESG Certification Standard 5 Principles:
 - Principle 1: corporate governance, transparency and ethics
 - Principle 2: human rights, social impact and community development
 - Principle 3: Indigenous Peoples' rights
@@ -38,27 +38,27 @@ These map directly to the EO100 5 Principles:
 - MSCI ESG Rating: AAA (Global Sustainability Index member)
 - Sustainalytics Score: 48.2
 - ISS Scores: Environment 8, Social 7, Governance 1
-- Equitable Origin: EO100 Standard certification
+- Certification Body: ESG Certification Standard Standard certification
 
 This means they're reporting to 4+ different frameworks at once — a massive data reconciliation problem.
 
 ### Problems They Face
-- **Framework Fragmentation**: Data needed for EO100, MSCI, Sustainalytics, ISS — all different formats
+- **Framework Fragmentation**: Data needed for ESG Certification Standard, MSCI, Sustainalytics, ISS — all different formats
 - **Multi-Site Management**: Managing compliance and improvements across many operational sites
 - **Stakeholder Engagement**: Ongoing documentation of dialogue with stakeholders and Indigenous communities
 - **Asset Retirement Planning**: Tracking decommissioning and reclamation obligations over decades
 - **GHG Accounting**: Continuous emissions tracking and reduction target monitoring
 - **Continuous Improvement**: Tracking improvements across all certified sites over time
-- **Recertification Cycles**: EO100 requires periodic reassessment with extensive documentation
+- **Recertification Cycles**: ESG Certification Standard requires periodic reassessment with extensive documentation
 - **Talent Sustainability**: Internal programs tracked under ESG framework
 
 ---
 
-## 2. TDi Sustainability — The Consultancy with Digital Tools
+## 2. Target Consultancy — The Consultancy with Digital Tools
 
 ### What They Do
 - Sustainability consulting firm (based in UK)
-- Built "TDi Digital Platform" — a suite of SaaS tools for B2B clients
+- Built "Consultancy Digital Platform" — a suite of SaaS tools for B2B clients
 - Platform includes 5 tools:
   - **Supply Chain & Due Diligence Tool (TEDD)**: Supplier risk assessment
   - **Country Risk Tool**: Global risk assessment by region
@@ -75,7 +75,7 @@ This means they're reporting to 4+ different frameworks at once — a massive da
   5. Reporting
   6. Remediation
 - B2B SaaS model — companies subscribe to platform
-- Separate platform URL: platform-new.tdi-digital.com
+- Separate platform URL: platform-new.[REDACTED]
 - White-label capabilities (customizable to client brand)
 
 ### Problems They Solve
@@ -86,7 +86,7 @@ This means they're reporting to 4+ different frameworks at once — a massive da
 - Need for audit-ready documentation
 
 ### How Our Product Differs
-| TDi Current | Our Advantage |
+| Our Consultancy Client Current | Our Advantage |
 |------------|--------------|
 | Manual risk scoring | AI-powered risk analysis with reasoning |
 | Static knowledge base | Semantic search + RAG-powered document insights |
@@ -95,11 +95,11 @@ This means they're reporting to 4+ different frameworks at once — a massive da
 | Separate tools for each function | Unified platform with AI assistant across all modules |
 
 ### Key Insight
-TDi's existence proves there's a market for digital sustainability tools. But their tools lack AI — a massive opportunity. The fact that these repos (TDi code) exist shows this is a space with real demand.
+Customer's existence proves there's a market for digital sustainability tools. But their tools lack AI — a massive opportunity. The fact that these repos (Our Consultancy Client code) exist shows this is a space with real demand.
 
 ---
 
-## 3. Bettercoal — The Industry Association
+## 3. Coal Industry Program — The Industry Association
 
 ### What They Do
 - Non-profit member organization focused on responsible coal sourcing
@@ -158,8 +158,8 @@ Assessment Report → CIP Planning → Continuous Monitoring → Recertification
           │           │            │
    ───────┼───────────┼────────────┼───── Multi-Standard Support
           │           │            │
-          │  TDi      │  Bettercoal│
-          │  Digital  │  /EO100    │
+          │  Our Consultancy Client      │  Coal Industry Program│
+          │  Digital  │  /ESG Certification Standard    │
           │           │            │
           └────────────┼────────────┘
                        │
@@ -169,25 +169,25 @@ Assessment Report → CIP Planning → Continuous Monitoring → Recertification
 
 ## Key Findings
 
-1. **TDi Sustainability** proves the market exists — they've built a B2B SaaS platform with multiple risk tools serving major mining companies (Glencore, Anglo American, Lundin, ICMM visible as logos)
+1. **Target Consultancy** proves the market exists — they've built a B2B SaaS platform with multiple risk tools serving major mining companies (Major Mining Company, Global Mining Corporation, Mining Enterprise, Industry Mining Association visible as logos)
 
-2. **ARC Resources** shows the real-world complexity — managing EO100 certification across 100% of production sites is incredibly complex and requires ongoing stakeholder engagement
+2. **Major Energy Operator** shows the real-world complexity — managing ESG Certification Standard certification across 100% of production sites is incredibly complex and requires ongoing stakeholder engagement
 
-3. **Bettercoal** demonstrates the multi-tenant workflow challenge — managing programs with different roles (secretariat, members, suppliers, assessors) requires sophisticated platform architecture
+3. **Coal Industry Program** demonstrates the multi-tenant workflow challenge — managing programs with different roles (secretariat, members, suppliers, assessors) requires sophisticated platform architecture
 
 4. **The AI Gap**: None of these platforms have AI capabilities built in — this is our core differentiator
 
-5. **White-Label Demand**: All three operate in branded environments (TDi has custom platform, Bettercoal has branded process, ARC has their own sustainability portal)
+5. **White-Label Demand**: All three operate in branded environments (Our Consultancy Client has custom platform, Coal Industry Program has branded process, ARC has their own sustainability portal)
 
 ## Strategic Implications for Our Product
 
-1. **Target Audience**: Two segments — energy companies (like ARC) doing certifications, and consultancies (like TDi) who serve them
+1. **Target Audience**: Two segments — energy companies (like ARC) doing certifications, and consultancies (like Our Consultancy Client) who serve them
 
 2. **Core Value Prop**: "AI-powered sustainability platform that replaces 5 different tools with one intelligent assistant"
 
 3. **Key Features to Prioritize**:
    - Knowledge base with RAG-powered search (replaces ICAT + manual research)
-   - AI-guided assessments (replaces Bettercoal SAQ + TDi TEDD)
+   - AI-guided assessments (replaces Coal Industry Program SAQ + Our Consultancy Client TEDD)
    - Automated report generation (replaces manual report writing)
-   - Multi-site management with AI insights (replaces ARC's manual tracking)
+   - Multi-site management with AI insights (replaces The Operator's manual tracking)
    - AI-powered gap analysis (replaces manual compliance checking)

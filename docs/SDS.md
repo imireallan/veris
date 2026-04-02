@@ -11,7 +11,7 @@ Organization (Tenant)
 ├── Theme Configuration
 ├── Users (with roles)
 ├── ESG Focus Areas (6 per org: Ethics, Emissions, Assets, Rights, Community, Talent)
-│   ├── Framework Mappings (EO100, MSCI, ISS, Sustainalytics)
+│   ├── Framework Mappings (ESG Certification Standard, MSCI, ISS, Sustainalytics)
 │   ├── Assessment Responses
 │   └── AI Insights & Recommendations
 ├── Assessments
@@ -68,7 +68,7 @@ Handles authentication with organization context.
 - updated_at: Timestamp
 
 ### 4. ESG Focus Area Model
-The organizing unit for company's ESG program. Modeled on ARC Resources' 6 areas.
+The organizing unit for company's ESG program. Modeled on Major Energy Operator' 6 areas.
 
 - id: UUID (Primary Key)
 - organization_id: UUID (Foreign Key)
@@ -80,7 +80,7 @@ The organizing unit for company's ESG program. Modeled on ARC Resources' 6 areas
 - trend: Enum — UP, DOWN, STABLE, INSUFFICIENT_DATA
 - last_assessed: Timestamp
 - ai_risk_level: Enum — LOW, MEDIUM, HIGH
-- framework_mappings: JSONB (Maps to EO100, MSCI, ISS, Sustainalytics categories)
+- framework_mappings: JSONB (Maps to ESG Certification Standard, MSCI, ISS, Sustainalytics categories)
 - ai_gaps: JSONB (AI-identified gaps)
 - ai_recommendations: JSONB
 - created_at: Timestamp
@@ -90,7 +90,7 @@ The organizing unit for company's ESG program. Modeled on ARC Resources' 6 areas
 Tracks external ESG frameworks and their structure.
 
 - id: UUID (Primary Key)
-- name: String (EO100, MSCI, Sustainalytics, ISS, BETTERCOAL)
+- name: String (ESG Certification Standard, MSCI, Sustainalytics, ISS, BETTERCOAL)
 - version: String
 - description: Text
 - categories: JSONB (Their category/pillar structure)
@@ -215,7 +215,7 @@ Physical locations being assessed (operations sites, offices, mine sites, etc.)
 - region: String
 - coordinates: JSONB (lat, long)
 - operational_status: Enum — ACTIVE, DECOMMISSIONED, PLANNED
-- certifications: JSONB[] (EO100 certified, ISO 14001, etc.)
+- certifications: JSONB[] (ESG Certification Standard certified, ISO 14001, etc.)
 - description: Text
 - created_at: Timestamp
 - updated_at: Timestamp

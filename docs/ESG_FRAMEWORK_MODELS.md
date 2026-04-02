@@ -2,13 +2,13 @@
 
 ## Based On: Real-World Analysis
 
-This document captures the actual data structures from the ARC Resources EO100 sustainability page, TDi Digital Platform, and the Bettercoal assessment codebase. These form the foundation for our product's data models.
+This document captures the actual data structures from the Major Energy Operator ESG Certification Standard sustainability page, Consultancy Digital Platform, and the Coal Industry Program assessment codebase. These form the foundation for our product's data models.
 
 ---
 
-## The Real ESG Focus Areas (From ARC Resources)
+## The Real ESG Focus Areas (From Major Energy Operator)
 
-ARC's ESG materiality assessment identified **6 focus areas** that define their entire program:
+The Operator's ESG materiality assessment identified **6 focus areas** that define their entire program:
 
 | # | Focus Area | Internal Label | What It Covers |
 |---|-----------|---------------|----------------|
@@ -19,7 +19,7 @@ ARC's ESG materiality assessment identified **6 focus areas** that define their 
 | 5 | Community Relations | `community_relations` | Social impact, engagement, shared value |
 | 6 | Talent Attraction | `talent_attraction` | Recruitment, retention, engagement |
 
-## The EO100 5 Principles (From Equitable Origin)
+## The ESG Certification Standard 5 Principles (From Certification Body)
 
 The certification standard they're assessed against:
 
@@ -44,7 +44,7 @@ ARC tracks ratings from **4 separate agencies** at once:
 | MSCI | ESG Rating: AAA | Environmental, Social, Governance performance |
 | Sustainalytics | Score: 48.2 | ESG risk (lower = better risk management) |
 | ISS | Environment: 8, Social: 7, Governance: 1 | Separate ESG pillar scores |
-| Equitable Origin | EO100 Certified | Site-level certification status |
+| Certification Body | ESG Certification Standard Certified | Site-level certification status |
 
 **This means:** Every data point collected (emissions, community engagement, governance policies) feeds into multiple reporting frameworks simultaneously. Each framework has:
 - Different scoring methodologies
@@ -56,7 +56,7 @@ Our product's killer feature: **Collect once, report everywhere.** The AI maps s
 
 ---
 
-## TDi Digital Platform Tools (From tdi-sustainability.com)
+## Consultancy Digital Platform Tools (From [REDACTED])
 
 The 5 separate tools they currently offer, which our product unifies:
 
@@ -70,9 +70,9 @@ The 5 separate tools they currently offer, which our product unifies:
 
 ---
 
-## Bettercoal Assessment Workflow (From Codebase)
+## Coal Industry Program Assessment Workflow (From Codebase)
 
-The actual workflow from the Bettercoal codebase in `~/Projects/TDi/bettercoal/`:
+The actual workflow from the Coal Industry Program codebase in `~/Projects/Our Consultancy Client/coal-program/`:
 
 ```
 Organization → User (with role) → Process → Questionnaire → Assessment → Finding → CIP
@@ -111,7 +111,7 @@ class ESGFocusArea:
     frameworks: JSONB      # Which frameworks this maps to
     
     # Framework mappings
-    eo100_principle_ids: JSONB[]    # [1, 5] etc.
+    esg-standard_principle_ids: JSONB[]    # [1, 5] etc.
     msci_category_ids: JSONB[]      # MSCI pillar mappings
     issu_category_ids: JSONB[]      # ISS pillar mappings
     sustainalytics_category_ids: JSONB[]
@@ -133,7 +133,7 @@ class ESGFocusArea:
 ```python
 class Framework:
     id: UUID
-    name: str                    # "EO100", "MSCI", "Sustainalytics"
+    name: str                    # "ESG Certification Standard", "MSCI", "Sustainalytics"
     version: str                 # "2023.1"
     description: str
     scoring_methodology: JSONB   # How they score
@@ -186,17 +186,17 @@ Data Collection Question ──► User Response ──► AI Validation
                                         │
                     ┌───────────────────┼───────────────────┐
                     ▼                   ▼                   ▼
-              EO100 Mapping       MSCI Mapping        ISS Mapping
+              ESG Certification Standard Mapping       MSCI Mapping        ISS Mapping
                     │                   │                   │
                     ▼                   ▼                   ▼
-              EO100 Report        MSCI Report         ISS Report
+              ESG Certification Standard Report        MSCI Report         ISS Report
 ```
 
 ### AI Mapping Rules Engine
 
 The AI automatically answers:
-1. **Cross-framework mapping**: "This GHG data point feeds into EO100 Principle 5, MSCI Environment pillar, and ISS Environment score"
-2. **Missing data detection**: "EO100 Principle 3 requires Indigenous engagement records — none found for Q3"
+1. **Cross-framework mapping**: "This GHG data point feeds into ESG Certification Standard Principle 5, MSCI Environment pillar, and ISS Environment score"
+2. **Missing data detection**: "ESG Certification Standard Principle 3 requires Indigenous engagement records — none found for Q3"
 3. **Data quality alerts**: "ISS governance score is 1/10 — critical gap in disclosure"
 4. **Trend analysis**: "Your ethics score improved 15% but talent attraction declined 8%"
 
@@ -206,14 +206,14 @@ The AI automatically answers:
 
 ### Phase 1 (Foundation) Must Support
 1. Organization → ESGFocusArea hierarchy (not just generic "assessments")
-2. Framework Registry with EO100 5 principles pre-loaded
+2. Framework Registry with ESG Certification Standard 5 principles pre-loaded
 3. Multi-framework mapping UI on data entry
 4. Theme engine for white-label branding
 
 ### Phase 2 (AI Core) Must Support
 1. AI-guided data collection for each focus area
-2. Cross-framework mapping AI ("You entered GHG data — maps to EO100 P5, MSCI Env")
-3. Knowledge base with EO100 standard, MSCI methodology docs
+2. Cross-framework mapping AI ("You entered GHG data — maps to ESG Certification Standard P5, MSCI Env")
+3. Knowledge base with ESG Certification Standard standard, MSCI methodology docs
 4. AI chat for "what do I need for X framework?"
 
 ### Phase 3 (Assessment Engine) Must Support
@@ -223,6 +223,6 @@ The AI automatically answers:
 4. External score correlation with internal performance
 
 ### Phase 4+ (Enterprise)
-1. Custom framework creation (for non-EO100 standards)
+1. Custom framework creation (for non-ESG Certification Standard standards)
 2. Advanced supply chain ESG mapping
 3. Regulatory change detection and impact assessment

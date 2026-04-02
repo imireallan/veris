@@ -1,130 +1,97 @@
-# TDi Service Mapping & Opportunity Analysis
+# Our Consultancy Client Service Catalog Mapping
 
-Source: tdi-sustainability.com
+Comprehensive analysis of Target Consultancy's offerings and how our platform maps to them.
 
-## TDi's Full Service Catalog
-
-### 4 Service Pillars:
-
-**1. Risk Management**
-- Community Engagement & Social Investment
-- Supplier Engagement
-- Engagement with ASM (Artisanal and Small-scale Mining)
-- Free, Prior & Informed Consent (FPIC)
-- Audit Preparation and Training
-- Second and Third Party Audits
-- Reporting
-
-**2. Risk Identification**
-- Supply Chain Risk Mapping
-- Due Diligence
-- Regulation and Standards Mapping
-- Human Rights Strategies
-
-**3. Strategy**
-- Strategy Development
-- Training and Capacity Building
-- Management Systems
-- Strategic Communications
-
-**4. Impact & Leadership**
-- Industry Leadership
-- Standard Setting and Assurance Schemes
-- Secretariat Services
-- Creation of Insights and Reports
-- Impact Investing
-- Corporate Impact Strategies
-
-### Digital Solutions (Existing)
-- TDi Sustainability Digital Platform
-- Platform & Website Development
-
-### Target Sectors (11)
-- Automotive
-- Aerospace
-- Cosmetics
-- Electronics
-- Energy
-- Finance & Investment
-- Governments & Public Organisations
-- Jewellery
-- Mining
-- Renewables
-- Standard Setters
+Source: [REDACTED]
 
 ---
 
-## Existing Digital Tools (4)
+## Customer's Service Pillars
 
-### Search360° News Monitor
-- Public issues and adverse news database
-- Near real-time risk identification
-- Proactive identification and management of evolving supply chain issues
+### 1. Risk Management
+| Service | What It Is | Our Platform Feature |
+|---------|-----------|---------------------|
+| Community Engagement & Social Investment | Managing stakeholder relationships | AI-guided engagement tracking + stakeholder mapping |
+| Supplier Engagement | Working with suppliers on ESG | AI-guided supplier assessments (replaces TEDD) |
+| Engagement with ASM | Artisanal/Small-scale Mining engagement | Sector-specific ASM workflows |
+| Free, Prior & Informed Consent | Indigenous peoples' consent process | FPIC workflow templates + documentation |
+| Audit Preparation and Training | Preparing clients for audits | AI audit prep from assessment data |
+| Second and Third Party Audits | Managing external audits | Audit trail + evidence management |
+| Reporting | Client reporting deliverables | AI-generated reports |
 
-**Our AI upgrade**: AI summarises news items, flags critical risks, maps to client's supply chain automatically. Instead of raw database dump, gives "These 3 news items affect YOUR supply chain — here's what to do."
+### 2. Risk Identification
+| Service | What It Is | Our Platform Feature |
+|---------|-----------|---------------------|
+| Supply Chain Risk Mapping | Identifying supply chain risks | Commodity + Country Risk unified with AI |
+| Due Diligence | ESG due diligence assessments | AI-guided assessments (replaces TEDD) |
+| Regulation and Standards Mapping | Tracking compliance requirements | ICAT replacement via RAG knowledge base |
+| Human Rights Strategies | Human rights due diligence | Framework registry with human rights standards |
 
-### Standards and Regulations Tool (ICAT)
-- Central standards and regulations reference hub
-- Translation of compliance requirements into practical framework
+### 3. Strategy
+| Service | What It Is | Our Platform Feature |
+|---------|-----------|---------------------|
+| Strategy Development | ESG strategy consulting | Dashboard analytics + AI insights |
+| Training and Capacity Building | Client team training | Knowledge base as training resource |
+| Management Systems | ESG management systems for clients | Multi-tenant platform |
+| Strategic Communications | ESG messaging support | AI-assisted report/deliverable generation |
 
-**Our AI upgrade**: RAG-powered knowledge base with chat interface. "What does the EU Battery Regulation require on human rights due diligence?" → instant answer with citations. Replaces hours of manual standard cross-referencing.
+### 4. Impact & Leadership
+| Service | What It Is | Our Platform Feature |
+|---------|-----------|---------------------|
+| Industry Leadership | Industry positioning | Benchmark data + AI insights |
+| Standard Setting | Creating assurance schemes | Framework creation tools |
+| Secretariat Services | Running industry bodies | Multi-tenant platform (Coal Industry Program model) |
+| Insights and Reports | Research and analysis deliverables | AI-generated reports |
+| Impact Investing | Investment impact tracking | Metrics dashboard |
+| Corporate Impact | Corporate sustainability strategy | Strategy development tools |
 
-### Country Risk Tool
-- Data-driven view of mineral production and ESG/compliance risks
-- Country-level ESG risk screening
+---
 
-**Our AI upgrade**: AI-generated country risk profiles with reasoning. "Why is DRC high-risk for your cobalt supply chain?" → AI produces structured analysis with evidence sources. Updates automatically from news feed + knowledge base.
+## Digital Platform Tools (4 tools we replace)
 
-### Commodity Risk Tool
-- Detailed commodity risk profiles
-- Bill of Materials risk mapping with business criticality assessments
+| Our Consultancy Client Tool | What It Does | Our Replacement |
+|----------|-------------|----------------|
+| **Search360° News Monitor** | Adverse public news database, near real-time risk identification | AI-powered news analysis with contextual risk mapping to client's supply chain |
+| **Standards & Regulations (ICAT)** | Central standards reference hub, translates compliance into practical framework | RAG-powered knowledge base + chat with citations |
+| **Country Risk Tool** | Country ESG risk screening with mineral production data | AI-enriched country ESG risk profiles with impact analysis |
+| **Commodity Risk Tool** | Commodity risk profiles across Bill of Materials | AI BoM analysis with prioritized remediation recommendations |
 
-**Our AI upgrade**: AI BoM analysis. Upload your supply chain → AI maps risks per commodity, per supplier, with prioritized remediation steps. Replaces manual spreadsheet work.
+---
+
+## 11 Target Sectors
+
+| Sector | Key Frameworks Our Consultancy Client Uses | Our Template |
+|--------|------------------------|--------------|
+| Automotive | RBA, ISO 14001, IATF 16949 | Supply chain due diligence template |
+| Aerospace | Quality standards, supply chain | Supply chain assessment template |
+| Cosmetics | NATRUE, BCI, Fair Trade | Responsible sourcing template |
+| Electronics | RBA, EICC, Conflict Minerals | Supply chain + human rights template |
+| Energy | ESG Certification Standard, GRESB, CDP | Energy sustainability template |
+| Finance & Investment | TCFD, EU Taxonomy, PRI | ESG reporting template |
+| Governments & Public | Regulatory compliance | Standards hub + compliance tracking |
+| Jewellery | RJC, CIBJO, Kimberley Process | Traceability template |
+| Mining | OECD Due Diligence, Industry Mining Association, FPIC | Mining due diligence template |
+| Renewables | IFC Performance Standards, Equator Principles | Project sustainability template |
+| Standard Setters | All of the above | Framework builder tool |
 
 ---
 
 ## The Hidden Opportunity
 
-TDi's digital tools are just the FRONT-END of their consulting services. The real value is:
+Customer's digital tools are just the **front-end** of their full consulting business. The real value is:
 
-| Service Pillar | Current State | Our Platform Capability |
-|----------------|---------------|------------------------|
+| Consulting Pillar | Current State | Our Platform Capability |
+|-------------------|---------------|------------------------|
 | Risk Management | Manual consulting work | AI-guided workflows, automated assessments |
-| Risk Identification | 4 separate tools | Unified AI intelligence hub |
+| Risk Identification | 4 separate digital tools | Unified AI intelligence hub |
 | Strategy | Manual consulting deliverables | AI-powered insights and recommendations |
-| Impact & Leadership | Manual reports and presentations | AI-generated reports, dashboards, trend analysis |
+| Impact & Leadership | Manual reports/presentations | AI-generated reports, dashboards, trend analysis |
 
-**The real pitch to TDi:**
+**Our platform becomes Customer's service delivery infrastructure** — not just a digital tool replacement but an enhancement of all 4 consulting pillars.
 
-> "Your 4 digital tools generate data your consultants then manually turn into client deliverables. Our platform closes the loop — risk identification → AI analysis → automated report generation → client dashboard. Your consultants deliver more value with less manual work."
-
-## Sector-Specific Framework Support
-
-Our platform must support the frameworks TDi uses across sectors:
-
-| Sector | Key Frameworks TDi Uses | Our Template |
-|--------|------------------------|--------------|
-| Mining | OECD Due Diligence, ICMM, IRMA, FPIC | Mining due diligence template |
-| Automotive | RBA, ISO 14001, IATF 16949 | Supply chain due diligence template |
-| Energy | EO100, GRI, SASB, CDP | Energy sustainability template |
-| Electronics | RBA, EICC, Conflict Minerals | Supply chain + human rights template |
-| Finance | TCFD, EU Taxonomy, PRI | ESG reporting template |
-| Cosmetics | NATRUE, BCI, Fair Trade | Responsible sourcing template |
-| Jewellery | RJC, CIBJO, Kimberley Process | Precious metals traceability template |
-| Renewable | IFC Performance Standards, Equator Principles | Project sustainability template |
-
----
-
-## What This Means for Phase 1
-
-We're not building a generic sustainability platform. We're building TDi's next-generation service delivery infrastructure.
-
-**Phase 1 must prove 3 things:**
-
-1. **The AI knowledge base works** — upload a standard (e.g., EO100 doc), ask questions, get structured answers. This proves we can replace ICAT + Search360.
-
-2. **Multi-framework assessment engine works** — demonstrate how one data point (e.g., "we conducted 12 community consultations") maps to multiple frameworks simultaneously. This proves we unify their tools.
-
-3. **AI-generated insights work** — assessment data → AI gap analysis → prioritized recommendations. This proves we enhance their consulting delivery.
-
-**Everything else is secondary to these 3 demos.**
+### What this means architecturally:
+1. **Sector-specific configuration** — not just branding, but sector-specific workflows, frameworks, templates
+2. **Framework Registry** — pre-loaded with ESG Certification Standard, OECD, RBA, Industry Mining Association, FPIC, TCFD, GRI, etc.
+3. **AI with sector context** — mining vs energy vs automotive all have different standards
+4. **Reports adapt per sector** — output formats, required sections, compliance criteria are sector-specific
+5. **Multi-tenant from day 1** — Our Consultancy Client rebrands for each client, each with their own sector config

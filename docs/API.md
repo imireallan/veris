@@ -129,7 +129,7 @@ Response:
   "sources": [
     {
       "document_id": "uuid",
-      "document_title": "EO100 Standard v2023",
+      "document_title": "ESG Certification Standard Standard v2023",
       "relevance_score": 0.89,
       "page_content": "..."
     }

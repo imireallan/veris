@@ -1,0 +1,29 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Integrations{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &gt; <a href="{% url 'settings:dashboard' %}">Settings</a> &gt; Integrations</div>{% endblock %}
+{% block content %}
+<h1>Integrations</h1>
+<p>Configure third-party services (LLM providers, email, Stripe, Sentry).</p>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+  <div style="background: #f8f8f8; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+    <h3>OpenAI / Groq</h3>
+    <p style="color: #666;">Configure LLM API key for AI chat, report generation, and assessment analysis.</p>
+  </div>
+  <div style="background: #f8f8f8; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+    <h3>Pinecone</h3>
+    <p style="color: #666;">Vector database for knowledge base semantic search.</p>
+  </div>
+  <div style="background: #f8f8f8; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+    <h3>Stripe</h3>
+    <p style="color: #666;">Subscription billing and payment processing.</p>
+  </div>
+  <div style="background: #f8f8f8; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+    <h3>Email (SMTP / SendGrid)</h3>
+    <p style="color: #666;">Automated emails for invites, reminders, and reports.</p>
+  </div>
+  <div style="background: #f8f8f8; padding: 15px; border-radius: 6px; border: 1px solid #eee;">
+    <h3>Sentry</h3>
+    <p style="color: #666;">Error monitoring and performance tracking.</p>
+  </div>
+</div>
+{% endblock %}

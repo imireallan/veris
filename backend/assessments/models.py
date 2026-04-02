@@ -60,7 +60,9 @@ class ESGFocusArea(models.Model):
     )
     framework_mappings = models.JSONField(default=dict)
     ai_gaps = models.JSONField(default=dict)
-    ai_recommendations = models.JSONField(default=dict)
+    ai_recommendations = models.JSONField(default=dict, blank=True)
+
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -1,0 +1,199 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Theme Settings — {{ org.name }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">Home</a>
+&gt; <a href="{% url 'settings:dashboard' %}">Settings</a>
+&gt; Theme &amp; Branding — {{ org.name }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 1400px;">
+  <h1>Theme &amp; Branding</h1>
+  <p style="color: #666;">Customize colors, fonts, logo, and styling for this client. Changes apply immediately to the frontend.</p>
+
+  {% if messages %}
+  <ul class="messagelist">
+  {% for msg in messages %}
+    <li{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post" id="theme-form">
+    {% csrf_token %}
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+
+      <!-- Brand Colors -->
+      <fieldset class="module aligned">
+        <h2>Brand Colors</h2>
+        <div class="form-row field-primary_color">
+          <div>
+            <label class="required">Primary Color</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="color" id="primary_color_picker" value="{{ theme.primary_color|default:'#2D5A7B' }}" style="width: 50px; height: 38px; border: none; cursor: pointer;">
+              <input type="text" name="primary_color" id="primary_color" value="{{ theme.primary_color|default:'#2D5A7B' }}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; width: 120px;">
+            </div>
+          </div>
+        </div>
+        <div class="form-row field-secondary_color">
+          <div>
+            <label>Secondary Color</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="color" id="secondary_color_picker" value="{{ theme.secondary_color|default:'#8FAABF' }}" style="width: 50px; height: 38px; border: none; cursor: pointer;">
+              <input type="text" name="secondary_color" id="secondary_color" value="{{ theme.secondary_color|default:'#8FAABF' }}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; width: 120px;">
+            </div>
+          </div>
+        </div>
+        <div class="form-row field-accent_color">
+          <div>
+            <label>Accent Color</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="color" id="accent_color_picker" value="{{ theme.accent_color|default:'#E88D67' }}" style="width: 50px; height: 38px; border: none; cursor: pointer;">
+              <input type="text" name="accent_color" id="accent_color" value="{{ theme.accent_color|default:'#E88D67' }}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; width: 120px;">
+            </div>
+          </div>
+        </div>
+        <div class="form-row field-background_color">
+          <div>
+            <label>Background Color</label>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <input type="color" id="background_color_picker" value="{{ theme.background_color|default:'#FAFAFA' }}" style="width: 50px; height: 38px; border: none; cursor: pointer;">
+              <input type="text" name="background_color" id="background_color" value="{{ theme.background_color|default:'#FAFAFA' }}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; width: 120px;">
+            </div>
+          </div>
+        </div>
+        <div class="form-row field-text_color">
+          <div>
+            <label>Text Color</label>
+            <input type="text" name="text_color" value="{{ theme.text_color|default:'#1A1A1A' }}" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; width: 95%;">
+          </div>
+        </div>
+        <div class="form-row field-button_radius">
+          <div>
+            <label>Button Border Radius (px)</label>
+            <input type="number" name="button_radius" value="{{ theme.button_radius|default:'8' }}" min="0" max="50" style="padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; width: 95%;">
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Typography & Logo -->
+      <fieldset class="module aligned">
+        <h2>Typography &amp; Logo</h2>
+        <div class="form-row field-font_family">
+          <div>
+            <label>Font Family</label>
+            <select name="font_family" style="width: 95%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+              <option value="Inter, system-ui, sans-serif" {% if theme.font_family == 'Inter, system-ui, sans-serif' %}selected{% endif %}>Inter</option>
+              <option value="'Open Sans', sans-serif" {% if theme.font_family == "'Open Sans', sans-serif" %}selected{% endif %}>Open Sans</option>
+              <option value="'Roboto', sans-serif" {% if theme.font_family == "'Roboto', sans-serif" %}selected{% endif %}>Roboto</option>
+              <option value="system-ui, -apple-system, sans-serif" {% if theme.font_family == 'system-ui, -apple-system, sans-serif' %}selected{% endif %}>System UI</option>
+              <option value="custom">Custom (see below)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row field-logo_url">
+          <div>
+            <label>Logo URL</label>
+            <input type="url" name="logo_url" value="{{ theme.logo_url }}" placeholder="https://client.com/logo.svg" style="width: 95%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+        </div>
+        <div class="form-row field-favicon_url">
+          <div>
+            <label>Favicon URL</label>
+            <input type="url" name="favicon_url" value="{{ theme.favicon_url }}" placeholder="https://client.com/favicon.ico" style="width: 95%; padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px;">
+          </div>
+        </div>
+        <div class="form-row field-custom_css">
+          <div>
+            <label>Custom CSS</label>
+            <textarea name="custom_css" rows="10" placeholder="/* CSS overrides for this tenant */" style="width: 95%; font-family: 'SF Mono', Monaco, monospace; font-size: 12px;">{{ theme.custom_css }}</textarea>
+          </div>
+        </div>
+      </fieldset>
+    </div>
+
+    <!-- Live Preview -->
+    <fieldset class="module">
+      <h2>Live Preview</h2>
+      <div style="border: 2px solid #eee; border-radius: 12px; overflow: hidden;">
+        <div id="preview-header" style="background: {{ theme.primary_color|default:'#2D5A7B' }}; color: white; padding: 20px 30px; display: flex; justify-content: space-between; align-items: center;">
+          <strong style="font-size: 18px;">{{ org.name }}</strong>
+          <div style="display: flex; gap: 15px; font-size: 13px; opacity: 0.9;">
+            <span>Dashboard</span>
+            <span>Assessments</span>
+            <span>Knowledge</span>
+          </div>
+        </div>
+        <div id="preview-body" style="background: {{ theme.background_color|default:'#FAFAFA' }}; color: {{ theme.text_color|default:'#1A1A1A' }}; padding: 30px;">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px;">
+            <div style="background: white; border: 1px solid #eee; border-radius: 8px; padding: 20px;">
+              <div style="font-size: 12px; color: #999;">Compliance</div>
+              <div style="font-size: 24px; font-weight: bold; color: {{ theme.primary_color|default:'#2D5A7B' }};">94%</div>
+            </div>
+            <div style="background: white; border: 1px solid #eee; border-radius: 8px; padding: 20px;">
+              <div style="font-size: 12px; color: #999;">Active Assessments</div>
+              <div style="font-size: 24px; font-weight: bold;">3</div>
+            </div>
+            <div style="background: white; border: 1px solid #eee; border-radius: 8px; padding: 20px;">
+              <div style="font-size: 12px; color: #999;">Team Members</div>
+              <div style="font-size: 24px; font-weight: bold;">12</div>
+            </div>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <button id="preview-btn-primary" style="background: {{ theme.accent_color|default:'#E88D67' }}; color: white; border: none; padding: 10px 25px; border-radius: {{ theme.button_radius|default:'8' }}px; cursor: pointer; margin-right: 10px;">Primary Action</button>
+            <button id="preview-btn-secondary" style="background: {{ theme.secondary_color|default:'#8FAABF' }}; color: white; border: none; padding: 10px 25px; border-radius: {{ theme.button_radius|default:'8' }}px; cursor: pointer;">Secondary</button>
+          </div>
+          <p>This is a sample of how the theme will appear for {{ org.name }}'s users. Adjust the colors, fonts, and styling above to see updates in real time.</p>
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="submit-row" style="margin-top: 20px; padding: 15px; background: #f8f8f8; border-radius: 8px;">
+      <input type="submit" value="Save Theme" class="default" style="padding: 12px 30px;">
+    </div>
+  </form>
+</div>
+
+<script>
+// Sync color pickers with text inputs and update preview
+const colorPairs = [
+  ['primary_color_picker', 'primary_color', '--preview-primary'],
+  ['secondary_color_picker', 'secondary_color', '--preview-secondary'],
+  ['accent_color_picker', 'accent_color', '--preview-accent'],
+  ['background_color_picker', 'background_color', '--preview-bg'],
+];
+
+colorPairs.forEach(([pickerId, textId]) => {
+  const picker = document.getElementById(pickerId);
+  const text = document.getElementById(textId);
+  picker.addEventListener('input', () => {
+    text.value = picker.value;
+    updatePreview();
+  });
+  text.addEventListener('input', () => {
+    picker.value = text.value;
+    updatePreview();
+  });
+});
+
+function updatePreview() {
+  const primary = document.getElementById('primary_color').value;
+  const secondary = document.getElementById('secondary_color').value;
+  const accent = document.getElementById('accent_color').value;
+  const background = document.getElementById('background_color').value;
+  const btnRadius = document.querySelector('input[name="button_radius"]').value;
+
+  document.getElementById('preview-header').style.background = primary;
+  document.getElementById('preview-body').style.background = background;
+  document.getElementById('preview-btn-primary').style.background = accent;
+  document.getElementById('preview-btn-primary').style.borderRadius = btnRadius + 'px';
+  document.getElementById('preview-btn-secondary').style.background = secondary;
+  document.getElementById('preview-btn-secondary').style.borderRadius = btnRadius + 'px';
+}
+</script>
+{% endblock %}

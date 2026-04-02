@@ -30,5 +30,6 @@ router.register(r"api/documents", KnowledgeDocumentViewSet, basename="knowledge-
 
 urlpatterns = [
     path("api/health/", health_check, name="health-check"),
+    path("", include("settings.urls")),
     *router.urls,
 ]

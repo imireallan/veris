@@ -1,0 +1,43 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Feature Flags{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &gt; <a href="{% url 'settings:dashboard' %}">Settings</a> &gt; Feature Flags</div>{% endblock %}
+{% block content %}
+<h1>Feature Flags</h1>
+<p>Toggle features on/off for this client. No code changes required.</p>
+<table style="width: 100%; margin-top: 20px; border-collapse: collapse;">
+  <thead>
+    <tr style="border-bottom: 2px solid #ddd;">
+      <th style="text-align: left; padding: 8px;">Feature</th>
+      <th style="text-align: left; padding: 8px;">Status</th>
+      <th style="text-align: left; padding: 8px;">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 8px;">AI Chat</td>
+      <td style="padding: 8px;">Yes</td>
+      <td style="padding: 8px; color: #666;">Knowledge base chat with RAG-powered answers.</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 8px;">AI Report Generation</td>
+      <td style="padding: 8px;">Yes</td>
+      <td style="padding: 8px; color: #666;">Automated report generation from assessment data.</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 8px;">Multi-Framework Mapping</td>
+      <td style="padding: 8px;">Yes</td>
+      <td style="padding: 8px; color: #666;">Automatic mapping across ESG frameworks.</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 8px;">Custom Domain</td>
+      <td style="padding: 8px;">Yes</td>
+      <td style="padding: 8px; color: #666;">White-label with custom domain.</td>
+    </tr>
+    <tr style="border-bottom: 1px solid #eee;">
+      <td style="padding: 8px;">Bulk Import</td>
+      <td style="padding: 8px;">No</td>
+      <td style="padding: 8px; color: #666;">Import assessments and data in bulk (CSV, Excel).</td>
+    </tr>
+  </tbody>
+</table>
+{% endblock %}

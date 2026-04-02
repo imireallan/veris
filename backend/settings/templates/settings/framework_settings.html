@@ -1,0 +1,58 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Frameworks & Standards — {{ org.name }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">Home</a>
+&gt; <a href="{% url 'settings:dashboard' %}">Settings</a>
+&gt; Frameworks &amp; Standards
+</div>
+{% endblock %}
+
+{% block content %}
+<fieldset class="module aligned">
+  <h2>Available Frameworks</h2>
+  <p>This client has access to the following ESG frameworks and standards.</p>
+  <table>
+    <thead>
+      <tr>
+        <th>Framework</th>
+        <th>Version</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fw in frameworks %}
+      <tr>
+        <td>{{ fw.name }}</td>
+        <td>{{ fw.version }}</td>
+        <td>{{ fw.description }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3">No frameworks configured yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</fieldset>
+
+<fieldset class="module aligned" style="margin-top: 20px;">
+  <h2>ESG Focus Areas</h2>
+  <p>Toggle which ESG focus areas are active for this client.</p>
+  <form method="post">
+    {% csrf_token %}
+    {% for area in focus_areas %}
+    <div style="display: flex; align-items: center; gap: 10px; padding: 5px 0;">
+      <input type="checkbox" name="focus_area_{{ area.id }}" {% if area.is_active %}checked{% endif %} style="width: 18px; height: 18px;">
+      <label><strong>{{ area.name }}</strong> — {{ area.description }}</label>
+    </div>
+    {% empty %}
+    <p>No focus areas assigned to this organization. Run <code>python manage.py seed</code> first.</p>
+    {% endfor %}
+    <div class="submit-row" style="margin-top: 15px;">
+      <input type="submit" value="Save Focus Areas" class="default">
+    </div>
+  </form>
+</fieldset>
+{% endblock %}

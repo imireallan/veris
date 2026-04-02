@@ -1,0 +1,74 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Organization Settings — {{ org.name }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">Home</a>
+&gt; <a href="{% url 'settings:dashboard' %}">Settings</a>
+&gt; Organization
+</div>
+{% endblock %}
+
+{% block content %}
+<fieldset class="module aligned">
+  <h2>Organization Details</h2>
+
+  {% if messages %}
+  <ul class="messagelist">
+  {% for msg in messages %}
+    <li{% if msg.tags %} class="{{ msg.tags }}"{% endif %}>{{ msg }}</li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="form-row field-name">
+      <div>
+        <label class="required" for="id_name">Organization Name</label>
+        <input type="text" id="id_name" name="name" value="{{ org.name }}" style="width: 300px; padding: 6px;">
+        <p class="help">The display name shown to users.</p>
+      </div>
+    </div>
+    <div class="form-row field-slug">
+      <div>
+        <label class="required" for="id_slug">URL Slug</label>
+        <input type="text" id="id_slug" name="slug" value="{{ org.slug }}" style="width: 300px; padding: 6px;">
+        <p class="help">Lowercase, no spaces. Used in URLs.</p>
+      </div>
+    </div>
+    <div class="form-row field-subscription_tier">
+      <div>
+        <label for="id_subscription_tier">Subscription Tier</label>
+        <select id="id_subscription_tier" name="subscription_tier" style="padding: 6px;">
+          <option value="FREE" {% if org.subscription_tier == 'FREE' %}selected{% endif %}>Free</option>
+          <option value="STANDARD" {% if org.subscription_tier == 'STANDARD' %}selected{% endif %}>Standard</option>
+          <option value="ENTERPRISE" {% if org.subscription_tier == 'ENTERPRISE' %}selected{% endif %}>Enterprise</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row field-status">
+      <div>
+        <label for="id_status">Status</label>
+        <select id="id_status" name="status" style="padding: 6px;">
+          <option value="ACTIVE" {% if org.status == 'ACTIVE' %}selected{% endif %}>Active</option>
+          <option value="SUSPENDED" {% if org.status == 'SUSPENDED' %}selected{% endif %}>Suspended</option>
+          <option value="TRIAL" {% if org.status == 'TRIAL' %}selected{% endif %}>Trial</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row field-custom_domain">
+      <div>
+        <label for="id_custom_domain">Custom Domain</label>
+        <input type="text" id="id_custom_domain" name="custom_domain" value="{{ org.custom_domain }}" placeholder="platform.client.com" style="width: 300px; padding: 6px;">
+        <p class="help">Optional — custom domain for white-label access.</p>
+      </div>
+    </div>
+    <div class="submit-row" style="margin-top: 20px;">
+      <input type="submit" value="Save" class="default">
+    </div>
+  </form>
+</fieldset>
+{% endblock %}

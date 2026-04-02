@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# Environment
+.env
+.env.local
+.env.production
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+.junit/
+
+# Node
+frontend/node_modules/
+ai_engine/node_modules/
+
+# Docker
+uploads/
+temp/
+
+# Generated
+*.log
+*.sqlite3

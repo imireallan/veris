@@ -3,7 +3,6 @@ services:
   frontend:
     build:
       context: ./frontend
-      # run the dev version locally
       target: development-dependencies-env
     ports:
       - "5173:5173"
@@ -14,8 +13,8 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - API_URL=http://backend:8000
-      - AI_API_URL=http://ai_engine:8001
+      - VITE_API_URL=http://backend:8000
+      - VITE_AI_API_URL=http://ai_engine:8001
     depends_on:
       backend:
         condition: service_started

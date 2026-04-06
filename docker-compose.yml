@@ -31,8 +31,6 @@ services:
     env_file: .env
     volumes:
       - ./backend:/app
-    environment:
-      - PYTHONPATH=/usr/local/lib/python3.11/site-packages
     depends_on:
       db:
         condition: service_healthy
@@ -56,7 +54,6 @@ services:
       - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - PYTHONPATH=/usr/local/lib/python3.11/site-packages
     volumes:
       - ./ai_engine:/app
     depends_on:

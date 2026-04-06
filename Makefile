@@ -78,6 +78,9 @@ backend-bash: ## Bash into backend container
 backend-test: ## Run backend tests
 	docker compose run --rm backend pytest
 
+create-superuser: ## Create Django superuser
+	docker compose run --rm backend python manage.py createsuperuser
+
 # ─────────────────────────────────────────────
 # Frontend (Vite)
 # ─────────────────────────────────────────────

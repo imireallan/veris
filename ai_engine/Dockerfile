@@ -8,12 +8,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 # 1. Force UV to use system python
 # 2. Add the global site-packages to PYTHONPATH
 # 3. Ensure /usr/local/bin (where uvicorn lives) is in PATH
-ENV UV_SYSTEM_PYTHON=1 \
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_COMPILE_BYTECODE=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/usr/local/lib/python3.11/site-packages \
-    PATH="/usr/local/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
 

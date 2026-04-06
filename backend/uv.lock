@@ -16,7 +16,6 @@ name = "backend"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "black" },
     { name = "django" },
     { name = "django-cors-headers" },
     { name = "django-environ" },
@@ -30,6 +29,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "black" },
     { name = "factory-boy" },
     { name = "flake8" },
     { name = "isort" },
@@ -42,7 +42,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "black", specifier = "==24.10.0" },
     { name = "django", specifier = "==5.1.5" },
     { name = "django-cors-headers", specifier = "==4.4.0" },
     { name = "django-environ", specifier = "==0.12.0" },
@@ -56,6 +55,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "black", specifier = "==24.10.0" },
     { name = "factory-boy", specifier = "==3.3.1" },
     { name = "flake8", specifier = "==7.1.1" },
     { name = "isort", specifier = "==5.13.2" },

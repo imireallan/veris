@@ -243,6 +243,51 @@ Everything is registered:
 
 ---
 
+## 5b. Multi-Industry Support
+
+The platform works across any industry. The key design decisions:
+
+### Site Types
+`Site.SiteType` is an enum with 12 options covering coal, oil/gas, agriculture, manufacturing, retail:
+- MINE, OPERATION, WELL, FACILITY, REFINERY
+- PORT, OFFICE, TRANSPORT
+- FARM, FACTORY, WAREHOUSE, RETAIL
+
+### Industry-Specific Data
+Industry-specific fields live in `Site.industry_data` (JSONField). This avoids adding new columns per industry:
+- Coal: `type_of_coal`, `type_of_mine`, `fatalities_last_12m`, `is_coal_washing`
+- Oil/Gas: `well_count`, `production_rate_bpd`, `pipeline_length_km`
+- Agriculture: `crop_type`, `hectares`, `irrigation_method`
+- Manufacturing: `production_lines`, `capacity_units`, `waste_management_type`
+
+### Assessors
+`AssessorProfile` replaces Bettercoal's assessor model. Key fields:
+- `role`: LEAD, SENIOR, JUNIOR, EXPERT
+- `specializations`: JSON list of industries (COAL, OIL_GAS, AGRICULTURE, etc.)
+- `can_be_lead_assessor`: bool
+- Cross-industry: an assessor can work on multiple industry types
+
+### Bettercoal Frameworks
+Their 12 CIP Code principles (Business Integrity, Human Rights, Labour Rights, H&S, etc.)  
+map to our `Framework` model. Their provisions map to `ESGFocusArea`. This means:
+- Any industry can have any framework loaded
+- Frameworks are org-level (each tenant has its own set)
+- Provisions are focus areas within a framework
+
+### Import Existing Data
+```bash
+docker compose run --rm backend python manage.py import_bettercoal bettercoal.sql --dry-run
+docker compose run --rm backend python manage.py import_bettercoal bettercoal.sql
+```
+
+The importer maps:
+- `users_company` → Organization
+- `assurance_process_*` → Assessment + AssessmentPlan
+- `assurance_process_minesite` → Site (MINE type)
+- `cip_code_*` → Framework + ESGFocusArea
+- `assessment_report_finding` → Finding
+- `users_assessorprofile` → AssessorProfile
+
 ## 6. Development Workflow
 
 ### Adding a New API Endpoint
@@ -327,7 +372,7 @@ Run `make backend-seed` to populate:
 
 ---
 
-## 8. Known Gaps (Not Yet Implemented)
+## 9. Common Pitfalls
 
 | Area | Status | Notes |
 |------|--------|-------|

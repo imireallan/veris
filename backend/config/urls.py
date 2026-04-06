@@ -13,6 +13,10 @@ from assessments.views import (
     AssessmentResponseViewSet,
     TaskViewSet,
     SiteViewSet,
+    AssessmentReportViewSet,
+    FindingViewSet,
+    CIPCycleViewSet,
+    AssessmentPlanViewSet,
 )
 from knowledge.views import KnowledgeDocumentViewSet
 from .health import health_check
@@ -28,6 +32,10 @@ router.register(r"api/responses", AssessmentResponseViewSet, basename="response"
 router.register(r"api/tasks", TaskViewSet, basename="task")
 router.register(r"api/sites", SiteViewSet, basename="site")
 router.register(r"api/documents", KnowledgeDocumentViewSet, basename="knowledge-document")
+router.register(r"api/reports", AssessmentReportViewSet, basename="report")
+router.register(r"api/findings", FindingViewSet, basename="finding")
+router.register(r"api/cip-cycles", CIPCycleViewSet, basename="cipcycle")
+router.register(r"api/plans", AssessmentPlanViewSet, basename="plan")
 
 urlpatterns = [
     path("api/health/", health_check, name="health-check"),

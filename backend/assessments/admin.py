@@ -10,6 +10,10 @@ from assessments.models import (
     AIInsight,
     Task,
     Site,
+    AssessmentReport,
+    Finding,
+    CIPCycle,
+    AssessmentPlan,
 )
 
 
@@ -111,3 +115,35 @@ class SiteAdmin(admin.ModelAdmin):
     search_fields = ("name", "description", "region")
     readonly_fields = ("id", "created_at", "updated_at")
     ordering = ("organization__name", "name")
+
+
+@admin.register(AssessmentReport)
+class AssessmentReportAdmin(admin.ModelAdmin):
+    list_display = ("title", "assessment", "organization", "status", "report_published_date")
+    list_filter = ("status",)
+    search_fields = ("title",)
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(Finding)
+class FindingAdmin(admin.ModelAdmin):
+    list_display = ("topic", "severity", "status", "assessment", "responsible_party")
+    list_filter = ("severity", "status")
+    search_fields = ("topic", "summary", "recommended_actions")
+    readonly_fields = ("id", "created_at", "updated_at")
+    ordering = ("-severity", "-created_at")
+
+
+@admin.register(CIPCycle)
+class CIPCycleAdmin(admin.ModelAdmin):
+    list_display = ("label", "assessment", "organization", "status", "start_date", "deadline_period_months")
+    list_filter = ("status",)
+    search_fields = ("label",)
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(AssessmentPlan)
+class AssessmentPlanAdmin(admin.ModelAdmin):
+    list_display = ("assessment", "site_assessment_start", "site_assessment_end", "draft_report_deadline")
+    search_fields = ("notes",)
+    readonly_fields = ("id", "created_at", "updated_at")

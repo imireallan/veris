@@ -29,6 +29,7 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<LoaderDat
       { to: "/assessments", label: "Assessments", icon: "ClipboardCheck" },
       { to: "/knowledge", label: "Knowledge", icon: "BookOpen" },
       { to: "/knowledge/chat", label: "AI Chat", icon: "MessageSquare" },
+      { to: "/data", label: "Data", icon: "Database" },
       { to: "/settings/theme", label: "Theme", icon: "Paintbrush" },
     ],
   };

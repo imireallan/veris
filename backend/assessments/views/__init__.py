@@ -1,4 +1,7 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from assessments.models import (
     ESGFocusArea,
     ExternalRating,
@@ -10,6 +13,10 @@ from assessments.models import (
     Task,
     Site,
     Framework,
+    AssessmentReport,
+    Finding,
+    CIPCycle,
+    AssessmentPlan,
 )
 from assessments.serializers import (
     ESGFocusAreaSerializer,
@@ -22,6 +29,10 @@ from assessments.serializers import (
     TaskSerializer,
     SiteSerializer,
     FrameworkSerializer,
+    AssessmentReportSerializer,
+    FindingSerializer,
+    CIPCycleSerializer,
+    AssessmentPlanSerializer,
 )
 
 
@@ -115,3 +126,35 @@ class SiteViewSet(viewsets.ModelViewSet):
         return Site.objects.filter(
             organization_id=self.kwargs.get("org_pk")
         )
+
+
+class AssessmentReportViewSet(viewsets.ModelViewSet):
+    serializer_class = AssessmentReportSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return AssessmentReport.objects.all()
+
+
+class FindingViewSet(viewsets.ModelViewSet):
+    serializer_class = FindingSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return Finding.objects.all()
+
+
+class CIPCycleViewSet(viewsets.ModelViewSet):
+    serializer_class = CIPCycleSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return CIPCycle.objects.all()
+
+
+class AssessmentPlanViewSet(viewsets.ModelViewSet):
+    serializer_class = AssessmentPlanSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        return AssessmentPlan.objects.all()

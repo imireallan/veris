@@ -204,8 +204,284 @@ class Command(BaseCommand):
                 status = "Created" if created else "Exists"
                 self.stdout.write(f"  [{status}] {org.name} -> {fa['name']}")
 
+        # ─────────────────────────────────────────────────────
+        # Sites (multi-industry — coal, oil/gas, agriculture)
+        # ─────────────────────────────────────────────────────
+        from assessments.models import Site
+
+        sites_data = [
+            {
+                "org_slug": "demo-mining",
+                "site": {
+                    "name": "Kgalagadi Colliery",
+                    "type": Site.SiteType.MINE,
+                    "country_code": "ZA",
+                    "region": "Mpumalanga",
+                    "coordinates": {"lat": -25.7479, "lng": 29.7620},
+                    "operational_status": Site.OperationalStatus.ACTIVE,
+                    "risk_profile": Site.RiskProfile.HIGH,
+                    "employee_count": 1200,
+                    "contractor_count": 450,
+                    "operational_since": 2005,
+                    "estimated_lifetime_years": 25,
+                    "industry_data": {
+                        "type_of_coal": "Bituminous / Thermal",
+                        "type_of_mine": "Open Pit + Underground",
+                        "certifications": ["ISO 14001", "NOSA"],
+                        "is_coal_washing": True,
+                        "fatalities_last_12m": 0,
+                    },
+                    "is_in_indigenous_territory": False,
+                    "is_in_conflict_zone": False,
+                    "description": "Primary thermal coal mine supplying regional power stations.",
+                },
+            },
+            {
+                "org_slug": "demo-mining",
+                "site": {
+                    "name": "Pilanesberg Processing Plant",
+                    "type": Site.SiteType.FACILITY,
+                    "country_code": "ZA",
+                    "region": "North West",
+                    "coordinates": {"lat": -25.2333, "lng": 27.1667},
+                    "operational_status": Site.OperationalStatus.ACTIVE,
+                    "risk_profile": Site.RiskProfile.MEDIUM,
+                    "employee_count": 350,
+                    "contractor_count": 120,
+                    "operational_since": 2010,
+                    "industry_data": {
+                        "certifications": ["ISO 45001"],
+                    },
+                    "description": "Coal wash and processing facility.",
+                },
+            },
+            {
+                "org_slug": "demo-energy",
+                "site": {
+                    "name": "Niger Delta Block 7",
+                    "type": Site.SiteType.OPERATION,
+                    "country_code": "NG",
+                    "region": "Niger Delta",
+                    "coordinates": {"lat": 5.0, "lng": 6.2},
+                    "operational_status": Site.OperationalStatus.ACTIVE,
+                    "risk_profile": Site.RiskProfile.CRITICAL,
+                    "employee_count": 800,
+                    "contractor_count": 1500,
+                    "operational_since": 1998,
+                    "industry_data": {
+                        "well_count": 42,
+                        "production_rate_bpd": 15000,
+                        "pipeline_length_km": 180,
+                    },
+                    "is_in_indigenous_territory": True,
+                    "is_in_conflict_zone": True,
+                    "description": "Major oil and gas extraction block with community tensions.",
+                },
+            },
+        ]
+
+        for site_info in sites_data:
+            org = org_map.get(site_info["org_slug"])
+            if not org:
+                continue
+            site, created = Site.objects.get_or_create(
+                organization=org,
+                name=site_info["site"]["name"],
+                defaults=site_info["site"],
+            )
+            status = "Created" if created else "Exists"
+            self.stdout.write(f"  [{status}] Site: {site.name}")
+
+        # ─────────────────────────────────────────────────────
+        # Assessment + Plan + Report + Finding + CIP Cycle demo
+        # ─────────────────────────────────────────────────────
+        from datetime import date, timedelta
+        from assessments.models import (
+            Assessment,
+            AssessmentPlan,
+            AssessmentReport,
+            Finding,
+            CIPCycle,
+            Task,
+        )
+
+        mining_org = org_map.get("demo-mining")
+        energy_org = org_map.get("demo-energy")
+        site1 = Site.objects.filter(organization=mining_org).first() if mining_org else None
+        site3 = Site.objects.filter(organization=energy_org).first() if energy_org else None
+        framework_ecs = Framework.objects.filter(name="Energy Certification Standard").first()
+
+        # Demo assessment with full Bettercoal-style flow
+        demo_assessment = None
+        if mining_org and mining_org.focus_areas.exists():
+            focus_area = mining_org.focus_areas.first()
+            demo_assessment, _ = Assessment.objects.get_or_create(
+                organization=mining_org,
+                focus_area=focus_area,
+                framework=framework_ecs,
+                defaults={
+                    "site": site1,
+                    "status": Assessment.Status.IN_PROGRESS,
+                    "start_date": date.today() - timedelta(days=30),
+                    "due_date": date.today() + timedelta(days=60),
+                    "created_by": User.objects.filter(is_superuser=True).first(),
+                    "overall_score": 62.5,
+                    "risk_level": Assessment.RiskLevel.MEDIUM,
+                    "ai_summary": "Assessment in progress. Key gaps identified in labour standards reporting.",
+                },
+            )
+            self.stdout.write(f"  [Upsert] Assessment: {demo_assessment}")
+
+        if demo_assessment:
+            # Assessment Plan
+            AssessmentPlan.objects.get_or_create(
+                assessment=demo_assessment,
+                defaults={
+                    "organization": mining_org,
+                    "site_assessment_start": date.today() - timedelta(days=10),
+                    "site_assessment_end": date.today() + timedelta(days=5),
+                    "draft_report_deadline": date.today() + timedelta(days=30),
+                    "final_report_deadline": date.today() + timedelta(days=60),
+                    "notes": "Follow OECD Due Diligence framework for site visit.",
+                },
+            )
+
+            # Assessment Report
+            AssessmentReport.objects.get_or_create(
+                assessment=demo_assessment,
+                defaults={
+                    "organization": mining_org,
+                    "title": "2025 ESG Assurance Report — Kgalagadi Colliery",
+                    "status": AssessmentReport.ReportStatus.DRAFT,
+                    "executive_summary": "This report presents findings from the ESG assurance assessment at Kgalagadi Colliery.",
+                    "methodology": "Site visits, stakeholder interviews, document review, and worker surveys.",
+                    "scope": "Labour standards, environmental management, community impact.",
+                },
+            )
+
+            # Findings
+            findings = [
+                {
+                    "topic": "Worker Safety — PPE Compliance",
+                    "summary": "Multiple workers observed without required PPE in underground sections.",
+                    "recommended_actions": "Implement mandatory PPE checks at entry points. Provide refresher training.",
+                    "severity": Finding.Severity.HIGH,
+                    "status": Finding.Status.OPEN,
+                    "responsible_party": "Site Safety Manager",
+                },
+                {
+                    "topic": "Community Grievance Mechanism",
+                    "summary": "No formal grievance mechanism documented for surrounding communities.",
+                    "recommended_actions": "Establish community liaison office and complaint tracking system.",
+                    "severity": Finding.Severity.MEDIUM,
+                    "status": Finding.Status.IN_PROGRESS,
+                    "responsible_party": "Community Relations Lead",
+                },
+                {
+                    "topic": "Environmental Monitoring Data Gap",
+                    "summary": "Water quality monitoring data missing for Q3 2024.",
+                    "recommended_actions": "Install automated monitoring stations and establish reporting cadence.",
+                    "severity": Finding.Severity.MEDIUM,
+                    "status": Finding.Status.OPEN,
+                    "responsible_party": "Environmental Officer",
+                },
+            ]
+            for f_data in findings:
+                _, created = Finding.objects.get_or_create(
+                    organization=mining_org,
+                    assessment=demo_assessment,
+                    topic=f_data["topic"],
+                    defaults={**f_data, "site": site1, "provision": framework_ecs},
+                )
+                self.stdout.write(f"  [{'Created' if created else 'Exists'}] Finding: {f_data['topic']}")
+
+            # CIP Cycles
+            for label, months in [("12 Month Review", 12), ("24 Month Follow-up", 24)]:
+                CIPCycle.objects.get_or_create(
+                    organization=mining_org,
+                    assessment=demo_assessment,
+                    label=label,
+                    defaults={
+                        "deadline_period_months": months,
+                        "start_date": date.today(),
+                        "status": CIPCycle.CycleStatus.ACTIVE,
+                    },
+                )
+
+            # Tasks (linked to findings)
+            from assessments.models import Finding as FindingModel
+            open_findings = FindingModel.objects.filter(
+                assessment=demo_assessment, status=Finding.Status.OPEN
+            )
+            for finding in open_findings:
+                Task.objects.get_or_create(
+                    organization=mining_org,
+                    assessment=demo_assessment,
+                    title=f"Address: {finding.topic}",
+                    defaults={
+                        "description": finding.recommended_actions,
+                        "priority": Task.Priority.HIGH if finding.severity == Finding.Severity.HIGH else Task.Priority.MEDIUM,
+                        "status": Task.Status.PENDING,
+                        "focus_area": demo_assessment.focus_area,
+                    },
+                )
+
+        # Energy org assessment (oil/gas)
+        if energy_org and energy_org.focus_areas.exists():
+            oil_focus = energy_org.focus_areas.filter(name="Low Emissions").first()
+            if oil_focus:
+                energy_assessment, _ = Assessment.objects.get_or_create(
+                    organization=energy_org,
+                    focus_area=oil_focus,
+                    framework=framework_ecs,
+                    defaults={
+                        "site": site3,
+                        "status": Assessment.Status.DRAFT,
+                        "start_date": date.today(),
+                        "due_date": date.today() + timedelta(days=90),
+                        "overall_score": 0.0,
+                        "risk_level": Assessment.RiskLevel.HIGH,
+                    },
+                )
+                self.stdout.write(f"  [Upsert] Assessment: {energy_assessment}")
+
+                # Sites findings for oil/gas
+                Finding.objects.get_or_create(
+                    organization=energy_org,
+                    assessment=energy_assessment,
+                    topic="Indigenous Rights — Free, Prior, Informed Consent",
+                    defaults={
+                        "summary": "No evidence of FPIC consultation before block expansion.",
+                        "recommended_actions": "Initiate FPIC process with affected communities.",
+                        "severity": Finding.Severity.CRITICAL,
+                        "status": Finding.Status.OPEN,
+                        "responsible_party": "Legal & Community Affairs",
+                        "site": site3,
+                    },
+                )
+
+        # ─────────────────────────────────────────────────────
+        # Assessor Profile (Bettercoal-style)
+        # ─────────────────────────────────────────────────────
+        from users.models import AssessorProfile
+
+        admin_user = User.objects.filter(is_superuser=True).first()
+        if admin_user and not hasattr(admin_user, "assessor_profile"):
+            AssessorProfile.objects.create(
+                user=admin_user,
+                role=AssessorProfile.Role.LEAD,
+                specializations=[AssessorProfile.Specialization.COAL, AssessorProfile.Specialization.OIL_GAS],
+                can_be_lead_assessor=True,
+                biography="Senior ESG assessor with 15+ years in mining and energy sector audits.",
+                direct_phone_number="+27 82 000 0000",
+                country="ZA",
+                region="Gauteng",
+                current_organisation="Bettercoal",
+                is_registration_completed=True,
+            )
+            self.stdout.write(self.style.SUCCESS("  [Created] Assessor Profile for admin"))
+
         # Summary
-        self.stdout.write("")
         self.stdout.write(self.style.SUCCESS("=" * 50))
         self.stdout.write(self.style.SUCCESS("Database seeded successfully!"))
         self.stdout.write(self.style.SUCCESS("=" * 50))

@@ -1,7 +1,15 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from users.models import User
+from users.models import User, AssessorProfile
+
+
+@admin.register(AssessorProfile)
+class AssessorProfileAdmin(admin.ModelAdmin):
+    list_display = ("user", "role", "can_be_lead_assessor", "country", "current_organisation")
+    list_filter = ("role", "can_be_lead_assessor", "country")
+    search_fields = ("user__email", "user__name", "biography", "current_organisation")
+    readonly_fields = ("id", "created_at", "updated_at")
 
 
 @admin.register(User)

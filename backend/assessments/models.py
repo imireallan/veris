@@ -328,20 +328,33 @@ class Task(models.Model):
 
 
 class Site(models.Model):
-    """
-    Physical locations being assessed.
-    """
+    """Physical locations being assessed — works across all industries."""
 
     class SiteType(models.TextChoices):
-        OPERATION = "OPERATION", "Operation"
         MINE = "MINE", "Mine"
-        OFFICE = "OFFICE", "Office"
-        FACILITY = "FACILITY", "Facility"
+        OPERATION = "OPERATION", "Oil/Gas Operation"
+        WELL = "WELL", "Well Pad / Well Site"
+        FACILITY = "FACILITY", "Processing Facility"
+        REFINERY = "REFINERY", "Refinery"
+        PORT = "PORT", "Port / Storage Facility"
+        OFFICE = "OFFICE", "Regional Office"
+        TRANSPORT = "TRANSPORT", "Transport Infrastructure"
+        FARM = "FARM", "Farm / Plantation"
+        FACTORY = "FACTORY", "Factory / Manufacturing"
+        WAREHOUSE = "WAREHOUSE", "Warehouse"
+        RETAIL = "RETAIL", "Retail Location"
 
     class OperationalStatus(models.TextChoices):
         ACTIVE = "ACTIVE", "Active"
         DECOMMISSIONED = "DECOMMISSIONED", "Decommissioned"
         PLANNED = "PLANNED", "Planned"
+        UNDER_CONSTRUCTION = "UNDER_CONSTRUCTION", "Under Construction"
+
+    class RiskProfile(models.TextChoices):
+        LOW = "LOW", "Low Risk"
+        MEDIUM = "MEDIUM", "Medium Risk"
+        HIGH = "HIGH", "High Risk"
+        CRITICAL = "CRITICAL", "Critical Risk"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
@@ -349,13 +362,48 @@ class Site(models.Model):
     )
     name = models.CharField(max_length=300)
     type = models.CharField(max_length=20, choices=SiteType.choices)
-    country_code = models.CharField(max_length=3)
-    region = models.CharField(max_length=200, blank=True, default="")
-    coordinates = models.JSONField(default=dict, help_text="{'lat': float, 'lng': float}")
     operational_status = models.CharField(
         max_length=20, choices=OperationalStatus.choices, default=OperationalStatus.ACTIVE
     )
+    risk_profile = models.CharField(
+        max_length=20, choices=RiskProfile.choices, default=RiskProfile.MEDIUM
+    )
+
+    # Location
+    country_code = models.CharField(max_length=3)
+    region = models.CharField(max_length=200, blank=True, default="")
+    coordinates = models.JSONField(default=dict, help_text="{'lat': float, 'lng': float}")
+
+    # Industry-specific fields (stored as JSON for flexibility across industries)
+    industry_data = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text=(
+            "Flexible industry-specific fields. Examples:\n"
+            "  Coal: type_of_coal, type_of_mine, certifications, contractors, fatalities, etc.\n"
+            "  Oil/Gas: well_type, production_rate, pipeline_connections, etc.\n"
+            "  Agriculture: crop_type, hectares, irrigation, etc.\n"
+            "  Manufacturing: production_lines, capacity, waste_management, etc."
+        ),
+    )
+
+    # Common operational metrics
+    employee_count = models.PositiveIntegerField(default=0, blank=True)
+    contractor_count = models.PositiveIntegerField(default=0, blank=True)
+    operational_since = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Year operations started"
+    )
+    estimated_lifetime_years = models.PositiveIntegerField(
+        null=True, blank=True, help_text="Remaining operational lifetime"
+    )
+    expansion_plan = models.TextField(blank=True, default="")
+
+    # Compliance
     certifications = models.JSONField(default=list)
+    other_certifications = models.TextField(blank=True, default="")
+    is_in_indigenous_territory = models.BooleanField(default=False)
+    is_in_conflict_zone = models.BooleanField(default=False, help_text="CAHRA or similar")
+
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -366,3 +414,213 @@ class Site(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.organization.name})"
+
+
+# ─────────────────────────────────────────────────────────────
+# Assessment Reports & Findings (Bettercoal-compatible)
+# ─────────────────────────────────────────────────────────────
+
+class AssessmentReport(models.Model):
+    """Structured assessment report with multiple sections.
+    Mirrors Bettercoal's multi-section report model but simplified.
+    """
+
+    class ReportStatus(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        UNDER_REVIEW = "UNDER_REVIEW", "Under Review"
+        COMPLETED = "COMPLETED", "Completed"
+        ARCHIVED = "ARCHIVED", "Archived"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "organizations.Organization", on_delete=models.CASCADE, related_name="assessment_reports"
+    )
+    assessment = models.OneToOneField(
+        "assessments.Assessment", on_delete=models.CASCADE, related_name="report"
+    )
+    title = models.CharField(max_length=500, default="Assessment Report")
+    status = models.CharField(
+        max_length=20, choices=ReportStatus.choices, default=ReportStatus.DRAFT
+    )
+
+    # Report sections stored as JSON for flexibility
+    executive_summary = models.TextField(blank=True, default="")
+    methodology = models.TextField(blank=True, default="")
+    scope = models.TextField(blank=True, default="")
+    country_context = models.TextField(blank=True, default="")
+    conclusion = models.TextField(blank=True, default="")
+
+    # Meeting participants (opening/closing)
+    meeting_participants = models.JSONField(default=list, blank=True)
+    stakeholder_meetings = models.JSONField(default=list, blank=True)
+
+    # Limitations and disclaimers
+    limitations = models.JSONField(default=list, blank=True)
+    disclaimer = models.TextField(blank=True, default="")
+
+    # Assessment metadata
+    assessment_start_date = models.DateField(null=True, blank=True)
+    assessment_end_date = models.DateField(null=True, blank=True)
+    report_published_date = models.DateField(null=True, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "assessment_reports"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Report: {self.title} - {self.assessment}"
+
+
+class Finding(models.Model):
+    """Assessment finding linked to a framework provision.
+    Equivalent to Bettercoal's assessment_report_finding + cip_cipfinding.
+    """
+
+    class Severity(models.TextChoices):
+        LOW = "LOW", "Low"
+        MEDIUM = "MEDIUM", "Medium"
+        HIGH = "HIGH", "High"
+        CRITICAL = "CRITICAL", "Critical"
+
+    class Status(models.TextChoices):
+        OPEN = "OPEN", "Open"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        RESOLVED = "RESOLVED", "Resolved"
+        CLOSED = "CLOSED", "Closed"
+        WAIVED = "WAIVED", "Waived"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "organizations.Organization", on_delete=models.CASCADE, related_name="findings"
+    )
+    report = models.ForeignKey(
+        "assessments.AssessmentReport",
+        on_delete=models.CASCADE,
+        related_name="findings",
+        null=True,
+        blank=True,
+    )
+    assessment = models.ForeignKey(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="findings",
+    )
+    site = models.ForeignKey(
+        "assessments.Site",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="findings",
+    )
+    provision = models.ForeignKey(
+        "assessments.Framework",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="The framework provision this finding relates to",
+    )
+    topic = models.CharField(max_length=300, blank=True, default="")
+    summary = models.TextField(blank=True, default="")
+    recommended_actions = models.TextField(blank=True, default="")
+    severity = models.CharField(
+        max_length=20, choices=Severity.choices, default=Severity.MEDIUM
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.OPEN
+    )
+    responsible_party = models.CharField(max_length=255, blank=True, default="")
+    supplier_response = models.TextField(blank=True, default="")
+    assessor_comments = models.TextField(blank=True, default="")
+    marked_as_completed = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "findings"
+        ordering = ["-severity", "-created_at"]
+
+    def __str__(self):
+        return f"Finding: {self.topic} ({self.status})"
+
+
+class CIPCycle(models.Model):
+    """Continuous Improvement Plan monitoring cycle.
+    Equivalent to Bettercoal's cip_cipmonitoringcycle.
+    Tracks recurring compliance checks over time.
+    """
+
+    class CycleStatus(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Completed"
+        OVERDUE = "OVERDUE", "Overdue"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="cip_cycles",
+    )
+    assessment = models.ForeignKey(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="cip_cycles",
+    )
+    label = models.CharField(max_length=100, help_text="e.g. '12 Month Review', 'Phase 2'")
+    deadline_period_months = models.PositiveIntegerField(
+        default=12, help_text="Monitoring period in months"
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=CycleStatus.choices,
+        default=CycleStatus.ACTIVE,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "cip_cycles"
+        ordering = ["-start_date"]
+
+    def __str__(self):
+        return f"CIP Cycle: {self.label} ({self.assessment})"
+
+
+class AssessmentPlan(models.Model):
+    """Assessment planning — schedules, deadlines, site visit windows.
+    Equivalent to Bettercoal's assessment_planning_assessmentplan.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="assessment_plans",
+    )
+    assessment = models.OneToOneField(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="plan",
+    )
+    site_assessment_start = models.DateField()
+    site_assessment_end = models.DateField()
+    draft_report_deadline = models.DateField()
+    final_report_deadline = models.DateField(null=True, blank=True)
+    opening_meeting_date = models.DateField(null=True, blank=True)
+    closing_meeting_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "assessment_plans"
+        ordering = ["site_assessment_start"]
+
+    def __str__(self):
+        return f"Plan: {self.assessment}"

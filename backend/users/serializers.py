@@ -1,55 +1,28 @@
 from rest_framework import serializers
-from .models import User
+
+from .models import User, AssessorProfile
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = [
-            "id",
-            "email",
-            "name",
-            "organization",
-            "role",
-            "status",
-            "timezone",
-            "created_at",
-            "updated_at",
-        ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        fields = (
+            "id", "email", "name", "organization", "role", "status",
+            "timezone", "is_staff", "is_active", "created_at", "updated_at",
+        )
+        read_only_fields = ("id", "created_at", "updated_at")
 
 
-class UserCreationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    password_confirm = serializers.CharField(write_only=True)
+class AssessorProfileSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source="user.email", read_only=True)
+    name = serializers.CharField(source="user.name", read_only=True)
 
     class Meta:
-        model = User
-        fields = [
-            "id",
-            "email",
-            "name",
-            "organization",
-            "role",
-            "password",
-            "password_confirm",
-            "timezone",
-        ]
-        read_only_fields = ["id"]
-
-    def validate(self, attrs):
-        if attrs["password"] != attrs.pop("password_confirm"):
-            raise serializers.ValidationError({"password": "Passwords do not match"})
-        return super().validate(attrs)
-
-    def create(self, validated_data):
-        user = User.objects.create_user(
-            email=validated_data["email"],
-            password=validated_data["password"],
+        model = AssessorProfile
+        fields = (
+            "id", "email", "name", "user", "role", "specializations",
+            "can_be_lead_assessor", "biography", "direct_phone_number",
+            "timezone", "country", "region", "current_organisation",
+            "is_registration_completed", "created_at", "updated_at",
         )
-        user.name = validated_data.get("name", "")
-        user.organization = validated_data.get("organization")
-        user.role = validated_data.get("role", User.Role.OPERATOR)
-        user.timezone = validated_data.get("timezone", "UTC")
-        user.save()
-        return user
+        read_only_fields = ("id", "created_at", "updated_at")

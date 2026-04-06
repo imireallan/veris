@@ -10,6 +10,10 @@ from assessments.models import (
     Task,
     Site,
     Framework,
+    AssessmentReport,
+    Finding,
+    CIPCycle,
+    AssessmentPlan,
 )
 
 
@@ -118,7 +122,61 @@ class SiteSerializer(serializers.ModelSerializer):
         model = Site
         fields = [
             "id", "organization", "name", "type", "country_code",
-            "region", "coordinates", "operational_status",
-            "certifications", "description", "created_at", "updated_at"
+            "region", "coordinates", "operational_status", "risk_profile",
+            "industry_data", "employee_count", "contractor_count",
+            "operational_since", "estimated_lifetime_years", "expansion_plan",
+            "certifications", "other_certifications",
+            "is_in_indigenous_territory", "is_in_conflict_zone",
+            "description", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class AssessmentReportSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssessmentReport
+        fields = [
+            "id", "organization", "assessment", "title", "status",
+            "executive_summary", "methodology", "scope", "country_context",
+            "conclusion", "meeting_participants", "stakeholder_meetings",
+            "limitations", "disclaimer",
+            "assessment_start_date", "assessment_end_date", "report_published_date",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class FindingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Finding
+        fields = [
+            "id", "organization", "report", "assessment", "site", "provision",
+            "topic", "summary", "recommended_actions", "severity", "status",
+            "responsible_party", "supplier_response", "assessor_comments",
+            "marked_as_completed", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class CIPCycleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CIPCycle
+        fields = [
+            "id", "organization", "assessment", "label",
+            "deadline_period_months", "start_date", "end_date",
+            "status", "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class AssessmentPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssessmentPlan
+        fields = [
+            "id", "organization", "assessment",
+            "site_assessment_start", "site_assessment_end",
+            "draft_report_deadline", "final_report_deadline",
+            "opening_meeting_date", "closing_meeting_date",
+            "notes", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]

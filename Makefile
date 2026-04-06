@@ -42,6 +42,50 @@ setup: .env ## Initialise app (db + migrations + seed)
 	@echo "\033[32m  App initialised and seeded!\033[0m"
 	@echo "\033[32m========================================\033[0m"
 
+full-reset: down-clean ## Wipe everything, rebuild from scratch, migrate + seed
+	@echo "\033[33m>>> Rebuilding all images...\033[0m"
+	docker compose up -d --build db
+	@sleep 3
+	docker compose up -d --build backend frontend
+	@echo "Waiting for database..."
+	@until docker compose exec db pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+	@echo "Running migrations + seed..."
+	docker compose run --rm backend python manage.py migrate
+	docker compose run --rm backend python manage.py seed
+	@echo "\033[33m>>> Migrating Bettercoal data...\033[0m"
+	$(MAKE) migrate-bettercoal
+	@echo ""
+	@echo "\033[32m========================================\033[0m"
+	@echo "\033[32m  Full reset complete!\033[0m"
+	@echo "\033[32m  Login: admin@example.com / admin\033[0m"
+	@echo "\033[32m========================================\033[0m"
+	@echo ""
+	@echo "\033[33m>>> Quick verification:\033[0m"
+	@docker exec veris-db-1 psql -U postgres -d veris -c \
+		"SELECT 'Orgs: ' || COUNT(*) FROM organizations UNION ALL SELECT 'Users: ' || COUNT(*) FROM users UNION ALL SELECT 'Frameworks: ' || COUNT(*) FROM frameworks UNION ALL SELECT 'Sites: ' || COUNT(*) FROM sites UNION ALL SELECT 'Assessments: ' || COUNT(*) FROM assessments UNION ALL SELECT 'Findings: ' || COUNT(*) FROM findings;"
+
+wire: ## Full end-to-end setup: DB → migrations → seed → bettercoal → verify
+	@echo "\033[33m>>> Starting database...\033[0m"
+	$(MAKE) db-up
+	@echo "Waiting for database (healthcheck)..."
+	@until docker compose exec db pg_isready -U postgres > /dev/null 2>&1; do sleep 1; done
+	@echo "\033[33m>>> Running Django migrations...\033[0m"
+	docker compose run --rm backend python manage.py migrate
+	@echo "\033[33m>>> Seeding demo data...\033[0m"
+	docker compose run --rm backend python manage.py seed
+	@echo "\033[33m>>> Migrating Bettercoal data...\033[0m"
+	$(MAKE) migrate-bettercoal
+	@echo ""
+	@echo "\033[32m========================================\033[0m"
+	@echo "\033[32m  Wire complete! App is ready.\033[0m"
+	@echo "\033[32m  Login: admin@example.com / admin\033[0m"
+	@echo "\033[32m========================================\033[0m"
+	@echo ""
+	@echo "\033[33m>>> Verification:\033[0m"
+	@docker exec veris-db-1 psql -U postgres -d veris -c \
+		"SELECT 'Orgs: ' || COUNT(*) FROM organizations UNION ALL SELECT 'Users: ' || COUNT(*) FROM users UNION ALL SELECT 'Frameworks: ' || COUNT(*) FROM frameworks UNION ALL SELECT 'Sites: ' || COUNT(*) FROM sites UNION ALL SELECT 'Assessments: ' || COUNT(*) FROM assessments UNION ALL SELECT 'Findings: ' || COUNT(*) FROM findings UNION ALL SELECT 'Focus Areas: ' || COUNT(*) FROM esg_focus_areas;"
+
+
 up: ## Start all services (dev)
 	docker compose up
 
@@ -80,6 +124,16 @@ backend-test: ## Run backend tests
 
 create-superuser: ## Create Django superuser
 	docker compose run --rm backend python manage.py createsuperuser
+
+migrate-bettercoal: ## Migrate Bettercoal data into Veris DB
+	@echo "Loading bettercoal.sql into temp database..."
+	@docker exec veris-db-1 psql -U postgres -c "DROP DATABASE IF EXISTS bettercoal_temp;"
+	@docker exec veris-db-1 psql -U postgres -c "CREATE DATABASE bettercoal_temp;"
+	@docker cp backend/bettercoal.sql veris-db-1:/tmp/bettercoal.sql
+	@docker exec veris-db-1 psql -U postgres -d bettercoal_temp -f /tmp/bettercoal.sql
+	@echo "Temp DB loaded. Running migration..."
+	docker compose exec backend python migrate_bettercoal.py
+	@echo "Bettercoal migration complete!"
 
 # ─────────────────────────────────────────────
 # Frontend (Vite)

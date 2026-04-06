@@ -1,23 +1,22 @@
 import { useLoaderData } from "react-router";
-import type { Route } from "./+types/data";
-import { requireUser } from "~/.server/sessions";
+import type { LoaderFunctionArgs } from "react-router";
+import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/api";
 import { useState } from "react";
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   await requireUser(request);
+  const token = getUserToken(request);
   const [findings, sites, reports, cipCycles, plans, frameworks, orgs] =
     await Promise.all([
-      api.get("/api/findings/"),
-      api.get("/api/sites/"),
-      api.get("/api/reports/"),
-      api.get("/api/cip-cycles/"),
-      api.get("/api/plans/"),
-      api.get("/api/frameworks/"),
-      api.get("/api/organizations/"),
-    ].map((promise) =>
-      promise.catch(() => ({ count: 0, results: [] as any[] }))
-    ));
+      api.get("/api/findings/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/sites/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/reports/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/cip-cycles/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/plans/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/frameworks/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/organizations/", token).catch(() => ({ count: 0, results: [] })),
+    ]);
 
   return { findings, sites, reports, cipCycles, plans, frameworks, orgs };
 }

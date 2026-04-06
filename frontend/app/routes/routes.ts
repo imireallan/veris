@@ -10,5 +10,5 @@ export default [
   route("knowledge/chat", "routes/knowledge/chat.tsx"),
   route("assessments", "routes/assessments.tsx"),
   route("assessments/new", "routes/assessments.new.tsx"),
-  route("assessments/:id", "routes/assessments_detail.tsx"),
+  route("assessments/$id", "routes/assessments.$id.tsx"),
 ] satisfies RouteConfig;

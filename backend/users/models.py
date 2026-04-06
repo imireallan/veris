@@ -1,6 +1,6 @@
 import uuid
 
-from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
 from django.contrib.auth.hashers import make_password
 from django.db import models
 
@@ -29,7 +29,7 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra_fields)
 
 
-class User(models.Model):
+class User(AbstractBaseUser):
     """Custom user model with email as unique identifier."""
 
     class Role(models.TextChoices):

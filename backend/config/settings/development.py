@@ -1,18 +1,8 @@
-import environ
 from config.settings.base import *  # noqa: F401,F403
-from config.settings.base import BASE_DIR
-
-env = environ.Env(DEBUG=(bool, False))
-environ.Env.read_env(BASE_DIR / ".env")
+from config.settings.base import env
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 
-DATABASES = {
-    "default": env.db(
-        "DATABASE_URL",
-        default="postgresql://postgres:postgres@localhost:5432/sustainabilityai",
-    )
-}
 
 DEBUG = env.bool("DEBUG", default=True)
 SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="django-insecure-change-me-in-production")

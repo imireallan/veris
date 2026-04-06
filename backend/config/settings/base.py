@@ -2,8 +2,24 @@
 
 import os
 from pathlib import Path
+import environ
+
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+env = environ.Env()
+
+print("BASE_DIR", BASE_DIR)
+
+env_file = BASE_DIR / ".env"
+print("env_file", env_file)
+if env_file.exists():
+    environ.Env.read_env(str(env_file))
+
+DATABASES = {
+    "default": env.db("DATABASE_URL")
+}
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key-change-in-production")
 
@@ -63,8 +79,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database — overridden in dev/prod via django-environ
-DATABASES = {}
+# Database
+DATABASES = {
+    "default": env.db("DATABASE_URL")
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

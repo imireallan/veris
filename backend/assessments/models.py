@@ -192,7 +192,7 @@ class AssessmentQuestion(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     template = models.ForeignKey(
-        "assessments.AssessmentTemplate", on_delete=models.CASCADE, related_name="questions"
+        "assessments.AssessmentTemplate", on_delete=models.CASCADE, related_name="assessment_questions"
     )
     text = models.TextField()
     order = models.PositiveIntegerField(default=0)

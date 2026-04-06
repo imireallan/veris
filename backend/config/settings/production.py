@@ -1,15 +1,10 @@
-import environ
 from config.settings.base import *  # noqa: F401,F403
-from config.settings.base import BASE_DIR
+from config.settings.base import env
 
-env = environ.Env()
-environ.Env.read_env(env_file=BASE_DIR / ".env")
 
 DEBUG = False
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
-
-DATABASES = {"default": env.db("DATABASE_URL")}
 
 SECRET_KEY = env.str("SECRET_KEY")
 

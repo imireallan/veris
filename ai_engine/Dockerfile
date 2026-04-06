@@ -1,11 +1,64 @@
+# ─────────────────────────────────────────────
+# Base
+# ─────────────────────────────────────────────
 FROM python:3.11-slim AS base
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# 1. Force UV to use system python
+# 2. Add the global site-packages to PYTHONPATH
+# 3. Ensure /usr/local/bin (where uvicorn lives) is in PATH
+ENV UV_SYSTEM_PYTHON=1 \
+    UV_COMPILE_BYTECODE=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/usr/local/lib/python3.11/site-packages \
+    PATH="/usr/local/bin:$PATH"
 
 WORKDIR /app
 
-COPY requirements.txt .
+# ─────────────────────────────────────────────
+# Builder (Production Dependencies)
+# ─────────────────────────────────────────────
+FROM base AS builder
 
-RUN pip install --no-cache-dir -r requirements.txt
+# Install production dependencies only
+# We use --no-install-project to cache layers before copying source code
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-dev
+
+# ─────────────────────────────────────────────
+# Development (Includes Testing Tools)
+# ─────────────────────────────────────────────
+
+FROM builder AS development
+
+# Note: Removed --no-install-project so binaries are created
+RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --group dev
 
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001"]
+EXPOSE 8001
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+
+# ─────────────────────────────────────────────
+# Production (Lean Runtime)
+# ─────────────────────────────────────────────
+FROM base AS production
+
+# Copy the system-wide installed packages from the builder stage
+# This keeps the 'uv' binary and caches out of your final image
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+COPY . .
+
+EXPOSE 8001
+
+# Using --workers 2 as in your original, but uvicorn[standard] handles this well
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "2"]

@@ -25,22 +25,22 @@ const DEFAULT_THEME: ThemeConfig = {
 function applyThemeVars(theme: ThemeConfig) {
   const root = document.documentElement;
   const vars: Record<string, string> = {
-    "--color-primary": theme.primary,
-    "--color-primary-foreground": theme.primaryForeground,
-    "--color-secondary": theme.secondary,
-    "--color-secondary-foreground": theme.secondaryForeground,
-    "--color-accent": theme.accent,
-    "--color-accent-foreground": theme.accentForeground,
-    "--color-background": theme.background,
-    "--color-foreground": theme.foreground,
-    "--color-muted": theme.muted,
-    "--color-muted-foreground": theme.mutedForeground,
-    "--color-card": theme.card,
-    "--color-card-foreground": theme.cardForeground,
-    "--color-border": theme.border,
-    "--color-destructive": theme.destructive,
-    "--color-destructive-foreground": theme.destructiveForeground,
-    "--color-success": theme.success,
+    "--color-primary": `rgb(${theme.primary})`,
+    "--color-primary-foreground": `rgb(${theme.primaryForeground})`,
+    "--color-secondary": `rgb(${theme.secondary})`,
+    "--color-secondary-foreground": `rgb(${theme.secondaryForeground})`,
+    "--color-accent": `rgb(${theme.accent})`,
+    "--color-accent-foreground": `rgb(${theme.accentForeground})`,
+    "--color-background": `rgb(${theme.background})`,
+    "--color-foreground": `rgb(${theme.foreground})`,
+    "--color-muted": `rgb(${theme.muted})`,
+    "--color-muted-foreground": `rgb(${theme.mutedForeground})`,
+    "--color-card": `rgb(${theme.card})`,
+    "--color-card-foreground": `rgb(${theme.cardForeground})`,
+    "--color-border": `rgb(${theme.border})`,
+    "--color-destructive": `rgb(${theme.destructive})`,
+    "--color-destructive-foreground": `rgb(${theme.destructiveForeground})`,
+    "--color-success": `rgb(${theme.success})`,
   };
   for (const [k, v] of Object.entries(vars)) {
     root.style.setProperty(k, v);

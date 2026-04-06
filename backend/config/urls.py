@@ -1,4 +1,5 @@
 from django.urls import path, include
+from django.contrib import admin
 from rest_framework.routers import DefaultRouter
 
 # App viewsets
@@ -32,4 +33,6 @@ urlpatterns = [
     path("api/health/", health_check, name="health-check"),
     path("", include("settings.urls")),
     *router.urls,
+
+    path("admin/", admin.site.urls),  # Add this line
 ]

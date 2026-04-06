@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 
 
@@ -14,7 +16,7 @@ class Organization(models.Model):
         STANDARD = "STANDARD", "Standard"
         ENTERPRISE = "ENTERPRISE", "Enterprise"
 
-    id = models.UUIDField(primary_key=True, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=500)
     slug = models.SlugField(max_length=500, unique=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.TRIAL)

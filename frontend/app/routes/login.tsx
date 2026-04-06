@@ -1,6 +1,6 @@
 import { Form, redirect, useActionData, useSearchParams, useNavigation } from "react-router";
 import type { Route } from "./+types/login";
-import { createTokenSession } from "~/.server/sessions";
+import { createTokenSession, loginUser } from "~/.server/sessions";
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
@@ -14,26 +14,11 @@ export async function action({ request }: Route.ActionArgs) {
       return { error: "Email and password are required" };
     }
 
-    // Call backend API to authenticate
-    try {
-      const apiUrl = process.env.API_URL ?? "";
-      const res = await fetch(`${apiUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    const result = await loginUser(email, password);
+    if ("error" in result) return result;
 
-      if (!res.ok) {
-        const data = await res.json();
-        return { error: data?.error ?? "Invalid credentials" };
-      }
-
-      const data = await res.json();
-      const accessToken = data.access_token as string;
-      return createTokenSession({ accessToken, redirectTo: "/" });
-    } catch {
-      return { error: "Unable to reach authentication server" };
-    }
+    const redirectTo = (formData.get("redirectTo") as string) || "/";
+    return createTokenSession({ accessToken: result.accessToken, redirectTo });
   }
 
   return { error: "Unknown action" };

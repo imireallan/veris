@@ -1,9 +1,11 @@
+/** Server-side session & auth utilities. */
+
 import { redirect } from "react-router";
-import { isApiError } from "~/helpers/apiError";
+import { api, ApiError } from "./api";
 
 const COOKIE_NAME = "access_token";
 
-/* ─────────────── helpers used across the app ─────────────── */
+/* ─────────────── helpers ─────────────── */
 
 export function decodeJwt(token: string): { exp: number } | null {
   try {
@@ -22,7 +24,7 @@ export function isTokenExpired(token: string): boolean {
   return (payload.exp - buffer) * 1000 < Date.now();
 }
 
-export function getAccessToken(request: Request): string | null {
+function getAccessToken(request: Request): string | null {
   const cookieHeader = request.headers.get("Cookie");
   if (!cookieHeader) return null;
   const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]*)`));
@@ -38,7 +40,7 @@ export async function createTokenSession({
   accessToken: string;
   redirectTo: string;
 }) {
-  const maxAge = 7 * 24 * 60 * 60; // 7 days
+  const maxAge = 7 * 24 * 60 * 60;
   return redirect(redirectTo, {
     headers: {
       "Set-Cookie": `${COOKIE_NAME}=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge};`,
@@ -58,7 +60,42 @@ export async function destroyTokenSession() {
 
 const isTestMode = (globalThis as any).__TEST_MODE__ || false;
 
-export async function getUserFromRequest(request: Request) {
+export interface AuthMeResponse {
+  id: string;
+  email: string;
+  full_name: string;
+  first_name?: string;
+  last_name?: string;
+  org_id: string;
+  role: string;
+  picture_url?: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  fullName: string;
+  firstName?: string;
+  lastName?: string;
+  orgId: string;
+  role: "admin" | "manager" | "viewer";
+  pictureUrl?: string;
+}
+
+function mapUser(data: AuthMeResponse): User {
+  return {
+    id: data.id,
+    email: data.email,
+    fullName: data.full_name,
+    firstName: data.first_name,
+    lastName: data.last_name,
+    orgId: data.org_id,
+    role: (data.role as User["role"]) || "viewer",
+    pictureUrl: data.picture_url,
+  };
+}
+
+export async function getUserFromRequest(request: Request): Promise<User | null> {
   if (isTestMode) {
     const token = getAccessToken(request);
     if (token && decodeJwt(token)) {
@@ -69,57 +106,62 @@ export async function getUserFromRequest(request: Request) {
         firstName: "Test",
         lastName: "User",
         orgId: "org-1",
-        role: "admin" as const,
+        role: "admin",
         pictureUrl: "https://example.com/avatar.png",
       };
     }
   }
 
-  const apiUrl = process.env.API_URL ?? "";
-  const accessToken = getAccessToken(request);
+  const token = getAccessToken(request);
+  if (!token) return null;
+
   try {
-    const res = await fetch(`${apiUrl}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as Record<string, unknown>;
-    if (isApiError(data as any)) return null;
-    return {
-      id: (data.id as string) ?? "",
-      email: (data.email as string) ?? "",
-      fullName: (data.full_name as string) ?? "",
-      firstName: (data.first_name as string) ?? undefined,
-      lastName: (data.last_name as string) ?? undefined,
-      orgId: (data.org_id as string) ?? "",
-      role: (data.role as "admin" | "manager" | "viewer") ?? "viewer",
-      pictureUrl: (data.picture_url as string) ?? undefined,
-    };
+    const data = await api.get<AuthMeResponse>("/api/auth/me", token);
+    return mapUser(data);
   } catch {
     return null;
+  }
+}
+
+export async function loginUser(
+  email: string,
+  password: string,
+): Promise<{ accessToken: string } | { error: string }> {
+  try {
+    const data = await api.post<{ access_token: string }>(
+      "/api/auth/login",
+      { email, password },
+    );
+    return { accessToken: data.access_token };
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return { error: err.status === 401 ? "Invalid credentials" : err.message };
+    }
+    return { error: "Unable to reach authentication server" };
   }
 }
 
 /**
  * Require authenticated user — throws redirect to /login if none.
  */
-export async function requireUser(request: Request) {
+export async function requireUser(request: Request): Promise<User> {
   const token = getAccessToken(request);
   if (!token || isTokenExpired(token)) {
     const url = new URL(request.url);
-    const searchParams = new URLSearchParams([["redirectTo", url.pathname]]);
-    throw redirect(`/login?${searchParams}`);
+    const search = new URLSearchParams([["redirectTo", url.pathname]]);
+    throw redirect(`/login?${search}`);
   }
 
   const user = await getUserFromRequest(request);
   if (!user) {
     const url = new URL(request.url);
-    const searchParams = new URLSearchParams([["redirectTo", url.pathname]]);
-    throw redirect(`/login?${searchParams}`);
+    const search = new URLSearchParams([["redirectTo", url.pathname]]);
+    throw redirect(`/login?${search}`);
   }
 
   return user;
 }
 
-export function getUserToken(request: Request) {
+export function getUserToken(request: Request): string | null {
   return getAccessToken(request);
 }

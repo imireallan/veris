@@ -3,44 +3,46 @@ import { createContext, useContext, useEffect, useState } from "react";
 
 /* ─────────────── default fallback theme ─────────────── */
 const DEFAULT_THEME: ThemeConfig = {
-  primary: "16 185 129",
-  primaryForeground: "255 255 255",
-  secondary: "59 130 246",
-  secondaryForeground: "255 255 255",
-  accent: "245 158 11",
-  accentForeground: "0 0 0",
-  background: "250 250 250",
-  foreground: "15 23 42",
-  muted: "241 245 249",
-  mutedForeground: "100 116 139",
-  card: "255 255 255",
-  cardForeground: "15 23 42",
-  border: "226 232 240",
-  destructive: "239 68 68",
-  destructiveForeground: "255 255 255",
-  success: "34 197 94",
+  primary: "160 84% 39%",        /* emerald-500 */
+  primaryForeground: "0 0% 100%",
+  secondary: "210 40% 96.1%",
+  secondaryForeground: "222.2 47.4% 11.2%",
+  accent: "38 92% 50%",          /* amber-500 */
+  accentForeground: "0 0% 0%",
+  background: "0 0% 100%",
+  foreground: "222.2 84% 4.9%",
+  muted: "210 40% 96.1%",
+  mutedForeground: "215.4 16.3% 46.9%",
+  card: "0 0% 100%",
+  cardForeground: "222.2 84% 4.9%",
+  border: "214.3 31.8% 91.4%",
+  destructive: "0 84.2% 60.2%",
+  destructiveForeground: "0 0% 100%",
+  success: "142 76% 36%",        /* green-600 */
 };
 
-/* ─────────────── apply CSS custom properties ─────────────── */
+/* ─────────────── apply CSS custom properties (HSL values) ─────────────── */
 function applyThemeVars(theme: ThemeConfig) {
   const root = document.documentElement;
   const vars: Record<string, string> = {
-    "--color-primary": `rgb(${theme.primary})`,
-    "--color-primary-foreground": `rgb(${theme.primaryForeground})`,
-    "--color-secondary": `rgb(${theme.secondary})`,
-    "--color-secondary-foreground": `rgb(${theme.secondaryForeground})`,
-    "--color-accent": `rgb(${theme.accent})`,
-    "--color-accent-foreground": `rgb(${theme.accentForeground})`,
-    "--color-background": `rgb(${theme.background})`,
-    "--color-foreground": `rgb(${theme.foreground})`,
-    "--color-muted": `rgb(${theme.muted})`,
-    "--color-muted-foreground": `rgb(${theme.mutedForeground})`,
-    "--color-card": `rgb(${theme.card})`,
-    "--color-card-foreground": `rgb(${theme.cardForeground})`,
-    "--color-border": `rgb(${theme.border})`,
-    "--color-destructive": `rgb(${theme.destructive})`,
-    "--color-destructive-foreground": `rgb(${theme.destructiveForeground})`,
-    "--color-success": `rgb(${theme.success})`,
+    "--primary-hsl": theme.primary,
+    "--primary-foreground-hsl": theme.primaryForeground,
+    "--secondary-hsl": theme.secondary,
+    "--secondary-foreground-hsl": theme.secondaryForeground,
+    "--accent-hsl": theme.accent,
+    "--accent-foreground-hsl": theme.accentForeground,
+    "--background-hsl": theme.background,
+    "--foreground-hsl": theme.foreground,
+    "--muted-hsl": theme.muted,
+    "--muted-foreground-hsl": theme.mutedForeground,
+    "--card-hsl": theme.card,
+    "--card-foreground-hsl": theme.cardForeground,
+    "--border-hsl": theme.border,
+    "--input-hsl": theme.border, // input uses same as border
+    "--ring-hsl": theme.primary, // ring uses primary
+    "--destructive-hsl": theme.destructive,
+    "--destructive-foreground-hsl": theme.destructiveForeground,
+    "--success-hsl": theme.success,
   };
   for (const [k, v] of Object.entries(vars)) {
     root.style.setProperty(k, v);
@@ -59,7 +61,7 @@ export function useTheme() {
 
 interface ThemeProviderProps {
   initialTheme?: ThemeConfig;
-  children: any;
+  children: React.ReactNode;
 }
 
 export function ThemeProvider({ initialTheme, children }: ThemeProviderProps) {
@@ -79,4 +81,3 @@ export function ThemeProvider({ initialTheme, children }: ThemeProviderProps) {
     </ThemeContext.Provider>
   );
 }
-

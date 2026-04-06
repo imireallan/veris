@@ -25,7 +25,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export function meta(): Route.MetaFunction {
-  return [{ title: "Sign In — SustainabilityAI" }];
+  return [{ title: "Sign In — Veris" }];
 }
 
 export default function LoginRoute() {
@@ -40,7 +40,7 @@ export default function LoginRoute() {
         <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
           <div className="mb-8 text-center">
             <h1 className="text-2xl font-bold text-foreground">
-              SustainabilityAI
+              Veris
             </h1>
             <p className="text-muted-foreground mt-2 text-sm">
               Sign in to your account

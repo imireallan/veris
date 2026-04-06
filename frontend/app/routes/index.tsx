@@ -36,7 +36,7 @@ export async function loader({ request }: LoaderFunctionArgs): Promise<LoaderDat
 }
 
 export function meta({ data }: { data: LoaderData }) {
-  return [{ title: data?.user?.fullName ? `${data.user.fullName} — SustainabilityAI` : "Dashboard" }];
+  return [{ title: data?.user?.fullName ? `${data.user.fullName} — Veris` : "Dashboard" }];
 }
 
 export default function IndexRoute() {

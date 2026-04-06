@@ -1,4 +1,4 @@
-# SustainabilityAI - Architecture Diagrams
+# Veris - Architecture Diagrams
 
 ## 1. System Overview
 

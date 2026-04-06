@@ -26,7 +26,7 @@ export const links: LinksFunction = () => [
 ];
 
 export const meta: MetaFunction = () => [
-    { title: "SustainabilityAI" },
+    { title: "Veris" },
     {
         name: "description",
         content: "AI-powered multi-tenant sustainability platform for managing ESG assessments, knowledge, and intelligence.",

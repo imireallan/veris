@@ -4,7 +4,7 @@ Usage:
     python manage.py import_bettercoal /path/to/bettercoal.sql
 
 This command parses the Bettercoal pg_dump file and maps entities
-to SustainabilityAI models. Both empty (schema-only) and populated
+to Veris models. Both empty (schema-only) and populated
 dumps are supported.
 
 Mapping:
@@ -30,7 +30,7 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Import Bettercoal PostgreSQL dump into SustainabilityAI models"
+    help = "Import Bettercoal PostgreSQL dump into Veris models"
 
     def add_arguments(self, parser):
         parser.add_argument("filepath", type=str, help="Path to bettercoal.sql dump")

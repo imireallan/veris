@@ -1,8 +1,8 @@
-# SustainabilityAI - Product Requirements Document
+# Veris - Product Requirements Document
 
 ## Project Overview
 
-**SustainabilityAI** is an AI-first, multi-tenant sustainability assessment and intelligence platform. It helps organizations navigate sustainability compliance, generate reports, implement continuous improvement workflows, and build knowledge bases through AI-guided assistance.
+**Veris** is an AI-first, multi-tenant sustainability assessment and intelligence platform. It helps organizations navigate sustainability compliance, generate reports, implement continuous improvement workflows, and build knowledge bases through AI-guided assistance.
 
 ### Core Problem
 

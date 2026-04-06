@@ -48,7 +48,7 @@ services:
       - "8001:8001"
     env_file: .env
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/sustainabilityai
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/veris
       - PINECONE_API_KEY=${PINECONE_API_KEY}
       - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
       - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
@@ -67,7 +67,7 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_DB=sustainabilityai
+      - POSTGRES_DB=veris
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:

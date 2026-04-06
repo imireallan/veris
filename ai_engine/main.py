@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(
-    title="SustainabilityAI Engine",
+    title="Veris Engine",
     description="AI-powered sustainability assessment intelligence",
     version="0.1.0",
     lifespan=lifespan,

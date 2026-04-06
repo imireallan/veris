@@ -1,4 +1,4 @@
-# SustainabilityAI — Developer Guide
+# Veris — Developer Guide
 
 > AI-powered, multi-tenant sustainability assessment platform.
 > Replaces 5+ legacy tools (Tedd, ICAT, Country Risk, Commodity Risk, Search360) with one white-label SaaS.
@@ -70,7 +70,7 @@ Consultancies run ESG/sustainability assessments for clients across frameworks l
 ## 3. Project Structure
 
 ```
-SustainabilityAI/
+Veris/
 ├── docker-compose.yml          # Local dev orchestration
 ├── Makefile                    # Common commands (make help)
 ├── backend/                    # Django + DRF

@@ -1,4 +1,4 @@
-# SustainabilityAI - System Design Specification
+# Veris - System Design Specification
 
 ### Data Models (PostgreSQL)
 

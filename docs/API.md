@@ -1,4 +1,4 @@
-# SustainabilityAI - API Reference
+# Veris - API Reference
 
 ## Overview
 

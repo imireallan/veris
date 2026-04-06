@@ -1,4 +1,4 @@
-# SustainabilityAI - Local Development Setup
+# Veris - Local Development Setup
 
 ## Prerequisites
 
@@ -10,7 +10,7 @@
 ## Repository Structure
 
 ```
-SustainabilityAI/
+Veris/
 ├── frontend/              # React Router v7 + Tailwind
 ├── backend/               # Django Core API
 ├── ai_engine/             # FastAPI AI Service
@@ -25,7 +25,7 @@ SustainabilityAI/
 
 ```bash
 git clone <repo-url>
-cd SustainabilityAI
+cd Veris
 cp .env.example .env
 ```
 
@@ -35,7 +35,7 @@ Required variables in `.env`:
 
 ```env
 # Database
-DATABASE_URL=postgresql://postgres:password@db:5432/sustainabilityai
+DATABASE_URL=postgresql://postgres:password@db:5432/veris
 
 # AI Service
 OPENAI_API_KEY=sk-...

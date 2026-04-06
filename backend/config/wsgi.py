@@ -1,4 +1,4 @@
-"""WSGI config for SustainabilityAI backend."""
+"""WSGI config for Veris backend."""
 
 import os
 

@@ -1,4 +1,4 @@
-# SustainabilityAI
+# Veris
 
 AI-powered, white-label sustainability assessment platform for consultancies (Our Consultancy Client-first).
 
@@ -9,7 +9,7 @@ A multi-tenant SaaS that replaces Customer's 5 separate digital tools with one A
 ## Value Chain
 
 ```
-You (freelancer) → SustainabilityAI → Our Consultancy Client → Customer's clients (ARC, Coal Industry Program, etc.)
+You (freelancer) → Veris → Our Consultancy Client → Customer's clients (ARC, Coal Industry Program, etc.)
 ```
 
 ## Quick Stats

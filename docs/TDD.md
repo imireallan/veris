@@ -1,4 +1,4 @@
-# SustainabilityAI - Test-Driven Development Guide
+# Veris - Test-Driven Development Guide
 
 ## Testing Strategy
 

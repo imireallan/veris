@@ -40,7 +40,7 @@ export default function Sidebar({
             <div className="px-5 py-4 flex items-center gap-2.5 border-b border-border">
                 <Leaf className="w-6 h-6 text-primary" />
                 <span className="text-base font-bold text-foreground">
-                    SustainabilityAI
+                    Veris
                 </span>
             </div>
 

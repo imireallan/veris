@@ -1,4 +1,4 @@
-# SustainabilityAI - Operations Guide
+# Veris - Operations Guide
 
 ## Deployment Architecture
 

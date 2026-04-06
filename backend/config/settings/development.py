@@ -11,7 +11,7 @@ INSTALLED_APPS = INSTALLED_APPS + ["django_extensions"]
 
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
-    default=["http://localhost:3000", "http://127.0.0.1:3000"],
+    default=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173"],
 )
 
 LOGGING = {

@@ -32,7 +32,7 @@ router.register(r"api/documents", KnowledgeDocumentViewSet, basename="knowledge-
 urlpatterns = [
     path("api/health/", health_check, name="health-check"),
     path("", include("settings.urls")),
+    path("api/", include("users.urls")),
     *router.urls,
-
-    path("admin/", admin.site.urls),  # Add this line
+    path("admin/", admin.site.urls),
 ]

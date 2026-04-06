@@ -13,8 +13,10 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://backend:8000
-      - VITE_AI_API_URL=http://ai_engine:8001
+      - VITE_API_URL=http://localhost:8000
+      - BACKEND_URL=http://backend:8000
+      - VITE_AI_API_URL=http://localhost:8001
+      - AI_BACKEND_URL=http://ai_engine:8001
     depends_on:
       backend:
         condition: service_started

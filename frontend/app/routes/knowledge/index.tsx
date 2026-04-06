@@ -1,9 +1,9 @@
 import { useLoaderData, redirect, Link } from "react-router";
-import type { Route } from "./+types/knowledge";
+import type { LoaderFunctionArgs } from "react-router";
 import { requireUser } from "~/.server/sessions";
 import { BookOpen, FileText, MessageSquare } from "lucide-react";
 
-export async function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   await requireUser(request);
   return {
     documents: [

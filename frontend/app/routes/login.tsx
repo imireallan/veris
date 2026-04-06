@@ -1,8 +1,8 @@
 import { Form, redirect, useActionData, useSearchParams, useNavigation } from "react-router";
-import type { Route } from "./+types/login";
+import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { createTokenSession, loginUser } from "~/.server/sessions";
 
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData();
   const intent = formData.get("_action");
 
@@ -24,7 +24,7 @@ export async function action({ request }: Route.ActionArgs) {
   return { error: "Unknown action" };
 }
 
-export function meta(): Route.MetaFunction {
+export function meta() {
   return [{ title: "Sign In — Veris" }];
 }
 

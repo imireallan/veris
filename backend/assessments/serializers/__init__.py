@@ -71,15 +71,34 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
+    site_name = serializers.CharField(source="site.name", read_only=True)
+    framework_name = serializers.CharField(source="framework.name", read_only=True)
+    focus_area_name = serializers.CharField(source="focus_area.name", read_only=True)
+
     class Meta:
         model = Assessment
         fields = [
-            "id", "organization", "site", "template", "focus_area",
-            "status", "framework", "start_date", "due_date",
+            "id", "organization", "site", "site_name", "template", "focus_area",
+            "focus_area_name", "framework", "framework_name",
+            "status", "start_date", "due_date",
             "completed_at", "overall_score", "risk_level", "ai_summary",
             "created_by", "assigned_to", "created_at", "updated_at"
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+        extra_kwargs = {
+            "start_date": {"required": False, "allow_null": True},
+            "due_date": {"required": False, "allow_null": True},
+            "organization": {"required": False},
+        }
+
+    def create(self, validated_data):
+        # If no org provided, use the first org
+        if not validated_data.get("organization_id") and not validated_data.get("organization"):
+            from organizations.models import Organization
+            first_org = Organization.objects.first()
+            if first_org:
+                validated_data["organization"] = first_org
+        return super().create(validated_data)
 
 
 class AssessmentResponseSerializer(serializers.ModelSerializer):

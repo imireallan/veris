@@ -4,31 +4,137 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  /* CSS Custom Property theme tokens — overridden by ThemeProvider at runtime */
-  --color-primary: 16 185 129;        /* emerald-500 default */
-  --color-primary-foreground: 255 255 255;
-  --color-secondary: 59 130 246;      /* blue-500 default */
-  --color-secondary-foreground: 255 255 255;
-  --color-accent: 245 158 11;         /* amber-500 default */
-  --color-accent-foreground: 0 0 0;
-  --color-background: 250 250 250;
-  --color-foreground: 15 23 42;       /* slate-900 */
-  --color-muted: 241 245 249;         /* slate-100 */
-  --color-muted-foreground: 100 116 139; /* slate-500 */
-  --color-card: 255 255 255;
-  --color-card-foreground: 15 23 42;
-  --color-border: 226 232 240;        /* slate-200 */
-  --color-destructive: 239 68 68;     /* red-500 */
-  --color-destructive-foreground: 255 255 255;
-  --color-success: 34 197 94;         /* green-500 */
+  /* shadcn-compatible CSS variables using HSL format */
+  --color-background: hsl(var(--background-hsl));
+  --color-foreground: hsl(var(--foreground-hsl));
+  --color-card: hsl(var(--card-hsl));
+  --color-card-foreground: hsl(var(--card-foreground-hsl));
+  --color-popover: hsl(var(--popover-hsl));
+  --color-popover-foreground: hsl(var(--popover-foreground-hsl));
+  --color-primary: hsl(var(--primary-hsl));
+  --color-primary-foreground: hsl(var(--primary-foreground-hsl));
+  --color-secondary: hsl(var(--secondary-hsl));
+  --color-secondary-foreground: hsl(var(--secondary-foreground-hsl));
+  --color-muted: hsl(var(--muted-hsl));
+  --color-muted-foreground: hsl(var(--muted-foreground-hsl));
+  --color-accent: hsl(var(--accent-hsl));
+  --color-accent-foreground: hsl(var(--accent-foreground-hsl));
+  --color-destructive: hsl(var(--destructive-hsl));
+  --color-destructive-foreground: hsl(var(--destructive-foreground-hsl));
+  --color-success: hsl(var(--success-hsl));
+  --color-border: hsl(var(--border-hsl));
+  --color-input: hsl(var(--input-hsl));
+  --color-ring: hsl(var(--ring-hsl));
+  --radius: 0.75rem;
 }
 
+/* ───────── Light mode (default) ───────── */
+html {
+  --background-hsl: 0 0% 100%;
+  --foreground-hsl: 222.2 84% 4.9%;
+  --card-hsl: 0 0% 100%;
+  --card-foreground-hsl: 222.2 84% 4.9%;
+  --popover-hsl: 0 0% 100%;
+  --popover-foreground-hsl: 222.2 84% 4.9%;
+  --primary-hsl: 160 84% 39%;
+  --primary-foreground-hsl: 0 0% 100%;
+  --secondary-hsl: 210 40% 96.1%;
+  --secondary-foreground-hsl: 222.2 47.4% 11.2%;
+  --muted-hsl: 210 40% 96.1%;
+  --muted-foreground-hsl: 215.4 16.3% 46.9%;
+  --accent-hsl: 38 92% 50%;
+  --accent-foreground-hsl: 0 0% 0%;
+  --destructive-hsl: 0 84.2% 60.2%;
+  --destructive-foreground-hsl: 0 0% 100%;
+  --success-hsl: 142 76% 36%;
+  --border-hsl: 214.3 31.8% 91.4%;
+  --input-hsl: 214.3 31.8% 91.4%;
+  --ring-hsl: 160 84% 39%;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background-hsl: 222.2 84% 4.9%;
+    --foreground-hsl: 210 40% 98%;
+    --card-hsl: 222.2 84% 4.9%;
+    --card-foreground-hsl: 210 40% 98%;
+    --popover-hsl: 222.2 84% 4.9%;
+    --popover-foreground-hsl: 210 40% 98%;
+    --primary-hsl: 160 84% 39%;
+    --primary-foreground-hsl: 0 0% 100%;
+    --secondary-hsl: 217.2 32.6% 17.5%;
+    --secondary-foreground-hsl: 210 40% 98%;
+    --muted-hsl: 217.2 32.6% 17.5%;
+    --muted-foreground-hsl: 215 20.2% 65.1%;
+    --accent-hsl: 38 92% 50%;
+    --accent-foreground-hsl: 0 0% 0%;
+    --destructive-hsl: 0 62.8% 30.6%;
+    --destructive-foreground-hsl: 210 40% 98%;
+    --success-hsl: 142 70% 45%;
+    --border-hsl: 217.2 32.6% 17.5%;
+    --input-hsl: 217.2 32.6% 17.5%;
+    --ring-hsl: 160 84% 39%;
+  }
+}
+
+/* ───────── Dark mode (manual toggle) ───────── */
+/* Using !important to override Tailwind layer cascade */
+html.dark {
+  --background-hsl: 222.2 84% 4.9% !important;
+  --foreground-hsl: 210 40% 98% !important;
+  --card-hsl: 222.2 84% 4.9% !important;
+  --card-foreground-hsl: 210 40% 98% !important;
+  --popover-hsl: 222.2 84% 4.9% !important;
+  --popover-foreground-hsl: 210 40% 98% !important;
+  --primary-hsl: 160 84% 39% !important;
+  --primary-foreground-hsl: 0 0% 100% !important;
+  --secondary-hsl: 217.2 32.6% 17.5% !important;
+  --secondary-foreground-hsl: 210 40% 98% !important;
+  --muted-hsl: 217.2 32.6% 17.5% !important;
+  --muted-foreground-hsl: 215 20.2% 65.1% !important;
+  --accent-hsl: 38 92% 50% !important;
+  --accent-foreground-hsl: 0 0% 0% !important;
+  --destructive-hsl: 0 62.8% 30.6% !important;
+  --destructive-foreground-hsl: 210 40% 98% !important;
+  --success-hsl: 142 70% 45% !important;
+  --border-hsl: 217.2 32.6% 17.5% !important;
+  --input-hsl: 217.2 32.6% 17.5% !important;
+  --ring-hsl: 160 84% 39% !important;
+}
+
+/* ───────── Global resets ───────── */
 html,
 body {
   @apply bg-background text-foreground;
   min-height: 100vh;
+}
 
-  @media (prefers-color-scheme: dark) {
-    color-scheme: dark;
+/* ───────── Focus ring utility ───────── */
+* {
+  @apply border-border;
+}
+
+/* ───────── Tailwind v4 animation utilities ───────── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
   }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-in.slide-in-from-right {
+  animation: slide-in-from-right 0.3s ease-out;
 }

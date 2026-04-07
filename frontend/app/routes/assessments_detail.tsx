@@ -3,7 +3,20 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/api";
 import { useState } from "react";
-import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  ProgressBar,
+  PageHeader,
+  SectionCard,
+  EmptyState,
+  TabsSection,
+  EditableField,
+  EditModeToolbar,
+} from "~/components/ui";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -78,14 +91,12 @@ export async function action({ request, params }: ActionFunctionArgs) {
   return { error: "Unknown intent" };
 }
 
-const SEVERITY_COLORS: Record<string, string> = { LOW:"bg-green-100 text-green-700", MEDIUM:"bg-yellow-100 text-yellow-700", HIGH:"bg-orange-100 text-orange-700", CRITICAL:"bg-red-100 text-red-700" };
-const STATUS_COLORS: Record<string, string> = { OPEN:"bg-red-100 text-red-700", IN_PROGRESS:"bg-blue-100 text-blue-700", RESOLVED:"bg-green-100 text-green-700", CLOSED:"bg-gray-100 text-gray-700" };
-const RISK_COLORS: Record<string, string> = { LOW:"bg-green-100 text-green-700", MEDIUM:"bg-yellow-100 text-yellow-700", HIGH:"bg-orange-100 text-orange-700", CRITICAL:"bg-red-100 text-red-700" };
+/* ────────────── Assessment Detail Page ────────────── */
 
 export default function AssessmentDetailRoute() {
   const data = useLoaderData<typeof loader>();
   const [editMode, setEditMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "findings" | "plan" | "cip" | "tasks">("overview");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [formData, setFormData] = useState({
     status: data.assessment?.status ?? "DRAFT",
     risk_level: data.assessment?.risk_level ?? "MEDIUM",
@@ -94,162 +105,512 @@ export default function AssessmentDetailRoute() {
   });
   const [editingFinding, setEditingFinding] = useState<string | null>(null);
 
-  if (!data.assessment) return (<div className="text-center py-12"><h2 className="text-xl font-medium text-foreground">Assessment not found</h2><Link to="/assessments" className="text-primary hover:underline mt-4 inline-block">← Back to assessments</Link></div>);
+  if (!data.assessment) {
+    return (
+      <div className="text-center py-12 space-y-4">
+        <h2 className="text-xl font-medium">Assessment not found</h2>
+        <Link to="/assessments" className="text-primary hover:underline">
+          ← Back to assessments
+        </Link>
+      </div>
+    );
+  }
 
   const a = data.assessment;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/assessments" className="p-2 hover:bg-muted rounded-lg"><ArrowLeft className="w-5 h-5 text-muted-foreground" /></Link>
-          <div><h2 className="text-2xl font-semibold text-foreground">Assessment {a.id.slice(0, 8)}</h2>
-          <p className="text-muted-foreground text-sm mt-0.5">Created {new Date(a.created_at).toLocaleDateString()}</p></div>
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link to="/assessments" className="p-2 hover:bg-muted rounded-lg">
+          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+        </Link>
+        <div className="flex-1">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Assessment {a.id.slice(0, 8)}
+          </h2>
+          <p className="text-muted-foreground text-sm mt-0.5">
+            Created {new Date(a.created_at).toLocaleDateString()}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          {!editMode ? <button type="button" onClick={() => setEditMode(true)} className="inline-flex items-center gap-2 px-3 py-1.5 border border-border rounded-lg text-sm"><Edit3 className="w-3.5 h-3.5" /> Edit</button> :
-          <>
-            <Form method="post" className="inline">
-              <input type="hidden" name="intent" value="save-assessment" />
-              <input type="hidden" name="status" value={formData.status} />
-              <input type="hidden" name="risk_level" value={formData.risk_level} />
-              <input type="hidden" name="overall_score" value={String(formData.overall_score)} />
-              <input type="hidden" name="ai_summary" value={formData.ai_summary} />
-              <button type="submit" className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm"><Save className="w-3.5 h-3.5" /> Save</button>
-            </Form>
-            <button type="button" onClick={() => setEditMode(false)} className="inline-flex items-center gap-2 px-3 py-1.5 border border-border rounded-lg text-sm"><X className="w-3.5 h-3.5" /> Cancel</button>
-          </>}
-        </div>
+        <EditModeToolbar
+          editMode={editMode}
+          onEdit={() => setEditMode(true)}
+          onSave={() => setEditMode(false)}
+          onCancel={() => setEditMode(false)}
+        />
       </div>
-      <div className="flex flex-wrap items-center gap-4 p-4 bg-card border border-border rounded-xl">
-        <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Status:</span>
-          {editMode ? <select value={formData.status} onChange={e => setFormData(d => ({...d, status: e.target.value}))} className="px-2 py-1 border border-border rounded-lg text-sm bg-background">{["DRAFT","IN_PROGRESS","UNDER_REVIEW","COMPLETED","ARCHIVED"].map(s => <option key={s} value={s}>{s.replace(/_/g," ")}</option>)}</select> :
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${a.status === "IN_PROGRESS" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-700"}`}>{a.status.replace(/_/g," ")}</span>}
-        </div>
-        <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Risk:</span>
-          {editMode ? <select value={formData.risk_level} onChange={e => setFormData(d => ({...d, risk_level: e.target.value}))} className="px-2 py-1 border border-border rounded-lg text-sm bg-background">
-            {["LOW","MEDIUM","HIGH","CRITICAL"].map(s => <option key={s} value={s}>{s}</option>)}</select> :
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${RISK_COLORS[a.risk_level]}`}>{a.risk_level}</span>}
-        </div>
-        <div className="flex items-center gap-2"><span className="text-sm text-muted-foreground">Score:</span>
-          {editMode ? <input type="number" min={0} max={100} value={formData.overall_score} onChange={e => setFormData(d => ({...d, overall_score: Number(e.target.value)}))} className="px-2 py-1 border border-border rounded-lg text-sm bg-background w-20" /> :
-          <span className="text-sm font-medium">{a.overall_score}%</span>}
-        </div>
-        <div className="ml-auto text-xs text-muted-foreground">{a.start_date ? "Start: " + new Date(a.start_date).toLocaleDateString() : ""} {a.due_date ? "| Due: " + new Date(a.due_date).toLocaleDateString() : ""}</div>
-      </div>
-      {a.overall_score >= 0 && <div className="w-full h-2 bg-muted rounded-full overflow-hidden"><div className={`h-full rounded-full ${a.overall_score >= 80 ? "bg-green-500" : a.overall_score >= 50 ? "bg-yellow-500" : "bg-red-500"}`} style={{ width: `${a.overall_score}%` }} /></div>}
-      <div className="flex gap-1 border-b border-border overflow-x-auto">
-        {[
-          {key: "overview", label: "Overview", count: 0},
-          {key: "findings", label: "Findings", count: data.findings.length},
-          {key: "plan", label: "Plan", count: 0},
-          {key: "cip", label: "CIP", count: data.cipCycles.length},
-          {key: "tasks", label: "Tasks", count: data.tasks.length},
-        ].map(tab => (
-          <button key={tab.key} onClick={() => setActiveTab(tab.key as any)} className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === tab.key ? "border-current text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-            {tab.label}{(tab.count as number) > 0 ? ` (${tab.count})` : ""}
-          </button>
-        ))}
-      </div>
-      {activeTab === "overview" && (
-        <div className="bg-card border border-border rounded-xl p-5 space-y-3 text-sm">
-          <div><div className="text-xs text-muted-foreground">Summary</div><div className="mt-0.5">{a.ai_summary || "—"}</div></div>
-          {editMode && <textarea value={formData.ai_summary} onChange={e => setFormData(d => ({...d, ai_summary: e.target.value}))} className="w-full mt-1 px-3 py-2 border border-border rounded-lg text-sm bg-background" rows={3} />}
-        </div>
+
+      {/* Edit form for save action */}
+      {editMode && (
+        <Form method="post" className="inline">
+          <input type="hidden" name="intent" value="save-assessment" />
+          <input type="hidden" name="status" value={formData.status} />
+          <input type="hidden" name="risk_level" value={formData.risk_level} />
+          <input type="hidden" name="overall_score" value={String(formData.overall_score)} />
+          <input type="hidden" name="ai_summary" value={formData.ai_summary} />
+        </Form>
       )}
-      {activeTab === "findings" && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-medium text-foreground">Findings</h3>
-            <Form method="post" className="inline">
-              <input type="hidden" name="intent" value="create-finding" />
-              <button type="submit" className="inline-flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm"><Plus className="w-3.5 h-3.5" /> Add Finding</button>
-            </Form>
-          </div>
-          {data.findings.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No findings yet.</p> :
-            data.findings.map((f: any) => (
-              <div key={f.id} className="bg-card border border-border rounded-xl p-5">
-                {editingFinding === f.id ? (
-                  <Form method="post">
-                    <input type="hidden" name="intent" value="save-finding" />
-                    <input type="hidden" name="finding_id" value={f.id} />
-                    <div className="space-y-3">
-                      <input name="topic" defaultValue={f.topic} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background" placeholder="Topic" />
-                      <textarea name="summary" defaultValue={f.summary} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background min-h-[80px]" placeholder="Summary" />
-                      <textarea name="recommended_actions" defaultValue={f.recommended_actions} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background" placeholder="Recommended actions" />
-                      <div className="flex items-center gap-3">
-                        <select name="severity" defaultValue={f.severity} className="px-2 py-1 border border-border rounded-lg text-sm bg-background">{Object.keys(SEVERITY_COLORS).map(s => <option key={s} value={s}>{s}</option>)}</select>
-                        <select name="status" defaultValue={f.status} className="px-2 py-1 border border-border rounded-lg text-sm bg-background">{Object.keys(STATUS_COLORS).map(s => <option key={s} value={s}>{s.replace(/_/g," ")}</option>)}</select>
-                        <input name="responsible_party" defaultValue={f.responsible_party} className="flex-1 px-3 py-2 border border-border rounded-lg text-sm bg-background" placeholder="Responsible party" />
-                      </div>
-                      <div className="flex gap-2"><button type="submit" className="px-3 py-1.5 bg-primary text-primary-foreground rounded text-sm font-medium">Save</button><button type="button" onClick={() => setEditingFinding(null)} className="px-3 py-1.5 border border-border rounded text-sm">Cancel</button></div>
-                    </div>
-                  </Form>
-                ) : (
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-orange-500" /><h4 className="font-medium text-foreground">{f.topic || "Untitled"}</h4>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${SEVERITY_COLORS[f.severity]}`}>{f.severity}</span>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[f.status]}`}>{f.status}</span></div>
-                      {f.summary && <p className="text-sm text-muted-foreground mt-2">{f.summary}</p>}
-                      {f.recommended_actions && <p className="text-xs text-muted-foreground mt-1"><b>Actions:</b> {f.recommended_actions}</p>}
-                      {f.responsible_party && <p className="text-xs text-muted-foreground mt-1"><b>Responsible:</b> {f.responsible_party}</p>}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setEditingFinding(f.id)} className="p-1.5 hover:bg-muted rounded-md"><Edit3 className="w-4 h-4 text-muted-foreground" /></button>
-                      <Form method="post">
-                        <input type="hidden" name="intent" value="delete-finding" />
-                        <input type="hidden" name="finding_id" value={f.id} />
-                        <button type="submit" className="p-1.5 hover:bg-red-50 rounded-md"><Trash2 className="w-4 h-4 text-red-500" /></button>
-                      </Form>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-        </div>
-      )}
-      {activeTab === "plan" && (
-        <div className="bg-card border border-border rounded-xl p-5">
-          {data.plan ? (<>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div><div className="text-xs text-muted-foreground">Site Visit Start</div><div className="font-medium">{data.plan.site_assessment_start ? new Date(data.plan.site_assessment_start).toLocaleDateString() : "—"}</div></div>
-              <div><div className="text-xs text-muted-foreground">Site Visit End</div><div className="font-medium">{data.plan.site_assessment_end ? new Date(data.plan.site_assessment_end).toLocaleDateString() : "—"}</div></div>
-              <div><div className="text-xs text-muted-foreground">Draft Report</div><div className="font-medium">{data.plan.draft_report_deadline ? new Date(data.plan.draft_report_deadline).toLocaleDateString() : "—"}</div></div>
-              <div><div className="text-xs text-muted-foreground">Final Report</div><div className="font-medium">{data.plan.final_report_deadline ? new Date(data.plan.final_report_deadline).toLocaleDateString() : "—"}</div></div>
+
+      {/* Meta card */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <FieldRow label="Status">
+              {editMode ? (
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData((d) => ({ ...d, status: e.target.value }))}
+                  className="px-2 py-1 border rounded-lg text-sm bg-background"
+                >
+                  {["DRAFT", "IN_PROGRESS", "UNDER_REVIEW", "COMPLETED", "ARCHIVED"].map((s) => (
+                    <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              ) : (
+                <Badge>{a.status.replace(/_/g, " ")}</Badge>
+              )}
+            </FieldRow>
+
+            <FieldRow label="Risk">
+              {editMode ? (
+                <select
+                  value={formData.risk_level}
+                  onChange={(e) => setFormData((d) => ({ ...d, risk_level: e.target.value }))}
+                  className="px-2 py-1 border rounded-lg text-sm bg-background"
+                >
+                  {["LOW", "MEDIUM", "HIGH", "CRITICAL"].map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              ) : (
+                <Badge variant={riskBadgeVariant(a.risk_level)}>{a.risk_level}</Badge>
+              )}
+            </FieldRow>
+
+            <FieldRow label="Score">
+              {editMode ? (
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={formData.overall_score}
+                  onChange={(e) =>
+                    setFormData((d) => ({
+                      ...d,
+                      overall_score: Number(e.target.value),
+                    }))
+                  }
+                  className="px-2 py-1 border rounded-lg text-sm bg-background w-20"
+                />
+              ) : (
+                <span className="text-sm font-medium">{a.overall_score}%</span>
+              )}
+            </FieldRow>
+
+            <div className="ml-auto text-xs text-muted-foreground">
+              {a.start_date ? `Start: ${new Date(a.start_date).toLocaleDateString()}` : ""}
+              {a.due_date ? ` | Due: ${new Date(a.due_date).toLocaleDateString()}` : ""}
             </div>
-            {data.plan.notes && <p className="text-sm text-muted-foreground mt-4 pt-4 border-t border-border">{data.plan.notes}</p>}
-          </>) : <p className="text-sm text-muted-foreground text-center py-4">No assessment plan created yet.</p>}
-        </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Score bar */}
+      {a.overall_score >= 0 && (
+        <ProgressBar value={a.overall_score} size="md" />
       )}
+
+      {/* Tabs */}
+      <TabsSection
+        tabs={[
+          { key: "overview", label: "Overview" },
+          { key: "findings", label: "Findings", count: data.findings.length },
+          { key: "plan", label: "Plan" },
+          { key: "cip", label: "CIP", count: data.cipCycles.length },
+          { key: "tasks", label: "Tasks", count: data.tasks.length },
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
+
+      {/* Tab content */}
+      {activeTab === "overview" && (
+        <SectionCard title="Summary" padding="compact">
+          <div className="text-sm leading-relaxed">
+            {a.ai_summary || "—"}
+          </div>
+          {editMode && (
+            <EditableField
+              label="Summary"
+              value={formData.ai_summary}
+              onChange={(v) => setFormData((d) => ({ ...d, ai_summary: v }))}
+              multiline
+            />
+          )}
+        </SectionCard>
+      )}
+
+      {activeTab === "findings" && (
+        <FindingsTab
+          findings={data.findings}
+          editingFinding={editingFinding}
+          setEditingFinding={setEditingFinding}
+        />
+      )}
+
+      {activeTab === "plan" && (
+        <SectionCard title="Assessment Plan">
+          {data.plan ? (
+            <PlanDetails plan={data.plan} />
+          ) : (
+            <EmptyState
+              icon={FileText}
+              title="No assessment plan yet"
+              description="Create a plan to outline key dates and milestones."
+            />
+          )}
+        </SectionCard>
+      )}
+
       {activeTab === "cip" && (
         <div className="space-y-3">
-          {data.cipCycles.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No CIP cycles configured.</p> :
+          {data.cipCycles.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="No CIP cycles configured"
+              description="Continuous Improvement cycles will appear here."
+            />
+          ) : (
             data.cipCycles.map((c: any) => (
-              <div key={c.id} className="bg-card border border-border rounded-xl p-5">
-                <div className="flex items-center justify-between"><h4 className="font-medium text-foreground">{c.label}</h4>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${c.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>{c.status}</span></div>
-                <div className="grid grid-cols-2 gap-4 mt-3 text-sm"><div><div className="text-xs text-muted-foreground">Period</div><div className="font-medium">{c.deadline_period_months} months</div></div><div><div className="text-xs text-muted-foreground">Start Date</div><div className="font-medium">{c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}</div></div></div>
-              </div>
-            ))}
+              <Card key={c.id}>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">{c.label}</h4>
+                    <Badge variant={c.status === "ACTIVE" ? "default" : "secondary"}>
+                      {c.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Period</div>
+                      <div className="font-medium">{c.deadline_period_months} months</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Start Date</div>
+                      <div className="font-medium">
+                        {c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       )}
+
       {activeTab === "tasks" && (
         <div className="space-y-3">
-          {data.tasks.length === 0 ? <p className="text-sm text-muted-foreground text-center py-8">No tasks yet.</p> :
+          {data.tasks.length === 0 ? (
+            <EmptyState
+              icon={FileText}
+              title="No tasks yet"
+              description="Tasks will appear here when assigned."
+            />
+          ) : (
             data.tasks.map((t: any) => (
-              <div key={t.id} className="bg-card border border-border rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div><h4 className="font-medium text-foreground">{t.title}</h4>{t.description && <p className="text-sm text-muted-foreground mt-1">{t.description}</p>}</div>
-                  <div className="flex gap-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.priority === "HIGH" ? "bg-red-100 text-red-700" : "bg-yellow-100 text-yellow-700"}`}>{t.priority}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700`}>{t.status.replace(/_/g," ")}</span>
+              <Card key={t.id} className="hover:shadow-sm transition-shadow">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">{t.title}</h4>
+                    <div className="flex gap-1.5">
+                      <Badge variant={taskPriorityVariant(t.priority)} className="text-[10px]">
+                        {t.priority}
+                      </Badge>
+                      <Badge variant={taskStatusVariant(t.status)} className="text-[10px]">
+                        {t.status.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                  {t.description && (
+                    <p className="text-sm text-muted-foreground">{t.description}</p>
+                  )}
+                  {t.due_date && (
+                    <div className="text-xs text-muted-foreground">
+                      Due: {new Date(t.due_date).toLocaleDateString()}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+/* ────────────── Helper Components ────────────── */
+
+function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-muted-foreground">{label}:</span>
+      {children}
+    </div>
+  );
+}
+
+const riskBadgeVariant = (r: string) => {
+  switch (r) {
+    case "CRITICAL":
+    case "HIGH":
+      return "destructive";
+    case "MEDIUM":
+      return "secondary";
+    case "LOW":
+      return "success";
+    default:
+      return "secondary";
+  }
+};
+
+const taskPriorityVariant = (p: string) => {
+  if (p === "HIGH" || p === "CRITICAL") return "destructive";
+  if (p === "MEDIUM") return "secondary";
+  return "default";
+};
+
+const taskStatusVariant = (s: string) => {
+  switch (s) {
+    case "COMPLETED":
+      return "default";
+    case "IN_PROGRESS":
+      return "secondary";
+    default:
+      return "outline";
+  }
+};
+
+/* ────────────── Findings Tab ────────────── */
+
+function FindingsTab({
+  findings,
+  editingFinding,
+  setEditingFinding,
+}: {
+  findings: any[];
+  editingFinding: string | null;
+  setEditingFinding: (id: string | null) => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-medium">Findings</h3>
+        <Form method="post" className="inline">
+          <input type="hidden" name="intent" value="create-finding" />
+          <Button size="sm">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add Finding
+          </Button>
+        </Form>
+      </div>
+
+      {findings.length === 0 ? (
+        <EmptyState
+          icon={AlertTriangle}
+          title="No findings yet"
+          description="Add your first finding to begin tracking issues."
+        />
+      ) : (
+        findings.map((f: any) =>
+          editingFinding === f.id ? (
+            <EditFindingForm key={f.id} finding={f} onCancel={() => setEditingFinding(null)} />
+          ) : (
+            <Card key={f.id} className="hover:shadow-sm transition-shadow">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
+                      <h4 className="font-medium">{f.topic || "Untitled"}</h4>
+                      <Badge variant={severityBadgeVariant(f.severity)}>{f.severity}</Badge>
+                      <Badge variant={findingStatusVariant(f.status)}>{f.status}</Badge>
+                    </div>
+                    {f.summary && (
+                      <p className="text-sm text-muted-foreground">{f.summary}</p>
+                    )}
+                    {f.recommended_actions && (
+                      <p className="text-xs text-muted-foreground">
+                        <b>Actions:</b> {f.recommended_actions}
+                      </p>
+                    )}
+                    {f.responsible_party && (
+                      <p className="text-xs text-muted-foreground">
+                        <b>Responsible:</b> {f.responsible_party}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditingFinding(f.id)}
+                      className="p-1.5 hover:bg-muted rounded-md"
+                    >
+                      <Edit3 className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <Form method="post">
+                      <input type="hidden" name="intent" value="delete-finding" />
+                      <input type="hidden" name="finding_id" value={f.id} />
+                      <button
+                        type="submit"
+                        className="p-1.5 hover:bg-red-50 rounded-md"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                      </button>
+                    </Form>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ),
+        )
+      )}
+    </div>
+  );
+}
+
+function EditFindingForm({
+  finding,
+  onCancel,
+}: {
+  finding: any;
+  onCancel: () => void;
+}) {
+  return (
+    <Form method="post">
+      <input type="hidden" name="intent" value="save-finding" />
+      <input type="hidden" name="finding_id" value={finding.id} />
+      <Card className="border-primary/50">
+        <CardContent className="p-5 space-y-3">
+          <EditableField>
+            <input
+              name="topic"
+              defaultValue={finding.topic}
+              className="w-full px-3 py-2 border rounded-lg text-sm"
+              placeholder="Topic"
+            />
+          </EditableField>
+          <EditableField>
+            <textarea
+              name="summary"
+              defaultValue={finding.summary}
+              className="w-full px-3 py-2 border rounded-lg text-sm min-h-[80px]"
+              placeholder="Summary"
+            />
+          </EditableField>
+          <EditableField>
+            <textarea
+              name="recommended_actions"
+              defaultValue={finding.recommended_actions}
+              className="w-full px-3 py-2 border rounded-lg text-sm"
+              placeholder="Recommended actions"
+            />
+          </EditableField>
+          <div className="flex items-center gap-3">
+            <select
+              name="severity"
+              defaultValue={finding.severity}
+              className="px-2 py-1 border rounded-lg text-sm"
+            >
+              {["LOW", "MEDIUM", "HIGH", "CRITICAL"].map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+            <select
+              name="status"
+              defaultValue={finding.status}
+              className="px-2 py-1 border rounded-lg text-sm"
+            >
+              {["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "WAIVED"].map((s) => (
+                <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+              ))}
+            </select>
+            <input
+              name="responsible_party"
+              defaultValue={finding.responsible_party}
+              className="flex-1 px-3 py-2 border rounded-lg text-sm"
+              placeholder="Responsible party"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button type="submit" size="sm">
+              <Save className="w-3.5 h-3.5 mr-1" /> Save
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={onCancel}>
+              <X className="w-3.5 h-3.5 mr-1" /> Cancel
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </Form>
+  );
+}
+
+const severityBadgeVariant = (s: string) => {
+  switch (s) {
+    case "CRITICAL":
+      return "destructive";
+    case "HIGH":
+      return "destructive";
+    case "MEDIUM":
+      return "secondary";
+    case "LOW":
+      return "success";
+    default:
+      return "secondary";
+  }
+};
+
+const findingStatusVariant = (s: string) => {
+  switch (s) {
+    case "OPEN":
+      return "destructive";
+    case "IN_PROGRESS":
+      return "secondary";
+    case "RESOLVED":
+      return "default";
+    default:
+      return "outline";
+  }
+};
+
+/* ────────────── Plan Details ────────────── */
+
+function PlanDetails({ plan }: { plan: any }) {
+  return (
+    <div className="space-y-4 text-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <DetailItem label="Site Visit Start" value={plan.site_assessment_start} />
+        <DetailItem label="Site Visit End" value={plan.site_assessment_end} />
+        <DetailItem label="Draft Report" value={plan.draft_report_deadline} />
+        <DetailItem label="Final Report" value={plan.final_report_deadline} />
+      </div>
+      {plan.notes && (
+        <p className="text-sm text-muted-foreground pt-4 border-t">{plan.notes}</p>
+      )}
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value?: string }) {
+  return (
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="font-medium mt-0.5">
+        {value ? new Date(value).toLocaleDateString() : "—"}
+      </div>
     </div>
   );
 }

@@ -624,3 +624,20 @@ class AssessmentPlan(models.Model):
 
     def __str__(self):
         return f"Plan: {self.assessment}"
+
+
+class UploadedImage(models.Model):
+    """Images uploaded via the rich-text editor for assessments."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    file = models.ImageField(upload_to="assessment_images/")
+    uploaded_by = models.ForeignKey(
+        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="uploaded_images"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "assessment_uploaded_images"
+
+    def __str__(self):
+        return f"Image {self.id} ({self.file.name})"
+

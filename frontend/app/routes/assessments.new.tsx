@@ -1,10 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Form, redirect, useLoaderData, useActionData, Link, useNavigation } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/api";
-import { ArrowLeft, ArrowRight, Check, Plus, Building2, MapPin, Calendar, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Plus, Building2, MapPin, Calendar, FileText, Eye, ChevronLeft, ChevronRight, RotateCcw, Sparkle } from "lucide-react";
 import { cn } from "~/lib/utils";
+import { useDraft } from "~/lib/use-draft";
+import { RichEditor } from "~/components/RichEditor";
 
 /* ──────────────────────────── SERVER ──────────────────────────── */
 
@@ -18,8 +20,8 @@ export async function action({ request }: ActionFunctionArgs) {
   let siteId = formData.get("site") as string;
 
   if (siteJson) {
-    const { name, type, country_code } = JSON.parse(siteJson as string);
     try {
+      const { name, type, country_code } = JSON.parse(siteJson as string);
       const site = await api.post<any>("/api/sites/", {
         name, type, country_code,
         organization: user.orgId,
@@ -55,7 +57,7 @@ export async function action({ request }: ActionFunctionArgs) {
     return redirect(`/assessments/${result.id}`);
   } catch (err: any) {
     const msg = err?.body?.non_field_errors?.[0] ?? err?.body?.detail ?? err?.body?.start_date?.[0] ?? err?.body?.due_date?.[0] ?? err?.message ?? "Failed to create assessment";
-    return { error: msg };
+    return { error: msg, success: false };
   }
 }
 
@@ -83,26 +85,82 @@ const STEPS = [
 
 /* ──────────────────────────── CLIENT ──────────────────────────── */
 
+/** Collect all form state into one object for draft persistence. */
+interface AssessmentForm {
+  step: number;
+  site: string;
+  framework: string;
+  focusArea: string;
+  startDate: string;
+  dueDate: string;
+  status: string;
+  riskLevel: string;
+  aiSummary: string;
+  showCreateSite: boolean;
+  newSiteName: string;
+  newSiteType: string;
+  newSiteCountry: string;
+}
+
 export default function NewAssessmentRoute() {
   const { sites, frameworks, focusAreas } = useLoaderData<typeof loader>();
-  const actionData = useActionData<{ error?: string }>();
+  const actionData = useActionData<{ error?: string; success?: boolean }>();
   const navigation = useNavigation();
   const submitting = navigation.state === "submitting";
 
-  // Form state
-  const [step, setStep] = useState(1);
-  const [site, setSite] = useState("");
-  const [framework, setFramework] = useState("");
-  const [focusArea, setFocusArea] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [status, setStatus] = useState("DRAFT");
-  const [riskLevel, setRiskLevel] = useState("LOW");
-  const [aiSummary, setAiSummary] = useState("");
-  const [showCreateSite, setShowCreateSite] = useState(false);
-  const [newSiteName, setNewSiteName] = useState("");
-  const [newSiteType, setNewSiteType] = useState("");
-  const [newSiteCountry, setNewSiteCountry] = useState("");
+  // Form state — grouped for draft persistence
+  const [form, setForm] = useState<AssessmentForm>({
+    step: 1, site: "", framework: "", focusArea: "",
+    startDate: "", dueDate: "", status: "DRAFT", riskLevel: "LOW",
+    aiSummary: "", showCreateSite: false,
+    newSiteName: "", newSiteType: "", newSiteCountry: "",
+  });
+  const update = <K extends keyof AssessmentForm>(key: K) =>
+    (val: AssessmentForm[K]) => setForm(prev => ({ ...prev, [key]: val }));
+  const updateAll = (fn: (prev: AssessmentForm) => AssessmentForm) => setForm(fn);
+
+  // Destructure for convenience
+  const {
+    step, site, framework, focusArea, startDate, dueDate,
+    status, riskLevel, aiSummary, showCreateSite,
+    newSiteName, newSiteType, newSiteCountry,
+  } = form;
+
+  // ── Draft auto-save ──
+  // Restore on mount - if there's a draft, apply it
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("veris:draft:assessment-new");
+      if (raw) {
+        const d = JSON.parse(raw);
+        // Only restore if there's actual content
+        const hasContent = d.site || d.framework || d.newSiteName || d.aiSummary || d.startDate;
+        if (hasContent) {
+          updateAll(() => ({ ...d, step: 1 })); // Start at step 1 on restore
+          setDraftRestored(true);
+        }
+      }
+    } catch { /* ignore corrupt data */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save on every form change (debounced)
+  const draftTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    clearTimeout(draftTimer.current);
+    draftTimer.current = setTimeout(() => {
+      localStorage.setItem("veris:draft:assessment-new", JSON.stringify(form));
+    }, 500);
+    return () => clearTimeout(draftTimer.current);
+  }, [form]);
+
+  // Clear draft on successful submit
+  useEffect(() => {
+    if (actionData && !actionData.error) {
+      localStorage.removeItem("veris:draft:assessment-new");
+      setDraftRestored(false);
+    }
+  }, [actionData]);
 
   const siteList = Array.isArray(sites) ? sites : [];
   const fwList = Array.isArray(frameworks) ? frameworks : [];
@@ -119,8 +177,8 @@ export default function NewAssessmentRoute() {
     }
   };
 
-  const next = () => { if (canNext() && step < 5) setStep(step + 1); };
-  const prev = () => { if (step > 1) setStep(step - 1); };
+  const next = () => { if (canNext() && step < 5) update("step")(step + 1); };
+  const prev = () => { if (step > 1) update("step")(step - 1); };
 
   const fw = fwList.find((f: any) => f.id === framework);
   const fa = faList.find((f: any) => f.id === focusArea);
@@ -159,7 +217,28 @@ export default function NewAssessmentRoute() {
         </div>
       </div>
 
+      {/* Draft restored banner */}
+      {draftRestored && (
+        <div className="flex items-center justify-between px-4 py-3 rounded-lg bg-primary/10 text-primary text-sm">
+          <div className="flex items-center gap-2">
+            <Sparkle className="w-4 h-4" />
+            <span>Draft restored from your last session.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              clearDraft();
+              setDraftRestored(false);
+            }}
+            className="text-xs text-muted-foreground hover:text-destructive transition-colors"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
       {/* Stepper */}
+
       <div className="bg-card border rounded-xl p-4">
         <div className="flex items-center justify-between gap-1">
           {STEPS.map((s, i) => {
@@ -224,10 +303,10 @@ export default function NewAssessmentRoute() {
           {/* ── STEP 1: BASICS ── */}
           {step === 1 && (
             <StepWrapper title="Basic Details" description="Configure the core assessment settings.">
-              <Field label="Status" required>
+              <Field label="Status">
                 <select
                   value={status}
-                  onChange={e => setStatus(e.target.value)}
+                  onChange={e => update("status")(e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                 >
                   <option value="DRAFT">Draft</option>
@@ -236,13 +315,13 @@ export default function NewAssessmentRoute() {
                 </select>
               </Field>
 
-              <Field label="Risk Level" required>
+              <Field label="Risk Level">
                 <div className="grid grid-cols-4 gap-2">
                   {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const).map(r => (
                     <button
                       key={r}
                       type="button"
-                      onClick={() => setRiskLevel(r)}
+                      onClick={() => update("riskLevel")(r)}
                       className={cn(
                         "px-3 py-2 rounded-lg text-xs font-semibold border transition-all",
                         riskLevel === r
@@ -260,12 +339,10 @@ export default function NewAssessmentRoute() {
               </Field>
 
               <Field label="Summary / Notes">
-                <textarea
-                  rows={3}
+                <RichEditor
                   value={aiSummary}
-                  onChange={e => setAiSummary(e.target.value)}
+                  onChange={update("aiSummary")}
                   placeholder="What is this assessment about? Any key context?"
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none resize-none"
                 />
               </Field>
             </StepWrapper>
@@ -429,7 +506,15 @@ export default function NewAssessmentRoute() {
                   <ReviewRow label="Status" value={status.replace(/_/g, " ")} />
                   <ReviewRow label="Risk Level" value={riskLevel} badge
                     badgeColor={riskLevel === "CRITICAL" ? "destructive" : riskLevel === "HIGH" ? "destructive" : riskLevel === "MEDIUM" ? "secondary" : "success"} />
-                  {aiSummary && <ReviewRow label="Summary" value={aiSummary} />}
+                  {aiSummary && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground block mb-1">Summary</span>
+                      <div
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: aiSummary }}
+                      />
+                    </div>
+                  )}
                 </ReviewSection>
 
                 <ReviewSection title="Site" icon={Building2}>

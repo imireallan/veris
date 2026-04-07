@@ -51,6 +51,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 />
                 <Meta />
                 <Links />
+                {/* Blocking inline script — runs before React hydration to prevent dark mode flicker */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `(function(){try{var t=localStorage.getItem('theme'),d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(d){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){}})();`,
+                    }}
+                />
             </head>
             <body className="min-h-screen flex flex-col bg-background text-foreground">
                 {children}

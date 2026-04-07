@@ -107,6 +107,33 @@ html,
 body {
   @apply bg-background text-foreground;
   min-height: 100vh;
+  color-scheme: light dark;
+}
+
+/* Fix native date picker inheriting HSL colors and showing blank cells */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  color-scheme: light;
+}
+
+input[type="date"] {
+  color-scheme: light;
+}
+
+/* ───────── Native date input popup fix ───────── */
+/* Override the global `* { border-color: var(--border) }` that breaks the native calendar popup */
+::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.6;
+}
+
+/* Override any inherited border/color cascade that affects the calendar popup */
+input[type="date"]::-webkit-datetime-edit,
+input[type="date"]::-webkit-datetime-edit-fields-wrapper,
+input[type="date"]::-webkit-datetime-edit-text,
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: inherit;
 }
 
 /* ───────── Focus ring utility ───────── */

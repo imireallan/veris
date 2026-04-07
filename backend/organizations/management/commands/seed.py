@@ -481,6 +481,15 @@ class Command(BaseCommand):
             )
             self.stdout.write(self.style.SUCCESS("  [Created] Assessor Profile for admin"))
 
+        # Assign admin user to the first organization if not already assigned
+        admin_user = User.objects.filter(email="admin@example.com").first()
+        if admin_user and not admin_user.organization_id:
+            first_org = Organization.objects.first()
+            if first_org:
+                admin_user.organization = first_org
+                admin_user.save(update_fields=["organization"])
+                self.stdout.write(self.style.SUCCESS("  [Updated] Assigned admin user to Demo Energy Corp"))
+
         # Summary
         self.stdout.write(self.style.SUCCESS("=" * 50))
         self.stdout.write(self.style.SUCCESS("Database seeded successfully!"))

@@ -49,14 +49,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     name="viewport"
                     content="width=device-width, initial-scale=1"
                 />
-                <Meta />
-                <Links />
-                {/* Blocking inline script — runs before React hydration to prevent dark mode flicker */}
+                {/* Blocking script BEFORE any CSS — prevents any paint of wrong theme */}
                 <script
                     dangerouslySetInnerHTML={{
                         __html: `(function(){try{var t=localStorage.getItem('theme'),d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme:dark)').matches);if(d){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}}catch(e){}})();`,
                     }}
                 />
+                <Meta />
+                <Links />
             </head>
             <body className="min-h-screen flex flex-col bg-background text-foreground">
                 {children}

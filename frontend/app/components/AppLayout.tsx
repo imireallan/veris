@@ -9,37 +9,44 @@ interface AppLayoutProps {
   navLinks: { to: string; label: string; icon: string }[]
 }
 
-export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+/** Dark mode toggle state — reads from DOM (.dark class is set by blocking script in root.tsx) */
+function useDarkMode(): [boolean, () => void] {
   const [dark, setDark] = useState(false)
 
-  // Check dark mode only on client after hydration
   useEffect(() => {
-    const stored = localStorage.getItem("theme")
-    if (stored === "dark") setDark(true)
-    else if (stored === "light") setDark(false)
-    else if (window.matchMedia("(prefers-color-scheme: dark)").matches) setDark(true)
+    // Read actual DOM state (set by blocking script before hydration)
+    const update = () => setDark(document.documentElement.classList.contains("dark"))
+    update()
+    // Listen for system preference changes
+    const mq = window.matchMedia("(prefers-color-scheme: dark)")
+    mq.addEventListener("change", update)
+    return () => mq.removeEventListener("change", update)
   }, [])
+
+  const toggle = () => {
+    const html = document.documentElement
+    const next = !html.classList.contains("dark")
+    if (next) {
+      html.classList.add("dark")
+      localStorage.setItem("theme", "dark")
+    } else {
+      html.classList.remove("dark")
+      localStorage.setItem("theme", "light")
+    }
+    setDark(next)
+  }
+
+  return [dark, toggle]
+}
+
+export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [dark, toggleTheme] = useDarkMode()
 
   const closeSidebar = () => setSidebarOpen(false)
 
-  const toggleTheme = () => {
-    setDark((prev) => {
-      const next = !prev
-      const html = document.documentElement
-      if (next) {
-        html.classList.add("dark")
-        localStorage.setItem("theme", "dark")
-      } else {
-        html.classList.remove("dark")
-        localStorage.setItem("theme", "light")
-      }
-      return next
-    })
-  }
-
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -48,14 +55,14 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
         />
       )}
 
+      {/* Sidebar wrapper: fixed on mobile, inline on desktop */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 transition-transform duration-200 ease-in-out
-          lg:relative lg:z-auto lg:w-64 lg:translate-x-0
+        className={`fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out
+          lg:relative lg:z-auto lg:translate-x-0
           ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        {/* Sidebar */}
         <Sidebar navLinks={navLinks} user={user} />
-        {/* Close button on mobile - placed over sidebar without affecting flex layout */}
+        {/* Close button on mobile */}
         <button
           className="absolute top-3 right-3 p-1.5 rounded-md hover:bg-muted lg:hidden"
           onClick={closeSidebar}
@@ -67,9 +74,9 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar - visible on all screens */}
+        {/* Top bar */}
         <header className="sticky top-0 z-30 flex items-center justify-end px-4 py-2.5 border-b bg-card shrink-0">
-          {/* Mobile hamburger - left side */}
+          {/* Mobile hamburger */}
           <button
             className="p-1.5 rounded-md hover:bg-muted -ml-2 lg:hidden"
             onClick={() => setSidebarOpen(true)}
@@ -78,7 +85,6 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
             <Menu className="w-5 h-5" />
           </button>
 
-          {/* Spacer */}
           <div className="flex-1" />
 
           {/* Theme toggle */}
@@ -91,7 +97,7 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
           </button>
         </header>
 
-        {/* Page content */}
+        {/* Page content — responsive padding */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {children}
         </main>

@@ -40,17 +40,17 @@ export default function Sidebar({
         .slice(0, 2);
 
     return (
-        <aside className="w-64 border-r bg-card flex flex-col shrink-0">
-            {/* Branding */}
-            <div className="px-5 py-4 flex items-center gap-2.5 border-b">
+        <aside className="w-64 h-screen border-r bg-card flex flex-col">
+            {/* Branding - fixed height */}
+            <div className="px-5 py-4 flex items-center gap-2.5 border-b shrink-0">
                 <Leaf className="w-6 h-6 text-primary" />
                 <span className="text-base font-bold tracking-tight">
                     Veris
                 </span>
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 px-3 py-4 space-y-1">
+            {/* Navigation - fills all remaining space */}
+            <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
                 {navLinks.map((link) => {
                     const Icon = iconMap[link.icon] ?? LayoutDashboard;
                     return (
@@ -73,15 +73,15 @@ export default function Sidebar({
                 })}
             </nav>
 
-            {/* User footer */}
-            <div className="px-3 py-3 border-t space-y-2">
+            {/* User footer - fixed at bottom */}
+            <div className="px-3 py-3 border-t shrink-0">
                 <div className="flex items-center gap-3 px-3 py-2">
                     <Avatar>
                         <AvatarFallback className="text-xs">
                             {initials}
                         </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">
                             {user.fullName}
                         </div>

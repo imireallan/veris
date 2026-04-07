@@ -14,12 +14,25 @@ import {
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = getUserToken(request);
+
+  const fetchWithLog = async (url: string, label: string) => {
+    try {
+      const result = await api.get<any>(url, token);
+      // DRF paginated responses are { count, results }, unwrap to plain array
+      return Array.isArray(result) ? result : (result?.results ?? []);
+    } catch (err) {
+      console.error(`[Assessments] Failed to fetch ${label}:`, err);
+      return [];
+    }
+  };
+
   const [assessments, sites, frameworks, focusAreas] = await Promise.all([
-    api.get<any[]>("/api/assessments/", token).catch(() => []),
-    api.get<any[]>("/api/sites/", token).catch(() => []),
-    api.get<any[]>("/api/frameworks/", token).catch(() => []),
-    api.get<any[]>("/api/focus-areas/", token).catch(() => []),
+    fetchWithLog("/api/assessments/", "assessments"),
+    fetchWithLog("/api/sites/", "sites"),
+    fetchWithLog("/api/frameworks/", "frameworks"),
+    fetchWithLog("/api/focus-areas/", "focusAreas"),
   ]);
+
   return { assessments, sites, frameworks, focusAreas, user };
 }
 
@@ -45,6 +58,7 @@ const riskVariant = (r: string): "default" | "destructive" | "secondary" | "succ
 
 export default function AssessmentsListRoute() {
   const { assessments, sites, frameworks, focusAreas } = useLoaderData<typeof loader>();
+  console.log("Loaded assessments:", sites);
   const [searchParams, setSearchParams] = useSearchParams();
   const search = searchParams.get("q") || "";
   const allItems = Array.isArray(assessments) ? assessments : [];

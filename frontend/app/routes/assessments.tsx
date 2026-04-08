@@ -10,7 +10,7 @@ import { PageHeader, SearchBar, EmptyState, Button } from "~/components/ui";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
 
   const fetchWithLog = async (url: string, label: string) => {
     try {

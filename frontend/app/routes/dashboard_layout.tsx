@@ -21,7 +21,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function DashboardLayoutRoute() {
   const { user, navLinks } = useLoaderData<typeof loader>()
   return (
-    <AppLayout user={user} navLinks={navLinks}>
+    <AppLayout user={{ ...user, fullName: user.email, orgId: user.organization_id, id: user.id }} navLinks={navLinks}>
       <Outlet />
     </AppLayout>
   )

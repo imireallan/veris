@@ -5,7 +5,7 @@ import { api } from "~/.server/lib/api";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
 
   // If user has an org, fetch it directly
   if (user.organization_id) {

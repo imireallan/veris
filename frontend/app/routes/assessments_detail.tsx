@@ -20,7 +20,7 @@ import {
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token).catch(() => null);
   const [findings, cipCycles, plan, tasks, report] = await Promise.all([
     api.get<any[]>(`/api/findings/?assessment=${params.id}`, token).catch(() => []),
@@ -40,7 +40,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 

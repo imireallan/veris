@@ -17,7 +17,7 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     const result = await loginUser(email, password);
-    if ("error" in result) return result;
+    if ("error" in result) return { error: result.error, field: "password" };
 
     const redirectTo = (formData.get("redirectTo") as string) || "/";
     return createTokenSession({ accessToken: result.accessToken, redirectTo });
@@ -31,7 +31,7 @@ export function meta() {
 }
 
 export default function LoginRoute() {
-  const actionData = useActionData<typeof action>();
+  const actionData = useActionData<{ error: string; field?: string }>();
   const [searchParams] = useSearchParams();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";

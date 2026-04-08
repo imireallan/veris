@@ -33,7 +33,7 @@ import { useWizardForm } from "~/hooks/useWizard";
 
 export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const formData = await request.formData();
 
   // Handle site creation inline (hidden field with JSON payload)
@@ -49,7 +49,7 @@ export async function action({ request }: ActionFunctionArgs) {
           name,
           type,
           country_code,
-          organization: user.orgId,
+          organization: user.organization_id,
           operational_status: "ACTIVE",
           risk_profile: "MEDIUM",
           coordinates: {},
@@ -103,7 +103,7 @@ export async function action({ request }: ActionFunctionArgs) {
 const unwrap = (r: any) => (Array.isArray(r) ? r : (r?.results ?? []));
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const [sites, frameworks, focusAreas] = await Promise.all([
     api
       .get<any>("/api/sites/", token)

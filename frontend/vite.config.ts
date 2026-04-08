@@ -11,8 +11,9 @@ const plugins = [tailwindcss(), reactRouter(), tsconfigPaths()];
 
 export default defineConfig({
   plugins,
-  // Inject test-mode flag so sessions.ts can skip real backend calls during e2e tests
-  "globalThis.__TEST_MODE__": JSON.stringify(isTest),
+  define: {
+    __TEST_MODE__: JSON.stringify(isTest),
+  },
   server: {
     host: true,
     strictPort: true,

@@ -8,7 +8,7 @@ import { Badge, Button, Card, CardContent, EmptyState, ProgressBar } from "~/com
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const { orgId, assessmentId } = params;
 
   // Fetch assessment to get template
@@ -42,7 +42,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
   const assessmentId = params.assessmentId;
@@ -60,8 +60,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
         question: questionId,
         answer_text: answer,
       };
-      if (ai_score_suggestion) body.ai_score_suggestion = parseFloat(ai_score_suggestion);
-      if (ai_feedback) body.ai_feedback = ai_feedback;
+      if (ai_score_suggestion && typeof ai_score_suggestion === "string") body.ai_score_suggestion = parseFloat(ai_score_suggestion);
+      if (ai_feedback && typeof ai_feedback === "string") body.ai_feedback = ai_feedback;
 
       if (responseId) {
         await api.patch(`/api/responses/${responseId}/`, body, token);
@@ -111,7 +111,7 @@ export default function QuestionnaireDetailRoute() {
 
   // Count answered questions
   const answeredCount = filteredQuestions.filter(
-    (q: any) => responseMap[q.id]
+    (q: any) => responseMap && responseMap[q.id]
   ).length;
   const progress = filteredQuestions.length > 0
     ? Math.round((answeredCount / filteredQuestions.length) * 100)
@@ -168,7 +168,7 @@ export default function QuestionnaireDetailRoute() {
       ) : (
         <div className="space-y-4">
           {filteredQuestions.map((q: any, idx: number) => {
-            const existing = responseMap[q.id];
+            const existing = responseMap ? responseMap[q.id] : undefined;
             const isEditing = editingResponse === q.id;
             return (
               <QuestionCard

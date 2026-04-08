@@ -7,7 +7,7 @@ import { FileText, Plus } from "lucide-react";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const orgId = params.orgId;
 
   const [org, assessments] = await Promise.all([

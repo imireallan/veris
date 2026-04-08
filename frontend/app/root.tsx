@@ -7,13 +7,16 @@ import {
   type LinksFunction,
   type MetaFunction,
   type LoaderFunctionArgs,
+  data,
+  redirect,
 } from "react-router";
 import { useRouteError } from "react-router";
-import { json } from "~/.server/sessions";
+import { getUserToken, getSession } from "~/.server/sessions"; // Import getSession and json here
 
 import { ThemeProvider } from "~/providers/ThemeProvider";
 import { fetchThemeConfig } from "~/.server/themes";
-import { getUserToken } from "~/.server/sessions";
+import { api } from "~/.server/lib/api"; // Assuming api is correctly configured here
+
 import "./app.css";
 
 export const links: LinksFunction = () => [
@@ -40,9 +43,64 @@ export const meta: MetaFunction = () => [
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
-  const orgId = token ? "" : "";
-  const theme = await fetchThemeConfig(orgId);
-  return json({ user: token ? { authenticated: true } : null, theme });
+  let user = null;
+
+  if (token) {
+    try {
+      // Fetch user details from the backend using the token
+      const userData = await api.get<{
+        id: string;
+        email: string;
+        full_name: string | null;
+        first_name: string | null;
+        last_name: string | null;
+        org_id: string | null;
+        role: string;
+        picture_url: string | null;
+      }>(`/api/auth/me/`, token); // Assuming /api/auth/me/ provides user details
+
+      console.log("Fetched user details:", userData);
+
+      if (userData) {
+        user = {
+          id: userData.id,
+          email: userData.email,
+          // Map backend's 'full_name' and 'name' to frontend's expected 'fullName'
+          // Provide first/last names if available, otherwise fallback to email parts
+          firstName:
+            userData.first_name ??
+            userData.full_name?.split(" ")[0] ??
+            userData.email.split("@")[0],
+          fullName: userData.full_name ?? userData.email,
+          organization_id: userData.org_id,
+          role: userData.role,
+          picture_url: userData.picture_url,
+        };
+        console.log("Constructed user object for sidebar:", user);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user details:", error);
+      // If fetching user fails, it implies an issue with the token or session.
+      // Destroy the session and redirect to login.
+      console.log("User fetch failed, redirecting to login...");
+      const session = await getSession(request); // Need to get the session to destroy it
+      // Ensure session is valid before destroying
+      if (session) {
+        throw redirect("/login", {
+          headers: {
+            "Set-Cookie": await sessionStorage.destroySession(session),
+          },
+        });
+      } else {
+        // If session is somehow invalid, just redirect without destroying
+        throw redirect("/login");
+      }
+    }
+  }
+
+  const theme = await fetchThemeConfig(user?.organization_id ?? ""); // Fetch theme based on user's org or default
+
+  return data({ user, theme });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -69,6 +127,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // The user object from useLoaderData will be used by children components
+  // e.g., Sidebar, which expects user properties like firstName, fullName, email.
+  // If user is null (not logged in or failed to fetch), navigation guards handle redirects.
   return (
     <ThemeProvider>
       <Outlet />

@@ -7,7 +7,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 const isTest =
   typeof process !== "undefined" && process.env.TEST_MOCK === "true";
 
-const plugins = [tailwindcss(), reactRouter(), tsconfigPaths()];
+const plugins = [reactRouterDevTools(), tailwindcss(), reactRouter(), tsconfigPaths()];
 
 export default defineConfig({
   plugins,

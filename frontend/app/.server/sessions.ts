@@ -131,12 +131,3 @@ function decodeJwtPayload(token: string): Record<string, any> {
   const raw = Buffer.from(parts[1], "base64url").toString("utf8");
   return JSON.parse(raw);
 }
-/** Re-export json helper (returns Response with JSON body). */
-export function json<T>(data: T, init?: ResponseInit): Response {
-  const headers = new Headers(init?.headers);
-  headers.set("Content-Type", "application/json; charset=utf-8");
-  return new Response(JSON.stringify(data), {
-    ...init,
-    headers,
-  });
-}

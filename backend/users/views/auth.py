@@ -10,28 +10,29 @@ from users.models import User
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):
-    """Authenticate via email+password and return JWT tokens."""
+    """Authenticate user with email and password, return JWT tokens."""
     email = request.data.get("email")
     password = request.data.get("password")
 
     if not email or not password:
-        return Response({"error": "Email and password are required"}, status=400)
+        return Response({"detail": "Email and password are required"}, status=400)
 
     try:
         user = User.objects.get(email=email)
     except User.DoesNotExist:
-        return Response({"error": "Invalid credentials"}, status=401)
+        return Response({"detail": "Invalid credentials"}, status=401)
 
     if not user.check_password(password):
-        return Response({"error": "Invalid credentials"}, status=401)
+        return Response({"detail": "Invalid credentials"}, status=401)
 
     if not user.is_active:
-        return Response({"error": "Account is disabled"}, status=401)
+        return Response({"detail": "Account is disabled"}, status=401)
 
     refresh = RefreshToken.for_user(user)
     return Response({
         "access_token": str(refresh.access_token),
         "refresh_token": str(refresh),
+        "user_id": str(user.id),
     })
 
 

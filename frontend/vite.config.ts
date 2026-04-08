@@ -7,12 +7,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 const isTest =
   typeof process !== "undefined" && process.env.TEST_MOCK === "true";
 
-const plugins = [tailwindcss(), reactRouter(), tsconfigPaths()];
-
-// Only enable React Router DevTools in development
-if (process.env.NODE_ENV === "development") {
-  plugins.unshift(reactRouterDevTools());
-}
+const plugins = [reactRouterDevTools(), tailwindcss(), reactRouter(), tsconfigPaths()];
 
 export default defineConfig({
   plugins,
@@ -24,5 +19,11 @@ export default defineConfig({
     host: true,
     strictPort: true,
     allowedHosts: true,
+    proxy: {
+      "/api/upload-image": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+    },
   },
 });

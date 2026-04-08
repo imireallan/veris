@@ -19,7 +19,10 @@ from assessments.views import (
     AssessmentPlanViewSet,
 )
 from knowledge.views import KnowledgeDocumentViewSet
+from assessments.views.upload_image import upload_image
 from .health import health_check
+from django.conf import settings
+from django.conf.urls.static import static
 
 router = DefaultRouter()
 router.register(r"api/organizations", OrganizationViewSet, basename="organization")
@@ -43,4 +46,8 @@ urlpatterns = [
     path("api/", include("users.urls")),
     *router.urls,
     path("admin/", admin.site.urls),
+    path("api/upload-image/", upload_image, name="upload-image"),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

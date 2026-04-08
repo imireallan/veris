@@ -1,10 +1,33 @@
 import { useState, useRef, useEffect } from "react";
-import { Form, redirect, useLoaderData, useActionData, Link, useNavigation } from "react-router";
+import {
+  redirect,
+  useLoaderData,
+  useActionData,
+  Link,
+  useNavigation,
+  useSubmit,
+} from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/api";
-import { ArrowLeft, ArrowRight, Check, Plus, Building2, MapPin, Calendar, FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Plus,
+  Building2,
+  MapPin,
+  Calendar,
+  FileText,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Sparkle,
+} from "lucide-react";
 import { cn } from "~/lib/utils";
+import { RichEditor } from "~/components/RichEditor";
+import { useWizardForm } from "~/hooks/useWizard";
 
 /* ──────────────────────────── SERVER ──────────────────────────── */
 
@@ -18,18 +41,28 @@ export async function action({ request }: ActionFunctionArgs) {
   let siteId = formData.get("site") as string;
 
   if (siteJson) {
-    const { name, type, country_code } = JSON.parse(siteJson as string);
     try {
-      const site = await api.post<any>("/api/sites/", {
-        name, type, country_code,
-        organization: user.orgId,
-        operational_status: "ACTIVE",
-        risk_profile: "MEDIUM",
-        coordinates: {},
-      }, token);
+      const { name, type, country_code } = JSON.parse(siteJson as string);
+      const site = await api.post<any>(
+        "/api/sites/",
+        {
+          name,
+          type,
+          country_code,
+          organization: user.orgId,
+          operational_status: "ACTIVE",
+          risk_profile: "MEDIUM",
+          coordinates: {},
+        },
+        token,
+      );
       siteId = site.id;
     } catch (err: any) {
-      const msg = err?.body?.non_field_errors?.[0] ?? err?.body?.detail ?? err?.message ?? "Failed to create site";
+      const msg =
+        err?.body?.non_field_errors?.[0] ??
+        err?.body?.detail ??
+        err?.message ??
+        "Failed to create site";
       return { error: `Site creation failed: ${msg}` };
     }
   }
@@ -50,23 +83,40 @@ export async function action({ request }: ActionFunctionArgs) {
   if (startDate) data.start_date = `${startDate}T00:00:00Z`;
   if (dueDate) data.due_date = `${dueDate}T23:59:59Z`;
 
+  console.log(startDate, dueDate);
+
   try {
     const result = await api.post<any>("/api/assessments/", data, token);
     return redirect(`/assessments/${result.id}`);
   } catch (err: any) {
-    const msg = err?.body?.non_field_errors?.[0] ?? err?.body?.detail ?? err?.body?.start_date?.[0] ?? err?.body?.due_date?.[0] ?? err?.message ?? "Failed to create assessment";
-    return { error: msg };
+    const msg =
+      err?.body?.non_field_errors?.[0] ??
+      err?.body?.detail ??
+      err?.body?.start_date?.[0] ??
+      err?.body?.due_date?.[0] ??
+      err?.message ??
+      "Failed to create assessment";
+    return { error: msg, success: false };
   }
 }
 
-const unwrap = (r: any) => Array.isArray(r) ? r : (r?.results ?? []);
+const unwrap = (r: any) => (Array.isArray(r) ? r : (r?.results ?? []));
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const token = getUserToken(request);
   const [sites, frameworks, focusAreas] = await Promise.all([
-    api.get<any>("/api/sites/", token).then(unwrap).catch(() => []),
-    api.get<any>("/api/frameworks/", token).then(unwrap).catch(() => []),
-    api.get<any>("/api/focus-areas/", token).then(unwrap).catch(() => []),
+    api
+      .get<any>("/api/sites/", token)
+      .then(unwrap)
+      .catch(() => []),
+    api
+      .get<any>("/api/frameworks/", token)
+      .then(unwrap)
+      .catch(() => []),
+    api
+      .get<any>("/api/focus-areas/", token)
+      .then(unwrap)
+      .catch(() => []),
   ]);
   return { sites, frameworks, focusAreas };
 }
@@ -83,26 +133,109 @@ const STEPS = [
 
 /* ──────────────────────────── CLIENT ──────────────────────────── */
 
+/** Collect all form state into one object for draft persistence. */
+interface AssessmentForm {
+  // step: number;
+  site: string;
+  framework: string;
+  focusArea: string;
+  startDate: string;
+  dueDate: string;
+  status: string;
+  riskLevel: string;
+  aiSummary: string;
+  showCreateSite: boolean;
+  newSiteName: string;
+  newSiteType: string;
+  newSiteCountry: string;
+}
+
 export default function NewAssessmentRoute() {
   const { sites, frameworks, focusAreas } = useLoaderData<typeof loader>();
-  const actionData = useActionData<{ error?: string }>();
+  const actionData = useActionData<{ error?: string; success?: boolean }>();
+  const submitRemix = useSubmit();
   const navigation = useNavigation();
-  const submitting = navigation.state === "submitting";
+  const isSubmittingRemix = navigation.state === "submitting";
 
-  // Form state
-  const [step, setStep] = useState(1);
-  const [site, setSite] = useState("");
-  const [framework, setFramework] = useState("");
-  const [focusArea, setFocusArea] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [status, setStatus] = useState("DRAFT");
-  const [riskLevel, setRiskLevel] = useState("LOW");
-  const [aiSummary, setAiSummary] = useState("");
-  const [showCreateSite, setShowCreateSite] = useState(false);
-  const [newSiteName, setNewSiteName] = useState("");
-  const [newSiteType, setNewSiteType] = useState("");
-  const [newSiteCountry, setNewSiteCountry] = useState("");
+  const STORAGE_KEY = "veris:draft:assessment-new";
+
+  const {
+    data: form,
+    step,
+    update,
+    next,
+    back,
+    goTo,
+    submit,
+    isLastStep,
+    submitting: isHookSubmitting,
+  } = useWizardForm<AssessmentForm>({
+    persistKey: STORAGE_KEY,
+    totalSteps: 5,
+    initialData: {
+      site: "",
+      framework: "",
+      focusArea: "",
+      startDate: "",
+      dueDate: "",
+      status: "DRAFT",
+      riskLevel: "LOW",
+      aiSummary: "",
+      showCreateSite: false,
+      newSiteName: "",
+      newSiteType: "",
+      newSiteCountry: "",
+    },
+    onSubmit: async (values) => {
+      const formData = new FormData();
+
+      // Define a mapping for keys that differ between Client and Server/API
+      const keyMap: Record<string, string> = {
+        startDate: "start_date",
+        dueDate: "due_date",
+        riskLevel: "risk_level",
+        focusArea: "focus_area",
+        aiSummary: "ai_summary",
+      };
+
+      Object.entries(values).forEach(([key, value]) => {
+        if (key === "showCreateSite") return;
+
+        // Use the mapped key if it exists, otherwise use the original key
+        const targetKey = keyMap[key] || key;
+        formData.append(targetKey, String(value));
+      });
+
+      // Special handling for new site
+      if (values.showCreateSite && values.newSiteName) {
+        formData.append(
+          "__new_site",
+          JSON.stringify({
+            name: values.newSiteName,
+            type: values.newSiteType,
+            country_code: values.newSiteCountry,
+          }),
+        );
+      }
+
+      submitRemix(formData, { method: "post" });
+    },
+  });
+
+  const {
+    site,
+    framework,
+    focusArea,
+    startDate,
+    dueDate,
+    status,
+    riskLevel,
+    aiSummary,
+    showCreateSite,
+    newSiteName,
+    newSiteType,
+    newSiteCountry,
+  } = form;
 
   const siteList = Array.isArray(sites) ? sites : [];
   const fwList = Array.isArray(frameworks) ? frameworks : [];
@@ -110,49 +243,36 @@ export default function NewAssessmentRoute() {
 
   const canNext = () => {
     switch (step) {
-      case 1: return true;
-      case 2: return site !== "" || (showCreateSite && newSiteName && newSiteType && newSiteCountry);
-      case 3: return true;  // framework and focus area are optional
-      case 4: return startDate !== "" && dueDate !== "";
-      case 5: return true;
-      default: return false;
+      case 1:
+        return true;
+      case 2:
+        return (
+          site !== "" ||
+          (showCreateSite && !!newSiteName && !!newSiteType && !!newSiteCountry)
+        );
+      case 3:
+        return true;
+      case 4:
+        return !!startDate && !!dueDate;
+      default:
+        return true;
     }
   };
-
-  const next = () => { if (canNext() && step < 5) setStep(step + 1); };
-  const prev = () => { if (step > 1) setStep(step - 1); };
 
   const fw = fwList.find((f: any) => f.id === framework);
   const fa = faList.find((f: any) => f.id === focusArea);
   const s = siteList.find((s: any) => s.id === site);
 
-  const siteTypeOptions = [
-    { value: "MINE", label: "Mine" },
-    { value: "OPERATION", label: "Oil/Gas Operation" },
-    { value: "WELL", label: "Well Pad / Well Site" },
-    { value: "FACILITY", label: "Processing Facility" },
-    { value: "REFINERY", label: "Refinery" },
-    { value: "PORT", label: "Port / Storage" },
-    { value: "OFFICE", label: "Regional Office" },
-    { value: "FARM", label: "Farm / Plantation" },
-    { value: "FACTORY", label: "Factory / Manufacturing" },
-    { value: "WAREHOUSE", label: "Warehouse" },
-  ];
-
-  // Serialize new site data as hidden field for the action
-  const newSitePayload = (showCreateSite && newSiteName && newSiteType && newSiteCountry)
-    ? JSON.stringify({ name: newSiteName, type: newSiteType, country_code: newSiteCountry })
-    : "";
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Link to="/assessments" className="p-2 hover:bg-muted rounded-lg">
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </Link>
         <div>
-          <h2 className="text-2xl font-semibold text-foreground">New Assessment</h2>
+          <h2 className="text-2xl font-semibold text-foreground">
+            New Assessment
+          </h2>
           <p className="text-muted-foreground text-sm mt-0.5">
             Set up a new sustainability assessment in 5 steps.
           </p>
@@ -162,285 +282,279 @@ export default function NewAssessmentRoute() {
       {/* Stepper */}
       <div className="bg-card border rounded-xl p-4">
         <div className="flex items-center justify-between gap-1">
-          {STEPS.map((s, i) => {
-            const Icon = s.icon;
-            const active = step === s.id;
-            const done = step > s.id;
-            return (
-              <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                <button
-                  type="button"
-                  onClick={() => setStep(s.id)}
+          {STEPS.map((s, i) => (
+            <div key={s.id} className="flex items-center flex-1 last:flex-none">
+              <button
+                type="button"
+                onClick={() => goTo(s.id)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all flex-1",
+                  step > s.id && "text-primary bg-primary/5",
+                  step === s.id &&
+                    "text-primary bg-primary/10 ring-1 ring-primary/30",
+                  step < s.id && "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <span
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all flex-1",
-                    done && "text-primary bg-primary/5",
-                    active && "text-primary bg-primary/10 ring-1 ring-primary/30",
-                    !done && !active && "text-muted-foreground hover:text-foreground"
+                    "w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0",
+                    step > s.id
+                      ? "bg-primary text-primary-foreground"
+                      : step === s.id
+                        ? "bg-primary/20 text-primary"
+                        : "border border-border",
                   )}
                 >
-                  <span className={cn(
-                    "w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0",
-                    done && "bg-primary text-primary-foreground",
-                    active && "bg-primary/20 text-primary",
-                    !done && !active && "border border-border"
-                  )}>
-                    {done ? <Check className="w-3 h-3" /> : s.id}
-                  </span>
-                  <span className="hidden sm:inline truncate">{s.label}</span>
-                </button>
-                {i < STEPS.length - 1 && (
-                  <div className={cn(
+                  {step > s.id ? <Check className="w-3 h-3" /> : s.id}
+                </span>
+                <span className="hidden sm:inline truncate">{s.label}</span>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div
+                  className={cn(
                     "h-px flex-1 mx-1",
-                    step > s.id ? "bg-primary/40" : "bg-border"
-                  )} />
-                )}
-              </div>
-            );
-          })}
+                    step > s.id ? "bg-primary/40" : "bg-border",
+                  )}
+                />
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Error banner */}
       {actionData?.error && (
         <div className="px-4 py-3 rounded-lg bg-destructive/10 text-destructive text-sm">
           {actionData.error}
         </div>
       )}
 
-      {/* Form card */}
       <div className="bg-card border rounded-xl p-6">
-        <Form method="post" className="space-y-5">
-          {/* Hidden fields for submit */}
-          <input type="hidden" name="site" value={site} />
-          <input type="hidden" name="__new_site" value={newSitePayload} />
-          <input type="hidden" name="framework" value={framework} />
-          <input type="hidden" name="focus_area" value={focusArea} />
-          <input type="hidden" name="start_date" value={startDate} />
-          <input type="hidden" name="due_date" value={dueDate} />
-          <input type="hidden" name="status" value={status} />
-          <input type="hidden" name="risk_level" value={riskLevel} />
-          <input type="hidden" name="ai_summary" value={aiSummary} />
-
-          {/* ── STEP 1: BASICS ── */}
+        <div className="space-y-5">
+          {/* STEP 1: BASICS */}
           {step === 1 && (
-            <StepWrapper title="Basic Details" description="Configure the core assessment settings.">
-              <Field label="Status" required>
+            <StepWrapper title="Basic Details">
+              <Field label="Status">
                 <select
                   value={status}
-                  onChange={e => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                  onChange={(e) => update("status")(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
                 >
                   <option value="DRAFT">Draft</option>
                   <option value="IN_PROGRESS">In Progress</option>
                   <option value="UNDER_REVIEW">Under Review</option>
                 </select>
               </Field>
-
-              <Field label="Risk Level" required>
+              <Field label="Risk Level">
                 <div className="grid grid-cols-4 gap-2">
-                  {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const).map(r => (
+                  {(["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const).map((r) => (
                     <button
                       key={r}
                       type="button"
-                      onClick={() => setRiskLevel(r)}
+                      onClick={() => update("riskLevel")(r)}
                       className={cn(
                         "px-3 py-2 rounded-lg text-xs font-semibold border transition-all",
                         riskLevel === r
-                          ? r === "CRITICAL" ? "bg-destructive/10 border-destructive text-destructive"
-                          : r === "HIGH" ? "bg-orange-50 dark:bg-orange-500/10 border-orange-400 text-orange-600 dark:text-orange-300"
-                          : r === "MEDIUM" ? "bg-yellow-50 dark:bg-yellow-500/10 border-yellow-400 text-yellow-700 dark:text-yellow-300"
-                          : "bg-green-50 dark:bg-green-500/10 border-green-400 text-green-700 dark:text-green-300"
-                          : "border-border text-muted-foreground hover:bg-muted"
+                          ? "bg-primary/10 border-primary text-primary"
+                          : "border-border text-muted-foreground",
                       )}
                     >
-                      {r.charAt(0) + r.slice(1).toLowerCase()}
+                      {r}
                     </button>
                   ))}
                 </div>
               </Field>
-
               <Field label="Summary / Notes">
-                <textarea
-                  rows={3}
-                  value={aiSummary}
-                  onChange={e => setAiSummary(e.target.value)}
-                  placeholder="What is this assessment about? Any key context?"
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none resize-none"
-                />
+                <RichEditor value={aiSummary} onChange={update("aiSummary")} />
               </Field>
             </StepWrapper>
           )}
 
-          {/* ── STEP 2: SITE ── */}
+          {/* STEP 2: SITE */}
           {step === 2 && (
-            <StepWrapper title="Select or Create a Site" description="Choose an existing site or create a new one.">
+            <StepWrapper title="Site Selection">
               {!showCreateSite ? (
-                <>
+                <div className="space-y-4">
                   <Field label="Site" required>
                     <select
                       value={site}
-                      onChange={e => setSite(e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                      onChange={(e) => update("site")(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg"
                     >
                       <option value="">— Select a site —</option>
                       {siteList.map((s: any) => (
-                        <option key={s.id} value={s.id}>{s.name} ({s.country_code})</option>
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
                       ))}
                     </select>
                   </Field>
                   <button
                     type="button"
-                    onClick={() => setShowCreateSite(true)}
-                    className="flex items-center gap-2 text-sm text-primary hover:underline"
+                    onClick={() => update("showCreateSite")(true)}
+                    className="text-sm text-primary flex items-center gap-2"
                   >
                     <Plus className="w-4 h-4" /> Create a new site
                   </button>
-                  {siteList.length === 0 && (
-                    <div className="text-sm text-muted-foreground p-4 border rounded-lg bg-muted/30">
-                      No sites exist yet — create one below.
-                    </div>
-                  )}
-                </>
+                </div>
               ) : (
                 <div className="space-y-4">
                   <button
                     type="button"
-                    onClick={() => { setShowCreateSite(false); setNewSiteName(""); setNewSiteType(""); setNewSiteCountry(""); }}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      update("showCreateSite")(false);
+                      update("newSiteName")(""); // Clear new site data when going back
+                    }}
+                    className="text-sm text-muted-foreground flex items-center gap-1"
                   >
-                    <ArrowLeft className="w-4 h-4" /> Back to existing sites
+                    <ArrowLeft className="w-4 h-4" /> Use existing site
                   </button>
-
-                  <Field label="Site Name" required>
+                  <Field label="Site Name">
                     <input
-                      type="text"
                       value={newSiteName}
-                      onChange={e => setNewSiteName(e.target.value)}
-                      placeholder="e.g. Kumasi Gold Mine"
-                      className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                      onChange={(e) => update("newSiteName")(e.target.value)}
+                      className="w-full border p-2 rounded"
                     />
                   </Field>
-
                   <div className="grid grid-cols-2 gap-4">
-                    <Field label="Type" required>
+                    <Field label="Type">
                       <select
                         value={newSiteType}
-                        onChange={e => setNewSiteType(e.target.value)}
-                        className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                        onChange={(e) => update("newSiteType")(e.target.value)}
+                        className="w-full border p-2 rounded"
                       >
-                        <option value="">— Select —</option>
-                        {siteTypeOptions.map(o => (
-                          <option key={o.value} value={o.value}>{o.label}</option>
-                        ))}
+                        <option value="">Select</option>
+                        {/* Add your siteTypeOptions.map here */}
                       </select>
                     </Field>
-
-                    <Field label="Country Code" required>
+                    <Field label="Country Code">
                       <input
-                        type="text"
                         value={newSiteCountry}
-                        onChange={e => setNewSiteCountry(e.target.value.toUpperCase())}
-                        placeholder="e.g. GHA"
-                        maxLength={3}
-                        className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                        onChange={(e) =>
+                          update("newSiteCountry")(e.target.value.toUpperCase())
+                        }
+                        className="w-full border p-2 rounded"
                       />
                     </Field>
                   </div>
-
-                  <div className="text-xs text-muted-foreground p-3 border rounded-lg bg-muted/30">
-                    Tip: You can always add more site details later from Settings.
-                  </div>
                 </div>
               )}
             </StepWrapper>
           )}
 
-          {/* ── STEP 3: FRAMEWORK & FOCUS AREA ── */}
+          {/* STEP 3: FRAMEWORK */}
           {step === 3 && (
-            <StepWrapper title="Framework & Focus Area" description="Choose the framework and focus area for this assessment.">
+            <StepWrapper title="Framework & Focus Area">
               <Field label="Framework">
                 <select
                   value={framework}
-                  onChange={e => setFramework(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                  onChange={(e) => update("framework")(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
                 >
-                  <option value="">— Select a framework (optional) —</option>
+                  <option value="">— Select framework —</option>
                   {fwList.map((f: any) => (
-                    <option key={f.id} value={f.id}>{f.name}{f.version ? ` (${f.version})` : ""}</option>
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
                   ))}
                 </select>
               </Field>
-
               <Field label="Focus Area">
                 <select
                   value={focusArea}
-                  onChange={e => setFocusArea(e.target.value)}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
+                  onChange={(e) => update("focusArea")(e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg"
                 >
-                  <option value="">— Select a focus area (optional) —</option>
+                  <option value="">— Select focus area —</option>
                   {faList.map((f: any) => (
-                    <option key={f.id} value={f.id}>{f.name}</option>
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
                   ))}
                 </select>
               </Field>
-
-              {fwList.length === 0 && faList.length === 0 && (
-                <div className="text-sm text-muted-foreground p-4 border rounded-lg bg-muted/30">
-                  No frameworks or focus areas configured yet. You can set these later.
-                </div>
-              )}
             </StepWrapper>
           )}
 
-          {/* ── STEP 4: SCHEDULE ── */}
+          {/* STEP 4: SCHEDULE */}
           {step === 4 && (
-            <StepWrapper title="Timeline" description="Set the start and due dates for this assessment.">
-              <div className="grid grid-cols-2 gap-4" style={{ colorScheme: "light" }}>
+            <StepWrapper title="Timeline">
+              <div className="grid grid-cols-2 gap-4">
                 <Field label="Start Date" required>
                   <DatePickerInput
                     value={startDate}
-                    onChange={setStartDate}
+                    onChange={update("startDate")}
                     minDate={new Date().toISOString().split("T")[0]}
                   />
                 </Field>
                 <Field label="Due Date" required>
                   <DatePickerInput
                     value={dueDate}
-                    onChange={setDueDate}
-                    minDate={startDate || new Date().toISOString().split("T")[0]}
+                    onChange={update("dueDate")}
+                    minDate={
+                      startDate || new Date().toISOString().split("T")[0]
+                    }
                   />
                 </Field>
               </div>
-
-              {startDate && dueDate && (
-                <div className="text-xs text-muted-foreground p-3 border rounded-lg bg-muted/30 flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5" />
-                  Duration: {Math.ceil((new Date(dueDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))} days
-                </div>
-              )}
             </StepWrapper>
           )}
 
-          {/* ── STEP 5: REVIEW ── */}
           {step === 5 && (
             <StepWrapper title="Review & Create">
               <div className="space-y-4">
                 <ReviewSection title="Basic Details" icon={FileText}>
                   <ReviewRow label="Status" value={status.replace(/_/g, " ")} />
-                  <ReviewRow label="Risk Level" value={riskLevel} badge
-                    badgeColor={riskLevel === "CRITICAL" ? "destructive" : riskLevel === "HIGH" ? "destructive" : riskLevel === "MEDIUM" ? "secondary" : "success"} />
-                  {aiSummary && <ReviewRow label="Summary" value={aiSummary} />}
+                  <ReviewRow
+                    label="Risk Level"
+                    value={riskLevel}
+                    badge
+                    badgeColor={
+                      riskLevel === "CRITICAL"
+                        ? "destructive"
+                        : riskLevel === "HIGH"
+                          ? "destructive"
+                          : riskLevel === "MEDIUM"
+                            ? "secondary"
+                            : "success"
+                    }
+                  />
+                  {aiSummary && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground block mb-1">
+                        Summary
+                      </span>
+                      <div
+                        className="prose prose-sm max-w-none text-foreground"
+                        dangerouslySetInnerHTML={{ __html: aiSummary }}
+                      />
+                    </div>
+                  )}
                 </ReviewSection>
 
                 <ReviewSection title="Site" icon={Building2}>
                   {site && s ? (
-                    <ReviewRow label="Site" value={`${s.name} (${s.country_code})`} />
+                    <ReviewRow
+                      label="Site"
+                      value={`${s.name} (${s.country_code})`}
+                    />
                   ) : showCreateSite ? (
                     <div className="text-sm">
                       <span className="text-muted-foreground">New site — </span>
-                      <span className="text-foreground font-medium">{newSiteName}</span>
-                      {newSiteType && <span className="text-muted-foreground"> · {newSiteType}</span>}
-                      {newSiteCountry && <span className="text-muted-foreground"> ({newSiteCountry})</span>}
+                      <span className="text-foreground font-medium">
+                        {newSiteName}
+                      </span>
+                      {newSiteType && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {newSiteType}
+                        </span>
+                      )}
+                      {newSiteCountry && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({newSiteCountry})
+                        </span>
+                      )}
                     </div>
                   ) : (
                     <ReviewRow label="Site" value="—" />
@@ -448,13 +562,43 @@ export default function NewAssessmentRoute() {
                 </ReviewSection>
 
                 <ReviewSection title="Framework & Focus Area" icon={MapPin}>
-                  <ReviewRow label="Framework" value={fw ? `${fw.name}${fw.version ? ` (${fw.version})` : ""}` : "Not selected"} />
-                  <ReviewRow label="Focus Area" value={fa ? fa.name : "Not selected"} />
+                  <ReviewRow
+                    label="Framework"
+                    value={
+                      fw
+                        ? `${fw.name}${fw.version ? ` (${fw.version})` : ""}`
+                        : "Not selected"
+                    }
+                  />
+                  <ReviewRow
+                    label="Focus Area"
+                    value={fa ? fa.name : "Not selected"}
+                  />
                 </ReviewSection>
 
                 <ReviewSection title="Schedule" icon={Calendar}>
-                  <ReviewRow label="Start Date" value={startDate ? new Date(startDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"} />
-                  <ReviewRow label="Due Date" value={dueDate ? new Date(dueDate + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"} />
+                  <ReviewRow
+                    label="Start Date"
+                    value={
+                      startDate
+                        ? new Date(startDate + "T00:00:00").toLocaleDateString(
+                            "en-GB",
+                            { day: "numeric", month: "short", year: "numeric" },
+                          )
+                        : "—"
+                    }
+                  />
+                  <ReviewRow
+                    label="Due Date"
+                    value={
+                      dueDate
+                        ? new Date(dueDate + "T00:00:00").toLocaleDateString(
+                            "en-GB",
+                            { day: "numeric", month: "short", year: "numeric" },
+                          )
+                        : "—"
+                    }
+                  />
                   {startDate && dueDate && (
                     <ReviewRow
                       label="Duration"
@@ -466,40 +610,45 @@ export default function NewAssessmentRoute() {
             </StepWrapper>
           )}
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-border">
+          {/* Navigation Actions */}
+          <div className="flex items-center justify-between pt-4 border-t">
             <button
               type="button"
-              onClick={prev}
+              onClick={back}
               className={cn(
-                "px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-muted transition-colors",
-                step === 1 && "invisible"
+                "px-4 py-2 border rounded-lg",
+                step === 1 && "invisible",
               )}
-              disabled={submitting}
             >
               Back
             </button>
-
-            {step < 5 ? (
+            {!isLastStep ? (
               <button
                 type="button"
                 onClick={next}
                 disabled={!canNext()}
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                className={cn(
+                  "px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                  // 2. Add conditional styling based on canNext()
+                  canNext()
+                    ? "bg-primary text-white hover:opacity-90 shadow-sm"
+                    : "bg-muted text-muted-foreground cursor-not-allowed opacity-50 grayscale-[0.5]",
+                )}
               >
                 Continue <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
               <button
-                type="submit"
-                disabled={submitting}
-                className="px-6 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+                type="button"
+                onClick={submit}
+                disabled={isSubmittingRemix || isHookSubmitting}
+                className="px-6 py-2 bg-primary text-white rounded-lg"
               >
-                {submitting ? "Creating..." : "Create Assessment"}
+                {isSubmittingRemix ? "Creating..." : "Create Assessment"}
               </button>
             )}
           </div>
-        </Form>
+        </div>
       </div>
     </div>
   );
@@ -507,30 +656,57 @@ export default function NewAssessmentRoute() {
 
 /* ──────────────────────────── SUB-COMPONENTS ──────────────────────────── */
 
-function StepWrapper({ title, description, children }: { title: string; description?: string; children?: React.ReactNode }) {
+function StepWrapper({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children?: React.ReactNode;
+}) {
   return (
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">{title}</h3>
-        {description && <p className="text-sm text-muted-foreground mt-0.5">{description}</p>}
+        {description && (
+          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+        )}
       </div>
       <div className="space-y-4">{children}</div>
     </div>
   );
 }
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function Field({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="text-sm font-medium text-foreground mb-1.5 block">
-        {label}{required && <span className="text-destructive ml-0.5">*</span>}
+        {label}
+        {required && <span className="text-destructive ml-0.5">*</span>}
       </label>
       {children}
     </div>
   );
 }
 
-function ReviewSection({ title, icon: Icon, children }: { title: string; icon?: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+function ReviewSection({
+  title,
+  icon: Icon,
+  children,
+}: {
+  title: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+}) {
   return (
     <div className="p-4 border rounded-lg space-y-2">
       <div className="flex items-center gap-2 text-sm font-semibold">
@@ -542,17 +718,34 @@ function ReviewSection({ title, icon: Icon, children }: { title: string; icon?: 
   );
 }
 
-function ReviewRow({ label, value, badge, badgeColor }: { label: string; value: string; badge?: boolean; badgeColor?: string }) {
+function ReviewRow({
+  label,
+  value,
+  badge,
+  badgeColor,
+}: {
+  label: string;
+  value: string;
+  badge?: boolean;
+  badgeColor?: string;
+}) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>
       {badge ? (
-        <span className={cn(
-          "px-2 py-0.5 rounded text-xs font-medium",
-          badgeColor === "destructive" && "bg-destructive/10 text-destructive",
-          badgeColor === "success" && "bg-green-500/10 text-green-600 dark:text-green-400",
-          badgeColor === "secondary" && "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
-        )}>{value}</span>
+        <span
+          className={cn(
+            "px-2 py-0.5 rounded text-xs font-medium",
+            badgeColor === "destructive" &&
+              "bg-destructive/10 text-destructive",
+            badgeColor === "success" &&
+              "bg-green-500/10 text-green-600 dark:text-green-400",
+            badgeColor === "secondary" &&
+              "bg-yellow-500/10 text-yellow-600 dark:text-yellow-400",
+          )}
+        >
+          {value}
+        </span>
       ) : (
         <span className="font-medium text-foreground">{value}</span>
       )}
@@ -562,8 +755,20 @@ function ReviewRow({ label, value, badge, badgeColor }: { label: string; value: 
 
 /* ──────────────────────────── DATE PICKER (avoids broken native popup) ──────────────────────────── */
 
-const MONTHS = ["January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"];
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
 
 const DAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -596,7 +801,8 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -612,18 +818,21 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
 
   const firstDay = new Date(viewDate.year, viewDate.month, 1).getDay();
   const totalDays = daysInMonth(viewDate.year, viewDate.month);
-  const prevMonthDays = viewDate.month === 0
-    ? daysInMonth(viewDate.year - 1, 11)
-    : daysInMonth(viewDate.year, viewDate.month - 1);
+  const prevMonthDays =
+    viewDate.month === 0
+      ? daysInMonth(viewDate.year - 1, 11)
+      : daysInMonth(viewDate.year, viewDate.month - 1);
 
-  const prevMonth = () => setViewDate(v => {
-    if (v.month === 0) return { year: v.year - 1, month: 11 };
-    return { ...v, month: v.month - 1 };
-  });
-  const nextMonth = () => setViewDate(v => {
-    if (v.month === 11) return { year: v.year + 1, month: 0 };
-    return { ...v, month: v.month + 1 };
-  });
+  const prevMonth = () =>
+    setViewDate((v) => {
+      if (v.month === 0) return { year: v.year - 1, month: 11 };
+      return { ...v, month: v.month - 1 };
+    });
+  const nextMonth = () =>
+    setViewDate((v) => {
+      if (v.month === 11) return { year: v.year + 1, month: 0 };
+      return { ...v, month: v.month + 1 };
+    });
 
   const isDisabled = (day: number, month: number, year: number) => {
     if (!minDate) return false;
@@ -641,19 +850,40 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
   };
 
   // Build grid cells: previous month trailing days + current month + next month leading
-  const cells: { day: number; current: boolean; disabled: boolean; selected: boolean; year: number; month: number }[] = [];
+  const cells: {
+    day: number;
+    current: boolean;
+    disabled: boolean;
+    selected: boolean;
+    year: number;
+    month: number;
+  }[] = [];
 
   // Trailing days from previous month
   for (let i = firstDay - 1; i >= 0; i--) {
     const d = prevMonthDays - i;
     const m = viewDate.month === 0 ? 11 : viewDate.month - 1;
     const y = viewDate.month === 0 ? viewDate.year - 1 : viewDate.year;
-    cells.push({ day: d, current: false, disabled: isDisabled(d, m, y), selected: isSelected(d, m, y), year: y, month: m });
+    cells.push({
+      day: d,
+      current: false,
+      disabled: isDisabled(d, m, y),
+      selected: isSelected(d, m, y),
+      year: y,
+      month: m,
+    });
   }
 
   // Current month days
   for (let d = 1; d <= totalDays; d++) {
-    cells.push({ day: d, current: true, disabled: isDisabled(d, viewDate.month, viewDate.year), selected: isSelected(d, viewDate.month, viewDate.year), year: viewDate.year, month: viewDate.month });
+    cells.push({
+      day: d,
+      current: true,
+      disabled: isDisabled(d, viewDate.month, viewDate.year),
+      selected: isSelected(d, viewDate.month, viewDate.year),
+      year: viewDate.year,
+      month: viewDate.month,
+    });
   }
 
   // Leading days from next month
@@ -661,11 +891,22 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
   for (let d = 1; d <= remaining; d++) {
     const m = viewDate.month === 11 ? 0 : viewDate.month + 1;
     const y = viewDate.month === 11 ? viewDate.year + 1 : viewDate.year;
-    cells.push({ day: d, current: false, disabled: isDisabled(d, m, y), selected: isSelected(d, m, y), year: y, month: m });
+    cells.push({
+      day: d,
+      current: false,
+      disabled: isDisabled(d, m, y),
+      selected: isSelected(d, m, y),
+      year: y,
+      month: m,
+    });
   }
 
   const displayValue = value
-    ? new Date(value + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    ? new Date(value + "T00:00:00").toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
     : "Select date...";
 
   return (
@@ -675,7 +916,9 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between px-3 py-2 border border-border rounded-lg text-sm bg-background text-left focus:ring-2 focus:ring-primary/20 outline-none hover:bg-muted/30 transition-colors"
       >
-        <span className={cn(!value && "text-muted-foreground")}>{displayValue}</span>
+        <span className={cn(!value && "text-muted-foreground")}>
+          {displayValue}
+        </span>
         <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
       </button>
 
@@ -683,19 +926,34 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
         <div className="absolute z-50 mt-2 w-72 bg-card border border-border rounded-xl shadow-xl p-3">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+            <button
+              type="button"
+              onClick={prevMonth}
+              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+            >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-sm font-semibold">{MONTHS[viewDate.month]} {viewDate.year}</span>
-            <button type="button" onClick={nextMonth} className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+            <span className="text-sm font-semibold">
+              {MONTHS[viewDate.month]} {viewDate.year}
+            </span>
+            <button
+              type="button"
+              onClick={nextMonth}
+              className="p-1.5 hover:bg-muted rounded-lg transition-colors"
+            >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
           {/* Day headers */}
           <div className="grid grid-cols-7 mb-1">
-            {DAYS.map(d => (
-              <div key={d} className="text-center text-[10px] font-medium text-muted-foreground py-1">{d}</div>
+            {DAYS.map((d) => (
+              <div
+                key={d}
+                className="text-center text-[10px] font-medium text-muted-foreground py-1"
+              >
+                {d}
+              </div>
             ))}
           </div>
 
@@ -713,9 +971,14 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
                 className={cn(
                   "w-8 h-8 rounded-md text-xs font-medium flex items-center justify-center transition-colors",
                   cell.selected && "bg-primary text-primary-foreground",
-                  !cell.selected && cell.current && !cell.disabled && "hover:bg-muted text-foreground",
+                  !cell.selected &&
+                    cell.current &&
+                    !cell.disabled &&
+                    "hover:bg-muted text-foreground",
                   !cell.selected && !cell.current && "text-muted-foreground/40",
-                  cell.disabled && !cell.selected && "text-muted-foreground/20 cursor-not-allowed",
+                  cell.disabled &&
+                    !cell.selected &&
+                    "text-muted-foreground/20 cursor-not-allowed",
                 )}
               >
                 {cell.day}
@@ -727,7 +990,10 @@ function DatePickerInput({ value, onChange, minDate }: DatePickerInputProps) {
           {value && (
             <button
               type="button"
-              onClick={() => { onChange(""); setOpen(false); }}
+              onClick={() => {
+                onChange("");
+                setOpen(false);
+              }}
               className="w-full mt-3 text-xs text-muted-foreground hover:text-destructive transition-colors py-1"
             >
               Clear date

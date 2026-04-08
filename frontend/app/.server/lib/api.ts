@@ -1,6 +1,6 @@
 /** Centralized API request helpers — all server-side fetches go through here. */
 
-import { API_URL, AI_API_URL } from "./config";
+import { API_URL, AI_API_URL } from "../config";
 export { API_URL, AI_API_URL };
 
 /* ─────────────── error types ─────────────── */

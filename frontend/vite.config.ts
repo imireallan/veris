@@ -7,14 +7,12 @@ import tsconfigPaths from "vite-tsconfig-paths";
 const isTest =
   typeof process !== "undefined" && process.env.TEST_MOCK === "true";
 
-const plugins = [reactRouterDevTools(), tailwindcss(), reactRouter(), tsconfigPaths()];
+const plugins = [tailwindcss(), reactRouter(), tsconfigPaths()];
 
 export default defineConfig({
   plugins,
-  define: {
-    // Inject test-mode flag so sessions.ts can skip real backend calls during e2e tests
-    "globalThis.__TEST_MODE__": JSON.stringify(isTest),
-  },
+  // Inject test-mode flag so sessions.ts can skip real backend calls during e2e tests
+  "globalThis.__TEST_MODE__": JSON.stringify(isTest),
   server: {
     host: true,
     strictPort: true,

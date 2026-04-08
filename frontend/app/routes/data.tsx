@@ -1,7 +1,7 @@
 import { useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
+import { api } from "~/.server/lib/api";
 import { useState } from "react";
 
 export async function loader({ request }: LoaderFunctionArgs) {

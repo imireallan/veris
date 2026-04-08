@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
+import { api } from "~/.server/lib/api";
 import { Clock, FileText, Plus } from "lucide-react";
 import { Badge, Card, CardContent, ProgressBar } from "~/components/ui";
 import { PageHeader, SearchBar, EmptyState, Button } from "~/components/ui";

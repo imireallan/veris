@@ -9,7 +9,7 @@ import {
 } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
+import { api } from "~/.server/lib/api";
 import {
   ArrowLeft,
   ArrowRight,

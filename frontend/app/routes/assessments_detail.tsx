@@ -1,7 +1,7 @@
 import { useLoaderData, Link, Form, redirect } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
+import { api } from "~/.server/lib/api";
 import { useState } from "react";
 import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText } from "lucide-react";
 import {
@@ -233,6 +233,13 @@ export default function AssessmentDetailRoute() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
+      <Link
+        to={`/assessments/${a.id}/questionnaire`}
+        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+      >
+        <FileText className="w-4 h-4" />
+        Open Questionnaire
+      </Link>
 
       {/* Tab content */}
       {activeTab === "overview" && (

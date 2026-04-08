@@ -1,14 +1,162 @@
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, NodeViewWrapper, ReactNodeViewRenderer, mergeAttributes } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
-import { useCallback, useRef, useEffect } from "react";
+import { Node, mergeAttributes as mergeAttrs } from "@tiptap/core";
+import { useCallback, useRef, useEffect, useState } from "react";
 import {
   Bold, Italic, List, ListOrdered, Strikethrough,
   Link2, ImagePlus, Type as TypeIcon,
-  Undo, Redo, X, Heading1, Heading2, Heading3,
+  Undo, Redo, X, Heading1, Heading2, Heading3, Trash2,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
+
+/* ──────────────────────────── Resizable Image Extension ──────────────────────────── */
+
+/**
+ * Extended Image extension with width attribute and NodeView for resize/delete UI.
+ * Images get: corner drag handle for resize, delete button on hover/selected,
+ * inline width preset buttons.
+ */
+
+function ResizableImageNodeView({ node, getPos, updateAttributes, editor, deleteNode }: any) {
+  const [showControls, setShowControls] = useState(false);
+
+  // Preset width presets (percentages)
+  const presets = [25, 50, 75, 100];
+  const currentWidth = node.attrs.width || 100;
+
+  const handleDelete = useCallback(() => {
+    // Select this node by position, then delete it
+    if (typeof getPos === "function") {
+      const pos = getPos();
+      editor.chain().setNodeSelection(pos).deleteSelection().run();
+    } else if (typeof deleteNode === "function") {
+      deleteNode();
+    }
+  }, [editor, getPos, deleteNode]);
+
+  return (
+    <NodeViewWrapper
+      className="relative group/image resizable-image-node"
+      onMouseEnter={() => setShowControls(true)}
+      onMouseLeave={() => setShowControls(false)}
+    >
+      {/* Delete button (visible on hover/selected) */}
+      {(showControls || editor.isActive("image")) && (
+        <button
+          type="button"
+          className="absolute top-2 right-2 z-10 p-1 rounded bg-destructive/90 text-white hover:bg-destructive opacity-0 group-hover/image:opacity-100 transition-opacity shadow-lg"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={handleDelete}
+          title="Delete image"
+        >
+          <Trash2 className="w-3 h-3" />
+        </button>
+      )}
+
+      {/* Width preset bar (visible on hover/selected) */}
+      {(showControls || editor.isActive("image")) && (
+        <div
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-0.5 px-1.5 py-0.5 rounded bg-background/90 border border-border shadow-sm opacity-0 group-hover/image:opacity-100 transition-opacity"
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {presets.map((w) => (
+            <button
+              key={w}
+              type="button"
+              onClick={() => updateAttributes({ width: w })}
+              className={cn(
+                "px-1.5 py-0.5 text-[10px] rounded hover:bg-muted transition-colors",
+                Math.round(currentWidth) === w && "bg-primary text-primary-foreground",
+              )}
+            >
+              {w}%
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* The image */}
+      <img
+        src={node.attrs.src}
+        alt={node.attrs.alt || ""}
+        style={{ width: `${currentWidth}%`, maxWidth: "100%" }}
+        className="transition-all"
+      />
+
+      {/* Resize handle (bottom-right corner) */}
+      <div
+        className="absolute bottom-0 right-0 z-10 w-4 h-4 cursor-nwse-resize bg-primary rounded-tl-sm opacity-0 group-hover/image:opacity-80 transition-opacity"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const startX = e.clientX;
+          const startWidth = currentWidth;
+          const imgEl = (e.target as HTMLElement).previousElementSibling as HTMLImageElement;
+          if (!imgEl) return;
+          const rect = imgEl.getBoundingClientRect();
+          const containerWidth = rect.width / (startWidth / 100);
+
+          const onMove = (ev: MouseEvent) => {
+            const delta = ev.clientX - startX;
+            const newWidth = Math.min(100, Math.max(10, ((startWidth / 100) * containerWidth + delta) / containerWidth * 100));
+            updateAttributes({ width: Math.round(newWidth) });
+          };
+          const onUp = () => {
+            document.removeEventListener("mousemove", onMove);
+            document.removeEventListener("mouseup", onUp);
+          };
+          document.addEventListener("mousemove", onMove);
+          document.addEventListener("mouseup", onUp);
+        }}
+      />
+    </NodeViewWrapper>
+  );
+}
+
+const ResizableImage = Node.create({
+  name: "image",
+  group: "block",
+  draggable: true,
+  addAttributes() {
+    return {
+      src: { default: null, renderHTML: (attrs) => ({ src: attrs.src }) },
+      alt: { default: null, renderHTML: (attrs) => attrs.alt ? { alt: attrs.alt } : {} },
+      width: { default: 100, renderHTML: (attrs) => attrs.width && attrs.width !== 100 ? { "data-width": attrs.width } : {} },
+      title: { default: null, renderHTML: (attrs) => attrs.title ? { title: attrs.title } : {} },
+    };
+  },
+  parseHTML() {
+    return [{ tag: "img[src]" }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const width = HTMLAttributes["data-width"] || 100;
+    return ["div", { class: "resizable-image-node", "data-width": width == 100 ? undefined : width },
+      ["img", mergeAttrs(Image.options.HTMLAttributes, HTMLAttributes, {
+        style: `width: ${width}%; max-width: 100%; display: block; margin: 0 auto;`,
+      })],
+    ];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(ResizableImageNodeView);
+  },
+  addCommands() {
+    return {
+      setImage:
+        (options: { src: string; alt?: string; title?: string; width?: number }) =>
+        ({ commands }: any) =>
+          commands.insertContent({
+            type: "image",
+            attrs: {
+              src: options.src,
+              alt: options.alt || "",
+              width: options.width || 100,
+              title: options.title || null,
+            },
+          }),
+    };
+  },
+});
 
 /* ──────────────────────────── types ──────────────────────────── */
 
@@ -29,8 +177,10 @@ export function RichEditor({
 }: RichEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInserting = useRef(false);
+  const lastChangeSource = useRef<"editor" | "external">("external");
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
@@ -39,14 +189,15 @@ export function RichEditor({
         openOnClick: false,
         HTMLAttributes: { class: "text-primary underline", target: "_blank" },
       }),
-      Image.configure({
+      ResizableImage.configure({
         inline: false,
         allowBase64: true,
-        HTMLAttributes: { class: "rounded-lg max-w-full" },
       }),
     ],
     content: value,
     onUpdate: ({ editor }) => {
+      lastChangeSource.current = "editor";
+      if (imageInserting.current) return;
       onChange(editor.getHTML());
     },
     editorProps: {
@@ -60,11 +211,28 @@ export function RichEditor({
     },
   });
 
-  // Sync external value changes (e.g. draft restore)
+  // Sync external value changes (e.g. draft restore) only — NEVER during active editing
+  const initialContentRef = useRef(true);
   useEffect(() => {
-    if (editor && value !== editor.getHTML() && !imageInserting.current) {
-      editor.commands.setContent(value || "");
+    if (!editor) return;
+    // On the very first render, let the editor's `content` prop set it — don't override
+    if (initialContentRef.current) {
+      initialContentRef.current = false;
+      return;
     }
+    // Skip while user is actively typing
+    if (editor.isFocused) return;
+
+    const current = editor.getHTML();
+    // If both are empty-ish, skip
+    const currentEmpty = !current || current === "<p></p>" || current === "<p><br></p>";
+    const valueEmpty = !value || value === "<p></p>" || value === "<p><br></p>";
+    if (currentEmpty && valueEmpty) return;
+    if (current === value) return;
+
+    // External change detected (draft restore, etc.)
+    lastChangeSource.current = "external";
+    editor.commands.setContent(value || "");
   }, [value, editor]);
 
   // Client-side upload handler
@@ -193,10 +361,11 @@ export function RichEditor({
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleImageFile(file);
+          const files = Array.from(e.target.files || []);
+          files.forEach((f) => handleImageUpload(f));
           e.target.value = "";
         }}
       />

@@ -13,7 +13,7 @@ export function useDraft<T extends Record<string, any>>(
   delay = 500,
 ) {
   const storageKey = DRAFT_PREFIX + key;
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Restore on mount
   useEffect(() => {

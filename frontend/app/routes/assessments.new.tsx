@@ -5,7 +5,6 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/api";
 import { ArrowLeft, ArrowRight, Check, Plus, Building2, MapPin, Calendar, FileText, Eye, ChevronLeft, ChevronRight, RotateCcw, Sparkle } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { useDraft } from "~/lib/use-draft";
 import { RichEditor } from "~/components/RichEditor";
 
 /* ──────────────────────────── SERVER ──────────────────────────── */
@@ -119,6 +118,11 @@ export default function NewAssessmentRoute() {
     (val: AssessmentForm[K]) => setForm(prev => ({ ...prev, [key]: val }));
   const updateAll = (fn: (prev: AssessmentForm) => AssessmentForm) => setForm(fn);
 
+  // Flag to survive across mounts after a successful submit
+  const STORAGE_CLEARED = "veris:draft:assessment-new:cleared";
+  const submittedRef = useRef(false);
+  const [draftRestored, setDraftRestored] = useState(false);
+
   // Destructure for convenience
   const {
     step, site, framework, focusArea, startDate, dueDate,
@@ -126,41 +130,66 @@ export default function NewAssessmentRoute() {
     newSiteName, newSiteType, newSiteCountry,
   } = form;
 
-  // ── Draft auto-save ──
-  // Restore on mount - if there's a draft, apply it
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("veris:draft:assessment-new");
-      if (raw) {
-        const d = JSON.parse(raw);
-        // Only restore if there's actual content
-        const hasContent = d.site || d.framework || d.newSiteName || d.aiSummary || d.startDate;
-        if (hasContent) {
-          updateAll(() => ({ ...d, step: 1 })); // Start at step 1 on restore
-          setDraftRestored(true);
-        }
-      }
-    } catch { /* ignore corrupt data */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+          // ── Draft auto-save ──
+          // Restore on mount - if there's a draft, apply it
+          useEffect(() => {
+            if (sessionStorage.getItem(STORAGE_CLEARED)) return;
+            try {
+              const raw = localStorage.getItem("veris:draft:assessment-new");
+              if (raw) {
+                const d = JSON.parse(raw);
+                // Only restore if there's ACTUAL content — skip empty/default drafts
+                // This catches the case where auto-save saved defaults before/after a submit
+                const hasRealContent =
+                  (d.aiSummary && d.aiSummary !== "" && d.aiSummary !== "<p></p>") ||
+                  (d.site && d.site !== "") ||
+                  (d.framework && d.framework !== "") ||
+                  (d.newSiteName && d.newSiteName !== "") ||
+                  (d.startDate && d.startDate !== "") ||
+                  (d.showCreateSite === true);
+                if (hasRealContent) {
+                  updateAll((prev) => ({ ...prev, ...d, step: 1 }));
+                  setDraftRestored(true);
+                }
+              }
+            } catch { /* ignore corrupt data */ }
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+          }, []);
 
-  // Auto-save on every form change (debounced)
-  const draftTimer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => {
-    clearTimeout(draftTimer.current);
-    draftTimer.current = setTimeout(() => {
-      localStorage.setItem("veris:draft:assessment-new", JSON.stringify(form));
-    }, 500);
-    return () => clearTimeout(draftTimer.current);
-  }, [form]);
+          // Auto-save on every form change (debounced) — but NEVER after submit and NEVER on review step
+          const draftTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+          useEffect(() => {
+            if (submittedRef.current || submitting || step === 5) return;
+            clearTimeout(draftTimer.current);
+            draftTimer.current = setTimeout(() => {
+              if (!sessionStorage.getItem(STORAGE_CLEARED)) {
+                localStorage.setItem("veris:draft:assessment-new", JSON.stringify(form));
+              }
+            }, 500);
+            return () => clearTimeout(draftTimer.current);
+          }, [form, submitting, STORAGE_CLEARED]);
 
-  // Clear draft on successful submit
+          // Clear draft when navigating away or after submit
   useEffect(() => {
-    if (actionData && !actionData.error) {
+    if (submittedRef.current || (actionData && !actionData.error)) {
       localStorage.removeItem("veris:draft:assessment-new");
+      sessionStorage.setItem(STORAGE_CLEARED, Date.now().toString());
       setDraftRestored(false);
     }
-  }, [actionData]);
+  }, [actionData, submitting, STORAGE_CLEARED]);
+
+  // Clear draft and reset form
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem("veris:draft:assessment-new");
+    sessionStorage.removeItem(STORAGE_CLEARED);
+    setDraftRestored(false);
+    updateAll(() => ({
+      step: 1, site: "", framework: "", focusArea: "",
+      startDate: "", dueDate: "", status: "DRAFT", riskLevel: "LOW",
+      aiSummary: "", showCreateSite: false,
+      newSiteName: "", newSiteType: "", newSiteCountry: "",
+    }));
+  }, []);
 
   const siteList = Array.isArray(sites) ? sites : [];
   const fwList = Array.isArray(frameworks) ? frameworks : [];
@@ -249,7 +278,7 @@ export default function NewAssessmentRoute() {
               <div key={s.id} className="flex items-center flex-1 last:flex-none">
                 <button
                   type="button"
-                  onClick={() => setStep(s.id)}
+                  onClick={() => update("step")(s.id)}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all flex-1",
                     done && "text-primary bg-primary/5",
@@ -288,7 +317,30 @@ export default function NewAssessmentRoute() {
 
       {/* Form card */}
       <div className="bg-card border rounded-xl p-6">
-        <Form method="post" className="space-y-5">
+        <Form
+          method="post"
+          onKeyDown={(e) => {
+            // Prevent Enter key from submitting the form on steps 1-4
+            if (e.key === "Enter" && e.target instanceof HTMLElement && e.target.tagName !== "TEXTAREA" && step < 5) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}
+          onSubmit={(e) => {
+            // Only allow submit on the review step (step 5)
+            if (step !== 5) {
+              e.preventDefault();
+              e.stopPropagation();
+              update("step")(step + 1);
+              return;
+            }
+            submittedRef.current = true;
+            localStorage.removeItem("veris:draft:assessment-new");
+            sessionStorage.setItem(STORAGE_CLEARED, Date.now().toString());
+            setDraftRestored(false);
+          }}
+          className="space-y-5"
+        >
           {/* Hidden fields for submit */}
           <input type="hidden" name="site" value={site} />
           <input type="hidden" name="__new_site" value={newSitePayload} />
@@ -342,7 +394,7 @@ export default function NewAssessmentRoute() {
                 <RichEditor
                   value={aiSummary}
                   onChange={update("aiSummary")}
-                  placeholder="What is this assessment about? Any key context?"
+                  placeholder="What is this assessment about? Any key context? Upload images from the toolbar."
                 />
               </Field>
             </StepWrapper>
@@ -356,7 +408,7 @@ export default function NewAssessmentRoute() {
                   <Field label="Site" required>
                     <select
                       value={site}
-                      onChange={e => setSite(e.target.value)}
+                      onChange={e => update("site")(e.target.value)}
                       className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                     >
                       <option value="">— Select a site —</option>
@@ -367,7 +419,7 @@ export default function NewAssessmentRoute() {
                   </Field>
                   <button
                     type="button"
-                    onClick={() => setShowCreateSite(true)}
+                    onClick={() => update("showCreateSite")(true)}
                     className="flex items-center gap-2 text-sm text-primary hover:underline"
                   >
                     <Plus className="w-4 h-4" /> Create a new site
@@ -382,7 +434,7 @@ export default function NewAssessmentRoute() {
                 <div className="space-y-4">
                   <button
                     type="button"
-                    onClick={() => { setShowCreateSite(false); setNewSiteName(""); setNewSiteType(""); setNewSiteCountry(""); }}
+                    onClick={() => { update("showCreateSite")(false); update("newSiteName")(""); update("newSiteType")(""); update("newSiteCountry")(""); }}
                     className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
                   >
                     <ArrowLeft className="w-4 h-4" /> Back to existing sites
@@ -392,7 +444,7 @@ export default function NewAssessmentRoute() {
                     <input
                       type="text"
                       value={newSiteName}
-                      onChange={e => setNewSiteName(e.target.value)}
+                      onChange={e => update("newSiteName")(e.target.value)}
                       placeholder="e.g. Kumasi Gold Mine"
                       className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                     />
@@ -402,7 +454,7 @@ export default function NewAssessmentRoute() {
                     <Field label="Type" required>
                       <select
                         value={newSiteType}
-                        onChange={e => setNewSiteType(e.target.value)}
+                        onChange={e => update("newSiteType")(e.target.value)}
                         className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                       >
                         <option value="">— Select —</option>
@@ -416,7 +468,7 @@ export default function NewAssessmentRoute() {
                       <input
                         type="text"
                         value={newSiteCountry}
-                        onChange={e => setNewSiteCountry(e.target.value.toUpperCase())}
+                        onChange={e => update("newSiteCountry")(e.target.value.toUpperCase())}
                         placeholder="e.g. GHA"
                         maxLength={3}
                         className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
@@ -438,7 +490,7 @@ export default function NewAssessmentRoute() {
               <Field label="Framework">
                 <select
                   value={framework}
-                  onChange={e => setFramework(e.target.value)}
+                  onChange={e => update("framework")(e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                 >
                   <option value="">— Select a framework (optional) —</option>
@@ -451,7 +503,7 @@ export default function NewAssessmentRoute() {
               <Field label="Focus Area">
                 <select
                   value={focusArea}
-                  onChange={e => setFocusArea(e.target.value)}
+                  onChange={e => update("focusArea")(e.target.value)}
                   className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:ring-2 focus:ring-primary/20 outline-none"
                 >
                   <option value="">— Select a focus area (optional) —</option>
@@ -476,14 +528,14 @@ export default function NewAssessmentRoute() {
                 <Field label="Start Date" required>
                   <DatePickerInput
                     value={startDate}
-                    onChange={setStartDate}
+                    onChange={(v) => update("startDate")(v)}
                     minDate={new Date().toISOString().split("T")[0]}
                   />
                 </Field>
                 <Field label="Due Date" required>
                   <DatePickerInput
                     value={dueDate}
-                    onChange={setDueDate}
+                    onChange={(v) => update("dueDate")(v)}
                     minDate={startDate || new Date().toISOString().split("T")[0]}
                   />
                 </Field>

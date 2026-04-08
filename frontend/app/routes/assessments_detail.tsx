@@ -237,9 +237,14 @@ export default function AssessmentDetailRoute() {
       {/* Tab content */}
       {activeTab === "overview" && (
         <SectionCard title="Summary" padding="compact">
-          <div className="text-sm leading-relaxed">
-            {a.ai_summary || "—"}
-          </div>
+          {a.ai_summary ? (
+            <div
+              className="prose prose-sm max-w-none text-foreground"
+              dangerouslySetInnerHTML={{ __html: a.ai_summary }}
+            />
+          ) : (
+            <div className="text-sm text-muted-foreground">—</div>
+          )}
           {editMode && (
             <EditableField
               label="Summary"

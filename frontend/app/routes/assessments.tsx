@@ -146,7 +146,9 @@ function AssessmentCard({
         </p>
 
         {assessment.ai_summary && (
-          <p className="text-xs text-muted-foreground line-clamp-1">{assessment.ai_summary}</p>
+          <p className="text-xs text-muted-foreground line-clamp-1">
+            {assessment.ai_summary.replace(/<[^>]*>/g, "")}
+          </p>
         )}
 
         <ProgressBar value={assessment.overall_score} size="sm" />

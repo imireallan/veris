@@ -177,9 +177,11 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Site.objects.filter(
-            organization_id=self.kwargs.get("org_pk")
-        )
+        org_id = self.kwargs.get("org_pk") or self.request.query_params.get("organization")
+        qs = Site.objects.all()
+        if org_id:
+            qs = qs.filter(organization_id=org_id)
+        return qs
 
 
 class AssessmentReportViewSet(viewsets.ModelViewSet):

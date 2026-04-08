@@ -17,6 +17,7 @@ from assessments.views import (
     FindingViewSet,
     CIPCycleViewSet,
     AssessmentPlanViewSet,
+    AssessmentQuestionViewSet,
 )
 from knowledge.views import KnowledgeDocumentViewSet
 from assessments.views.upload_image import upload_image
@@ -28,12 +29,41 @@ router = DefaultRouter()
 router.register(r"api/organizations", OrganizationViewSet, basename="organization")
 router.register(r"api/users", UserViewSet, basename="user")
 router.register(r"api/themes", ThemeViewSet, basename="theme")
-router.register(r"api/focus-areas", ESGFocusAreaViewSet, basename="focusarea")
 router.register(r"api/frameworks", FrameworkViewSet, basename="framework")
-router.register(r"api/assessments", AssessmentViewSet, basename="assessment")
-router.register(r"api/responses", AssessmentResponseViewSet, basename="response")
-router.register(r"api/tasks", TaskViewSet, basename="task")
-router.register(r"api/sites", SiteViewSet, basename="site")
+
+# Nested routes with org_pk
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/focus-areas",
+    ESGFocusAreaViewSet,
+    basename="focusarea"
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/assessments",
+    AssessmentViewSet,
+    basename="assessment"
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/assessments/(?P<assessment_pk>[^/.]+)/responses",
+    AssessmentResponseViewSet,
+    basename="response"
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/assessments/(?P<assessment_pk>[^/.]+)/questions",
+    AssessmentQuestionViewSet,
+    basename="assessmentquestion"
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/tasks",
+    TaskViewSet,
+    basename="task"
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/sites",
+    SiteViewSet,
+    basename="site"
+)
+
+# Non-nested routes
 router.register(r"api/documents", KnowledgeDocumentViewSet, basename="knowledge-document")
 router.register(r"api/reports", AssessmentReportViewSet, basename="report")
 router.register(r"api/findings", FindingViewSet, basename="finding")

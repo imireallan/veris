@@ -3,12 +3,11 @@ import { useLoaderData, Link } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { ChevronLeft, ChevronRight, FileText, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Plus, AlertCircle } from "lucide-react";
 import { Badge, EmptyState, Button } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
 
 import type { Assessment } from "~/types";
-import type { ApiResponse } from "~/.server/lib/api";
 
 interface Organization {
   id: string;
@@ -29,7 +28,7 @@ export async function loader({ request, params }: LoaderFunctionArgs): Promise<L
   try {
     const [org, assessmentsResponse] = await Promise.all([
       api.get<Organization>(`/api/organizations/${orgId}/`, token),
-      api.get<ApiResponse<Assessment[]> | Assessment[]>(`/api/organizations/${orgId}/assessments/`, token).catch(() => []),
+      api.get<any>(`/api/organizations/${orgId}/assessments/`, token).catch(() => []),
     ]);
 
     const assessments = Array.isArray(assessmentsResponse) 
@@ -53,6 +52,7 @@ export default function OrganizationAssessmentsRoute() {
     return (
       <div className="flex items-center justify-center h-[400px]">
         <EmptyState 
+          icon={AlertCircle}
           title="Organization not found" 
           description="The requested organization could not be retrieved." 
         />

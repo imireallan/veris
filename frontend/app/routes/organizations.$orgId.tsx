@@ -1,34 +1,46 @@
-import { useLoaderData, Link, Outlet } from "react-router";
+import { useLoaderData, Link, Outlet, useOutletContext } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
-import { requireUser, getUserToken } from "~/.server/sessions";
+import { getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
-  const user = await requireUser(request);
   const token = await getUserToken(request);
+  if (!token) throw new Response("Unauthorized", { status: 401 });
+  
   const orgId = params.orgId;
 
   const org = await api.get<any>(`/api/organizations/${orgId}/`, token);
 
-  // Check if user belongs to this organization or is admin
-  if (user.role !== "ADMIN" && String(user.organization_id) !== String(orgId)) {
-    throw new Response("Access denied", { status: 403 });
-  }
+  const allAssessments = await api.get<any>(`/api/assessments/`, token).catch(() => []);
+  const assessmentList = Array.isArray(allAssessments) 
+    ? allAssessments 
+    : (allAssessments?.results || []);
+  
+  const assessments = assessmentList.filter((a: any) => a.organization === orgId || a.organization_id === orgId);
 
-  // Fetch assessments for this org
-  const assessments = await api.get<any[]>(`/api/organizations/${orgId}/assessments/`, token)
-    .catch(() => []);
-
-  return { org, assessments: assessments || [], user };
+  return { org, assessments };
 }
 
 export default function OrganizationDetailRoute() {
   const { org, assessments } = useLoaderData<typeof loader>();
+  const { user } = useOutletContext<any>();
+
+  if (!user) {
+    return <div className="p-8 text-center">Loading user profile...</div>;
+  }
+
+  const isSuperAdmin = user.role === "SUPERADMIN";
+  const isAdmin = user.role === "ADMIN";
+  const belongsToOrg = String(user.orgId || user.organization_id) === String(org.id);
+
+  if (!isSuperAdmin && !isAdmin && !belongsToOrg) {
+    throw new Response("Access denied", { status: 403 });
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex flex-col">
           <h1 className="text-2xl font-semibold tracking-tight">{org.name}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {org.status} · {org.subscription_tier}
@@ -57,12 +69,25 @@ export default function OrganizationDetailRoute() {
         />
       </div>
 
-      <Link
-        to={`/organizations/${org.id}/assessments`}
-        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-      >
-        View Assessments →
-      </Link>
+      <div className="flex items-center justify-between border-t pt-6">
+        <div className="flex gap-4">
+          <Link
+            to={`/organizations/${org.id}/assessments`}
+            className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            View Assessments →
+          </Link>
+          
+          {isAdmin && (
+            <Link
+              to={`/organizations/${org.id}/templates`}
+              className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+            >
+              Manage Templates →
+            </Link>
+          )}
+        </div>
+      </div>
 
       <Outlet />
     </div>

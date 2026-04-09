@@ -142,11 +142,25 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        # Filter questions by organization through their assessment template
+        # Filter questions by the template associated with the specific assessment
+        assessment_pk = self.kwargs.get("assessment_pk")
         org_pk = self.kwargs.get("org_pk")
+        
+        if assessment_pk:
+            # Get the template associated with this assessment
+            from assessments.models import Assessment
+            try:
+                assessment = Assessment.objects.get(id=assessment_pk)
+                template = assessment.template
+                if template:
+                    return AssessmentQuestion.objects.filter(template=template)
+            except Assessment.DoesNotExist:
+                return AssessmentQuestion.objects.none()
+        
+        # Fallback: Filter questions by organization if assessment_pk is missing
         if org_pk:
             return AssessmentQuestion.objects.filter(
-                assessment_template__organization_id=org_pk
+                template__organization_id=org_pk
             )
         return AssessmentQuestion.objects.none()
 

@@ -30,12 +30,6 @@ def login_view(request):
 
     refresh = RefreshToken.for_user(user)
     
-    # Embed user details into the token payload so the frontend doesn't need a separate fetch
-    refresh['email'] = user.email
-    refresh['role'] = user.role
-    if user.organization_id:
-        refresh['organization_id'] = str(user.organization_id)
-        
     return Response({
         "access_token": str(refresh.access_token),
         "refresh_token": str(refresh),

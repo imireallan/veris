@@ -17,7 +17,7 @@ import {
   Button 
 } from "~/components/ui";
 
-// Mock Upload button since I don't have the original component definition
+// Mock Upload button
 function UploadEvidenceButton({ responseId }: { responseId?: string }) {
   return (
     <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
@@ -31,16 +31,22 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   
   const assessmentId = params.id;
+  const orgId = user.organization_id;
   
+  if (!orgId) {
+    throw new Response("User is not associated with an organization", { status: 403 });
+  }
+
   const [questions, responses] = await Promise.all([
-    api.get<any>(`/api/assessments/${assessmentId}/questions/`, token).catch(() => []),
-    api.get<any>(`/api/assessments/${assessmentId}/responses/`, token).catch(() => []),
+    api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/questions/`, token).catch(() => []),
+    api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/responses/`, token).catch(() => []),
   ]);
 
   return {
     assessmentId,
-    questions: Array.isArray(questions) ? questions : (questions?.results ?? []),
-    responses: Array.isArray(responses) ? responses : (responses?.results ?? []),
+    orgId,
+    questions: Array.isArray(questions) ? questions : (questions as any)?.results ?? [],
+    responses: Array.isArray(responses) ? responses : (responses as any)?.results ?? [],
   };
 }
 
@@ -54,6 +60,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const questionId = formData.get("question_id") as string;
     const answer = formData.get("answer") as string;
     const assessmentId = formData.get("assessment_id") as string;
+    const orgId = formData.get("org_id") as string;
 
     try {
       if (responseId) {
@@ -81,6 +88,7 @@ function QuestionCard({
   isEditing,
   onEdit,
   assessmentId,
+  orgId
 }: {
   question: any;
   index: number;
@@ -88,6 +96,7 @@ function QuestionCard({
   isEditing: boolean;
   onEdit: () => void;
   assessmentId: string;
+  orgId: string;
 }) {
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
   const [localAnswer, setLocalAnswer] = useState(existingResponse?.answer_text || "");
@@ -186,6 +195,7 @@ function QuestionCard({
             <input type="hidden" name="response_id" value={existingResponse?.id || ""} />
             <input type="hidden" name="question_id" value={question.id} />
             <input type="hidden" name="assessment_id" value={assessmentId} />
+            <input type="hidden" name="org_id" value={orgId} />
 
             <div className="space-y-3">
               <div className="space-y-1">
@@ -230,7 +240,7 @@ function QuestionCard({
 }
 
 export default function QuestionnaireRoute() {
-  const { assessmentId, questions, responses } = useLoaderData<typeof loader>();
+  const { assessmentId, orgId, questions, responses } = useLoaderData<typeof loader>();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   return (
@@ -246,20 +256,27 @@ export default function QuestionnaireRoute() {
       </div>
 
       <div className="grid gap-6">
-        {questions.map((q: any, idx: number) => {
-          const response = responses.find((r: any) => r.question === q.id);
-          return (
-            <QuestionCard
-              key={q.id}
-              index={idx + 1}
-              question={q}
-              existingResponse={response}
-              isEditing={editingIndex === idx}
-              onEdit={() => setEditingIndex(editingIndex === idx ? null : idx)}
-              assessmentId={assessmentId || ""}
-            />
-          );
-        })}
+        {questions.length === 0 ? (
+          <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed">
+            <p className="text-muted-foreground">No questions associated with this assessment.</p>
+          </div>
+        ) : (
+          questions.map((q: any, idx: number) => {
+            const response = responses.find((r: any) => r.question === q.id);
+            return (
+              <QuestionCard
+                key={q.id}
+                index={idx + 1}
+                question={q}
+                existingResponse={response}
+                isEditing={editingIndex === idx}
+                onEdit={() => setEditingIndex(editingIndex === idx ? null : idx)}
+                assessmentId={assessmentId || ""}
+                orgId={orgId || ""}
+              />
+            );
+          })
+        )}
       </div>
     </div>
   );

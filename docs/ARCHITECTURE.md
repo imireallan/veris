@@ -1,4 +1,4 @@
-# Veris - Architecture Diagrams
+# Veris - Architecture & Access Control
 
 ## 1. System Overview
 
@@ -6,7 +6,7 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │                            USERS                                     │
 │                                                                      │
-│   Coordinator    Operator     Executive    Assessor    Consultant     │
+│   Superadmin (Global)    Org Admin (Tenant)    End User (Operator)    │
 └──────────────────────────────────────────────────────────────────────┘
                                  │
                                  ▼
@@ -60,7 +60,28 @@
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
-## 2. AI Processing Pipeline
+## 2. Access Control Matrix (RBAC)
+
+The system implements a strict multi-tenant isolation model. All data access is filtered by `organization_id` except for users with the `SUPERADMIN` role.
+
+| Feature | Superadmin | Org Admin | End User |
+| :--- | :---: | :---: | :---: |
+| **Create Organizations** | ✅ | ❌ | ❌ |
+| **View All Organizations** | ✅ | ❌ | ❌ |
+| **Manage Own Organization** | ✅ | ✅ | ✅ |
+| **Manage Templates** | ✅ | ✅ | ❌ |
+| **Create Assessments** | ✅ | ✅ | ❌ |
+| **Fill Assessments** | ✅ | ✅ | ✅ |
+| **User Mgmt (Org Level)** | ✅ | ✅ | ❌ |
+
+### Role Definitions:
+- **SUPERADMIN**: Global platform owner. Can create tenants, view all data across the platform, and manage any organization.
+- **ADMIN**: Tenant-level administrator. Can manage users, templates, and assessment configurations within their assigned organization.
+- **USER**: Standard operator. Can participate in assessments and view reports as permitted.
+
+---
+
+## 3. AI Processing Pipeline
 
 ```
                     DOCUMENT INGESTION
@@ -149,7 +170,7 @@
     └───────────────────────────────────────────┘
 ```
 
-## 3. Multi-Tenant Theming Data Flow
+## 4. Multi-Tenant Theming Data Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -188,7 +209,7 @@
 │  }                                                              │
 │                                                                 │
 │  Tailwind extends:                                              │
-│    colors: { primary: "var(--color-primary)" }                  │
+│    colors: { primary: \"var(--color-primary)\" }                  │
 └─────────────────────────────────────────────────────────────────┘
          │
          ▼
@@ -202,7 +223,7 @@
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 4. Assessment Workflow State Machine
+## 5. Assessment Workflow State Machine
 
 ```
                     ┌──────────┐
@@ -235,7 +256,7 @@
      ┌──────────┐
      │ARCHIVED  │
      └──────────┘
-
+```
 
 AI ENRICHMENT AT EACH STATE:
 ──────────────────────────────
@@ -244,9 +265,8 @@ IN_PROGRESS: AI provides contextual guidance for each question
 UNDER_REVIEW: AI generates preliminary findings and risk flags
 COMPLETED: AI creates executive summary and improvement roadmap
 ARCHIVED: AI tracks historical trends and year-over-year changes
-```
 
-## 5. Deployment Pipeline
+## 6. Deployment Pipeline
 
 ```
 ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐

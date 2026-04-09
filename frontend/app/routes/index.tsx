@@ -1,24 +1,31 @@
-import { useLoaderData } from "react-router";
-import { requireUser } from "~/.server/sessions";
+import {  useOutletContext } from "react-router";
 import type { User } from "~/types";
 import Dashboard from "~/components/Dashboard";
 
 export async function loader({ request }: { request: Request }) {
-  const user = await requireUser(request);
-  return { user };
+  return { hasToken: true };
 }
 
 export default function IndexRoute() {
-  const { user } = useLoaderData<typeof loader>();
-  const typedUser = {
-    ...user,
-    fullName: user.email ?? "",
-    orgId: user.organization_id ?? "",
+  const context = useOutletContext<any>();
+  const user = context?.user;
+
+  console.log(user)
+
+  if (!user) {
+    return <div className="p-8 text-center">Loading user profile...</div>;
+  }
+
+  const typedUser: User = {
     id: user.id ?? "",
     email: user.email ?? "",
-    role: user.role ?? "",
-    organization_id: user.organization_id ?? "",
+    fullName: user.fullName ?? user.email ?? "",
+    firstName: user.firstName ?? user.email?.split("@")[0] ?? "",
+    lastName: "",
+    orgId: user.orgId ?? user.organization_id ?? "",
+    role: (user.role ?? "viewer") as "admin" | "manager" | "viewer",
+    pictureUrl: user.pictureUrl ?? user.picture_url,
   };
-  return <Dashboard user={typedUser as User} />;
-}
 
+  return <Dashboard user={typedUser} />;
+}

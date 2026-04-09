@@ -12,7 +12,7 @@ import {
   useLoaderData,
 } from "react-router";
 import { useRouteError } from "react-router";
-import { getUserToken, getSession } from "~/.server/sessions";
+import { getSession, getUserToken } from "~/.server/sessions";
 
 import { ThemeProvider } from "~/providers/ThemeProvider";
 import { fetchThemeConfig } from "~/.server/themes";
@@ -85,7 +85,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
           },
         });
       } else {
-        throw redirect("/login");
+      throw redirect("/login");
       }
     }
   }
@@ -121,7 +121,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { user } = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>();
+  const user = data?.user || null;
+
   return (
     <ThemeProvider>
       <Outlet context={{ user }} />

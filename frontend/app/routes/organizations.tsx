@@ -69,11 +69,11 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function OrganizationsRoute() {
   const { orgs } = useLoaderData<typeof loader>();
-  const context = useOutletContext<any>();
+  const context = useOutletContext<{ user: any }>();
   const user = context?.user;
 
   if (!user) {
-    return <div className="p-8 text-center">Loading user profile...</div>;
+    return <div className="p-8 text-center">Please sign in to view your organizations.</div>;
   }
 
   return (

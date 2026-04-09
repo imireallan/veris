@@ -21,6 +21,7 @@ const quickLinks = [
     { label: "Start Assessment", href: "/assessments" },
     { label: "Browse Documents", href: "/knowledge" },
     { label: "Ask AI", href: "/knowledge/chat" },
+    { label: "Manage Organizations", href: "/organizations" },
     { label: "Customize Theme", href: "/settings/theme" },
 ];
 

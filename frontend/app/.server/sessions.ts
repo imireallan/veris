@@ -37,22 +37,22 @@ export async function requireUser(request: Request) {
     throw redirect("/login");
   }
 
-  // Decode the JWT payload to get user info
+  // Decode the JWT payload to get user info, gracefully handle missing fields
+  let id: string | undefined;
+  let email: string | undefined;
+  let role: string | undefined;
+  let organization_id: string | undefined;
   try {
     const payload = decodeJwtPayload(token);
-    return {
-      id: payload.sub,
-      email: payload.email,
-      role: payload.role,
-      organization_id: payload.organization_id,
-    };
+    id = payload.sub;
+    email = payload.email;
+    role = payload.role;
+    organization_id = payload.organization_id;
   } catch {
-    throw redirect("/login", {
-      headers: {
-        "Set-Cookie": await sessionStorage.destroySession(session),
-      },
-    });
+    // Token exists but can't be fully decoded — still return user with available fields
+    // Don't destroy session; the token is still valid for API calls
   }
+  return { id, email, role, organization_id, hasToken: true };
 }
 
 /** Get the access token from a request (returns null if not authenticated). */

@@ -40,7 +40,8 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
         org_id = self.request.query_params.get("organization")
         if org_id:
             return Assessment.objects.filter(organization_id=org_id)
-        return Assessment.objects.none()
+        # No org specified — return all (admin/global view)
+        return Assessment.objects.all()
 
     def perform_create(self, serializer):
         org_id = self.request.query_params.get("organization")

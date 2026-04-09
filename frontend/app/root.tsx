@@ -12,11 +12,11 @@ import {
   useLoaderData,
 } from "react-router";
 import { useRouteError } from "react-router";
-import { getSession, getUserToken } from "~/.server/sessions";
+import { getUserToken, requireUser } from "~/.server/sessions";
+import type { User } from "~/types";
 
 import { ThemeProvider } from "~/providers/ThemeProvider";
 import { fetchThemeConfig } from "~/.server/themes";
-import { api } from "~/.server/lib/api";
 
 import "./app.css";
 
@@ -44,47 +44,15 @@ export const meta: MetaFunction = () => [
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
-  let user = null;
+  let user: User | null = null;
 
   if (token) {
     try {
-      const userData = await api.get<{
-        id: string;
-        email: string;
-        full_name: string | null;
-        first_name: string | null;
-        last_name: string | null;
-        org_id: string | null;
-        role: string;
-        picture_url: string | null;
-      }>(`/api/auth/me/`, token);
-
-      if (userData) {
-        user = {
-          id: userData.id,
-          email: userData.email,
-          firstName:
-            userData.first_name ??
-            userData.full_name?.split(" ")[0] ??
-            userData.email.split("@")[0],
-          fullName: userData.full_name ?? userData.email,
-          orgId: userData.org_id ?? "",
-          role: userData.role ?? "VIEWER",
-          pictureUrl: userData.picture_url ?? undefined,
-        };
-      }
-    } catch (error) {
-      console.error("Failed to fetch user details:", error);
-      const session = await getSession(request);
-      if (session) {
-        throw redirect("/login", {
-          headers: {
-            "Set-Cookie": await sessionStorage.destroySession(session),
-          },
-        });
-      } else {
-      throw redirect("/login");
-      }
+      user = await requireUser(request);
+    } catch {
+      // Not authenticated or token expired — continue without user
+      // (requireUser already throws redirect to /login for non-dashboard routes,
+      //  but the root layout should render even for anonymous users on /login etc.)
     }
   }
 

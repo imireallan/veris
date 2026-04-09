@@ -4,6 +4,7 @@ import {
   createCookieSessionStorage,
   redirect,
 } from "react-router";
+import type { User } from "~/types";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -28,43 +29,49 @@ export async function getSession(request: Request) {
   return getSessionFromCookie(cookie);
 }
 
-/** Get the access token from a request (throws if not authenticated). */
-export async function requireUser(request: Request) {
-  const session = await getSession(request);
-  const token = session.get("accessToken") as string | undefined;
-
+/**
+ * Require authentication and fetch the full user profile from /api/auth/me/.
+ * Returns a normalized User object. Throws redirect to /login if unauthenticated.
+ */
+export async function requireUser(request: Request): Promise<User> {
+  const token = await getUserToken(request);
   if (!token) {
     throw redirect("/login");
   }
 
-  // Decode the JWT payload to get user info, gracefully handle missing fields
-  let id: string | undefined;
-  let email: string | undefined;
-  let role: string | undefined;
-  let organization_id: string | undefined;
-  try {
-    const payload = decodeJwtPayload(token);
-    id = payload.sub;
-    email = payload.email;
-    role = payload.role;
-    organization_id = payload.organization_id;
-  } catch {
-    // Token exists but can't be fully decoded — still return user with available fields
-    // Don't destroy session; the token is still valid for API calls
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+  const response = await fetch(`${backendUrl}/api/auth/me/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    // Token is invalid/expired — destroy session and redirect to login
+    const session = await getSession(request);
+    throw redirect("/login", {
+      headers: {
+        "Set-Cookie": await sessionStorage.destroySession(session),
+      },
+    });
   }
-  return { id, email, role, orgId: organization_id, hasToken: true };
+
+  const data = await response.json();
+
+  return {
+    id: data.id ?? "",
+    email: data.email ?? "",
+    fullName: data.full_name ?? data.email ?? "",
+    firstName: data.first_name ?? data.full_name?.split(" ")[0] ?? data.email?.split("@")[0] ?? "",
+    lastName: data.last_name ?? "",
+    orgId: data.org_id ?? "",
+    role: (data.role ?? "VIEWER").toUpperCase() as User["role"],
+    pictureUrl: data.picture_url ?? undefined,
+  };
 }
 
 /** Get the access token from a request (returns null if not authenticated). */
 export async function getUserToken(request: Request): Promise<string | null> {
   const session = await getSession(request);
   return (session.get("accessToken") as string) ?? null;
-}
-
-/** Check if the current request is authenticated. */
-export async function isAuthenticated(request: Request): Promise<boolean> {
-  const token = await getUserToken(request);
-  return !!token;
 }
 
 /** Create a session with the given access token and redirect. */
@@ -122,12 +129,4 @@ export async function loginUser(
   } catch {
     return { error: "Network error — is the backend running?" };
   }
-}
-
-/** Decode a JWT payload (no signature verification — just reads claims). */
-function decodeJwtPayload(token: string): Record<string, any> {
-  const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("Invalid JWT");
-  const raw = Buffer.from(parts[1], "base64url").toString("utf8");
-  return JSON.parse(raw);
 }

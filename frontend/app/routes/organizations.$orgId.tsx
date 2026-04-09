@@ -1,13 +1,13 @@
-import { useLoaderData, Link, Outlet, useOutletContext } from "react-router";
+import { useLoaderData, Link, Outlet } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
-import { getUserToken } from "~/.server/sessions";
+import { requireUser, getUserToken } from "~/.server/sessions";
+import type { User } from "~/types";
 import { api } from "~/.server/lib/api";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
+  const user = await requireUser(request);
   const token = await getUserToken(request);
-  if (!token) throw new Response("Unauthorized", { status: 401 });
-  
-  const orgId = params.orgId;
+  const orgId = params.orgId!;
 
   const org = await api.get<any>(`/api/organizations/${orgId}/`, token);
 
@@ -18,12 +18,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   
   const assessments = assessmentList.filter((a: any) => a.organization === orgId || a.organization_id === orgId);
 
-  return { org, assessments };
+  return { org, assessments, user };
 }
 
 export default function OrganizationDetailRoute() {
-  const { org, assessments } = useLoaderData<typeof loader>();
-  const { user } = useOutletContext<any>();
+  const { org, assessments, user } = useLoaderData<typeof loader>();
 
   if (!user) {
     return <div className="p-8 text-center">Loading user profile...</div>;

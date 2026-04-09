@@ -28,7 +28,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export default function DashboardLayoutRoute() {
   const { navLinks } = useLoaderData<typeof loader>();
-  const context = useOutletContext<{ user: any }>();
+  const context = useOutletContext<{ user: User | null }>();
   const user = context?.user;
 
   if (!user) {
@@ -39,21 +39,9 @@ export default function DashboardLayoutRoute() {
     );
   }
 
-  // Map the user return value to the User interface expected by AppLayout
-  const appUser: User = {
-    id: user.id ?? "",
-    email: user.email ?? "",
-    fullName: user.fullName ?? user.email ?? "",
-    firstName: user.firstName ?? user.email?.split("@")[0] ?? "",
-    lastName: "",
-    orgId: user.orgId ?? "",
-    role: (user.role ?? "VIEWER") as User["role"],
-    pictureUrl: user.pictureUrl,
-  };
-
   return (
-    <AppLayout user={appUser} navLinks={navLinks}>
-      <Outlet context={{ user: appUser }} />
+    <AppLayout user={user} navLinks={navLinks}>
+      <Outlet context={{ user }} />
     </AppLayout>
   );
 }

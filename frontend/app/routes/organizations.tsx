@@ -1,51 +1,39 @@
 import { useLoaderData, Link, Form, useOutletContext } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { getUserToken } from "~/.server/sessions";
+import { requireUser, getUserToken } from "~/.server/sessions";
+import type { User } from "~/types";
 import { api } from "~/.server/lib/api";
 import { Plus } from "lucide-react";
 import { Button, Input } from "~/components/ui";
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await requireUser(request);
   const token = await getUserToken(request);
-  if (!token) return { orgs: [] };
 
-  try {
-    const user = await api.get<any>(`/api/auth/me/`, token);
-    
-    if (user.role === "SUPERADMIN") {
-      const response = await api.get<any>("/api/organizations/", token).catch(() => []);
-      const orgsList = Array.isArray(response) ? response : (response?.results || []);
-      return { orgs: orgsList };
+  if (user.role === "SUPERADMIN") {
+    const response = await api.get<any>("/api/organizations/", token).catch(() => []);
+    const orgsList = Array.isArray(response) ? response : (response?.results || []);
+    return { orgs: orgsList };
+  }
+
+  if (user.orgId) {
+    try {
+      const org = await api.get<any>(`/api/organizations/${user.orgId}/`, token);
+      return { orgs: [org] };
+    } catch (error) {
+      console.error(`Error fetching org ${user.orgId}:`, error);
+      return { orgs: [] };
     }
-
-    const orgId = user.org_id || user.orgId;
-
-    if (orgId) {
-      try {
-        const org = await api.get<any>(`/api/organizations/${orgId}/`, token);
-        return { orgs: [org] };
-      } catch (error) {
-        console.error(`Error fetching org ${orgId}:`, error);
-        return { orgs: [] };
-      }
-    }
-  } catch {
-    return { orgs: [] };
   }
 
   return { orgs: [] };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
+  const user = await requireUser(request);
   const token = await getUserToken(request);
-  if (!token) throw new Response("Unauthorized", { status: 401 });
 
-  try {
-    const user = await api.get<any>(`/api/auth/me/`, token);
-    if (user.role !== "SUPERADMIN") {
-      throw new Response("Forbidden", { status: 403 });
-    }
-  } catch (err: any) {
+  if (user.role !== "SUPERADMIN") {
     throw new Response("Forbidden", { status: 403 });
   }
 
@@ -62,7 +50,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function OrganizationsRoute() {
   const { orgs } = useLoaderData<typeof loader>();
-  const context = useOutletContext<{ user: any }>();
+  const context = useOutletContext<{ user: User | null }>();
   const user = context?.user;
 
   if (!user) {

@@ -31,7 +31,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   
   const assessmentId = params.id;
-  const orgId = user.organization_id;
+  const orgId = user.orgId;
   
   if (!orgId) {
     throw new Response("User is not associated with an organization", { status: 403 });

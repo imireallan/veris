@@ -16,7 +16,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId;
 
-  if (user.role !== "ADMIN" && String(user.organization_id) !== String(orgId)) {
+  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && String(user.orgId) !== String(orgId)) {
     throw new Response("Access denied", { status: 403 });
   }
 

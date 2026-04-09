@@ -10,8 +10,6 @@ export default function IndexRoute() {
   const context = useOutletContext<any>();
   const user = context?.user;
 
-  console.log(user)
-
   if (!user) {
     return <div className="p-8 text-center">Loading user profile...</div>;
   }
@@ -22,9 +20,9 @@ export default function IndexRoute() {
     fullName: user.fullName ?? user.email ?? "",
     firstName: user.firstName ?? user.email?.split("@")[0] ?? "",
     lastName: "",
-    orgId: user.orgId ?? user.organization_id ?? "",
-    role: (user.role ?? "viewer") as "admin" | "manager" | "viewer",
-    pictureUrl: user.pictureUrl ?? user.picture_url,
+    orgId: user.orgId ?? "",
+    role: (user.role ?? "VIEWER") as User["role"],
+    pictureUrl: user.pictureUrl,
   };
 
   return <Dashboard user={typedUser} />;

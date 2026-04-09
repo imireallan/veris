@@ -31,7 +31,7 @@ export default function OrganizationDetailRoute() {
 
   const isSuperAdmin = user.role === "SUPERADMIN";
   const isAdmin = user.role === "ADMIN";
-  const belongsToOrg = String(user.orgId || user.organization_id) === String(org.id);
+  const belongsToOrg = String(user.orgId) === String(org.id);
 
   if (!isSuperAdmin && !isAdmin && !belongsToOrg) {
     throw new Response("Access denied", { status: 403 });
@@ -78,7 +78,7 @@ export default function OrganizationDetailRoute() {
             View Assessments →
           </Link>
           
-          {isAdmin && (
+          {(isAdmin || isSuperAdmin) && (
             <Link
               to={`/organizations/${org.id}/templates`}
               className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"

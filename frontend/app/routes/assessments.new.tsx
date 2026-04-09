@@ -49,7 +49,7 @@ export async function action({ request }: ActionFunctionArgs) {
           name,
           type,
           country_code,
-          organization: user.organization_id,
+          organization: user.orgId,
           operational_status: "ACTIVE",
           risk_profile: "MEDIUM",
           coordinates: {},

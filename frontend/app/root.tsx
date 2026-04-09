@@ -68,11 +68,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
             userData.full_name?.split(" ")[0] ??
             userData.email.split("@")[0],
           fullName: userData.full_name ?? userData.email,
-          organization_id: userData.org_id,
-          orgId: userData.org_id,
-          role: userData.role,
-          picture_url: userData.picture_url,
-          pictureUrl: userData.picture_url,
+          orgId: userData.org_id ?? "",
+          role: userData.role ?? "VIEWER",
+          pictureUrl: userData.picture_url ?? undefined,
         };
       }
     } catch (error) {
@@ -90,9 +88,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   }
 
-  const theme = await fetchThemeConfig(user?.organization_id ?? "");
-
-  console.log("Loaded user:", user);
+  const theme = await fetchThemeConfig(user?.orgId ?? "");
 
   return data({ user, theme });
 }

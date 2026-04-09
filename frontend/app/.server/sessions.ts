@@ -52,7 +52,7 @@ export async function requireUser(request: Request) {
     // Token exists but can't be fully decoded — still return user with available fields
     // Don't destroy session; the token is still valid for API calls
   }
-  return { id, email, role, organization_id, hasToken: true };
+  return { id, email, role, orgId: organization_id, hasToken: true };
 }
 
 /** Get the access token from a request (returns null if not authenticated). */

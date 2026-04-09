@@ -10,16 +10,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!token) return { orgs: [] };
 
   try {
-    // We only need the user's role and org_id to decide what data to fetch.
-    // To avoid a full /auth/me call, we can either:
-    // 1. Trust the client context (not secure for loader)
-    // 2. Call /auth/me once here to authorize the data request.
-    // However, if the goal is ZERO redundant calls to /auth/me across the app:
-    // We have to accept that server-side loaders NEED to verify the user for security.
-    // BUT, we can optimize this by putting the user data in the session cookie 
-    // or using a cached version. 
-    
-    // Since we are in a loader, we MUST verify identity to prevent IDOR.
     const user = await api.get<any>(`/api/auth/me/`, token);
     
     if (user.role === "SUPERADMIN") {
@@ -28,15 +18,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
       return { orgs: orgsList };
     }
 
-    if (user.organization_id) {
+    const orgId = user.org_id || user.orgId;
+
+    if (orgId) {
       try {
-        const org = await api.get<any>(`/api/organizations/${user.organization_id}/`, token);
+        const org = await api.get<any>(`/api/organizations/${orgId}/`, token);
         return { orgs: [org] };
-      } catch {
+      } catch (error) {
+        console.error(`Error fetching org ${orgId}:`, error);
         return { orgs: [] };
       }
     }
-  } catch (error) {
+  } catch {
     return { orgs: [] };
   }
 

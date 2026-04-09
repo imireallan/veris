@@ -18,5 +18,7 @@ export default [
     route("organizations", "routes/organizations.tsx"),
     route("organizations/:orgId", "routes/organizations.$orgId.tsx"),
     route("organizations/:orgId/assessments", "routes/organizations.$orgId_.assessments.tsx"),
+    route("organizations/:orgId/templates", "routes/organizations.$orgId.templates.tsx"),
+    route("organizations/:orgId/templates/:templateId", "routes/organizations.$orgId.templates.$templateId.tsx"),
   ]),
 ] satisfies RouteConfig;

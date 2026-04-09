@@ -35,7 +35,7 @@ export interface User {
   firstName?: string;
   lastName?: string;
   orgId: string;
-  role: "admin" | "manager" | "viewer";
+  role: "SUPERADMIN" | "ADMIN" | "MANAGER" | "VIEWER";
   pictureUrl?: string;
 }
 

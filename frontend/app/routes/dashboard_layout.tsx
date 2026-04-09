@@ -46,9 +46,9 @@ export default function DashboardLayoutRoute() {
     fullName: user.fullName ?? user.email ?? "",
     firstName: user.firstName ?? user.email?.split("@")[0] ?? "",
     lastName: "",
-    orgId: user.organization_id ?? user.orgId ?? "",
-    role: (user.role ?? "viewer") as "admin" | "manager" | "viewer",
-    pictureUrl: user.picture_url ?? user.pictureUrl,
+    orgId: user.orgId ?? "",
+    role: (user.role ?? "VIEWER") as User["role"],
+    pictureUrl: user.pictureUrl,
   };
 
   return (

@@ -6,7 +6,6 @@ Planned migration to ai_engine service when scale requires it.
 See docs/ai-architecture-decision.md for details.
 """
 
-import os
 from dataclasses import dataclass
 from typing import List
 
@@ -44,17 +43,17 @@ def get_pinecone_client() -> Pinecone:
 def get_embedding_model():
     """
     Initialize embeddings model based on settings.
-    
+
     Supports:
     - OpenAI (paid, fast, reliable): text-embedding-3-small
     - HuggingFace (free, rate-limited): sentence-transformers/all-MiniLM-L6-v2
     """
     provider = settings.EMBEDDING_MODEL_PROVIDER.lower()
-    
+
     if provider == "huggingface":
         model_name = settings.EMBEDDING_MODEL_NAME
         api_key = settings.HUGGINGFACE_API_KEY
-        
+
         # HuggingFace Inference API (serverless)
         if api_key:
             return HuggingFaceEmbeddings(
@@ -64,13 +63,13 @@ def get_embedding_model():
         else:
             # Local model (requires transformers + torch, slower on CPU)
             return HuggingFaceEmbeddings(model_name=model_name)
-    
+
     elif provider == "openai":
         api_key = settings.OPENAI_API_KEY
         if not api_key:
             raise ValueError("OPENAI_API_KEY not configured in settings")
         return OpenAIEmbeddings(model="text-embedding-3-small", api_key=api_key)
-    
+
     else:
         raise ValueError(
             f"Unknown EMBEDDING_MODEL_PROVIDER: {provider}. "
@@ -99,7 +98,9 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
             return f.read()
 
 
-def chunk_document(text: str, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[ChunkResult]:
+def chunk_document(
+    text: str, chunk_size: int = 1000, chunk_overlap: int = 200
+) -> List[ChunkResult]:
     """Split document into overlapping chunks for embedding."""
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size,
@@ -217,7 +218,7 @@ def process_document(
 ) -> EmbeddingResult:
     """
     Full pipeline: Extract → Chunk → Embed → Store
-    
+
     Returns EmbeddingResult with vector_ids and chunk_count on success,
     or error message on failure.
     """

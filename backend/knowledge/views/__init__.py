@@ -5,7 +5,7 @@ from rest_framework.response import Response
 
 from knowledge.models import KnowledgeDocument
 from knowledge.serializers import KnowledgeDocumentSerializer
-from knowledge.services import process_document, delete_from_pinecone
+from knowledge.services import delete_from_pinecone, process_document
 from organizations.models import OrganizationMembership
 
 

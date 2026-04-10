@@ -47,16 +47,22 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
         # Explicit org filter requested — scope to that org
         if org_id:
+            # Ensure user has membership in the requested org
+            from organizations.models import OrganizationMembership
+            if not OrganizationMembership.objects.filter(user=user, organization_id=org_id).exists():
+                if not (user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"):
+                    return Assessment.objects.none()
             return Assessment.objects.filter(organization_id=org_id)
 
         # Platform-level admins: can see all orgs when no filter specified
         if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
             return Assessment.objects.all()
 
-        # All other users (including org ADMIN): scoped to their own org only
-        user_org = getattr(user, "organization_id", None)
-        if user_org:
-            return Assessment.objects.filter(organization_id=user_org)
+        # All other users: scoped to their memberships
+        from organizations.models import OrganizationMembership
+        memberships = OrganizationMembership.objects.filter(user=user).values_list("organization_id", flat=True)
+        if memberships:
+            return Assessment.objects.filter(organization_id__in=memberships)
 
         return Assessment.objects.none()
 
@@ -64,9 +70,11 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         org_id = self.request.query_params.get("organization")
         if not org_id:
-            # Non-platform-admins default to their own org
+            # Non-platform-admins default to their first membership
+            from organizations.models import OrganizationMembership
             if not (user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"):
-                org_id = getattr(user, "organization_id", None)
+                membership = OrganizationMembership.objects.filter(user=user).first()
+                org_id = membership.organization_id if membership else None
         serializer.save(organization_id=org_id, created_by=user)
 
 
@@ -79,9 +87,13 @@ class FlatFindingViewSet(viewsets.ModelViewSet):
         qs = Finding.objects.select_related("assessment", "site", "provision")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            # Scope to assessment and ensure user has membership in the assessment's organization
+            from organizations.models import OrganizationMembership
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if OrganizationMembership.objects.filter(user=self.request.user, organization_id=assessment.organization_id).exists() or self.request.user.is_superuser:
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
@@ -94,9 +106,12 @@ class FlatCIPCycleViewSet(viewsets.ModelViewSet):
         qs = CIPCycle.objects.select_related("assessment")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            from organizations.models import OrganizationMembership
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if OrganizationMembership.objects.filter(user=self.request.user, organization_id=assessment.organization_id).exists() or self.request.user.is_superuser:
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
@@ -109,9 +124,12 @@ class FlatAssessmentPlanViewSet(viewsets.ModelViewSet):
         qs = AssessmentPlan.objects.select_related("assessment")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            from organizations.models import OrganizationMembership
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if OrganizationMembership.objects.filter(user=self.request.user, organization_id=assessment.organization_id).exists() or self.request.user.is_superuser:
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
@@ -124,9 +142,12 @@ class FlatTaskViewSet(viewsets.ModelViewSet):
         qs = Task.objects.select_related("assessment", "organization")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            from organizations.models import OrganizationMembership
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if OrganizationMembership.objects.filter(user=self.request.user, organization_id=assessment.organization_id).exists() or self.request.user.is_superuser:
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
@@ -139,9 +160,12 @@ class FlatAssessmentReportViewSet(viewsets.ModelViewSet):
         qs = AssessmentReport.objects.select_related("assessment", "organization")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            from organizations.models import OrganizationMembership
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if OrganizationMembership.objects.filter(user=self.request.user, organization_id=assessment.organization_id).exists() or self.request.user.is_superuser:
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
@@ -151,13 +175,14 @@ class FlatAssessmentResponseViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        assessment_id = self.request.query_params.get("assessment")
+        assessment_id = self.request.query_params.get(\"assessment\")
         if assessment_id:
-            return AssessmentResponse.objects.filter(
-                assessment_id=assessment_id
-            ).filter(
-                assessment__organization=self.request.user.organization
-            )
+            from organizations.models import OrganizationMembership
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if OrganizationMembership.objects.filter(user=self.request.user, organization_id=assessment.organization_id).exists() or self.request.user.is_superuser:
+                    return AssessmentResponse.objects.filter(assessment_id=assessment_id)
+            return AssessmentResponse.objects.none()
         return AssessmentResponse.objects.none()
 
 
@@ -186,18 +211,22 @@ class FlatSiteViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        org_id = self.request.query_params.get("organization")
+        org_id = self.request.query_params.get(\"organization\")
 
         if org_id:
-            return Site.objects.filter(organization_id=org_id)
+            from organizations.models import OrganizationMembership
+            if OrganizationMembership.objects.filter(user=user, organization_id=org_id).exists() or user.is_superuser:
+                return Site.objects.filter(organization_id=org_id)
+            return Site.objects.none()
 
         # Platform-level admins: can see all orgs
-        if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
+        if user.is_superuser or getattr(user, \"role\", None) == \"SUPERADMIN\":
             return Site.objects.all()
 
-        # All other users (including org ADMIN): scoped to their own org
-        user_org = getattr(user, "organization_id", None)
-        if user_org:
-            return Site.objects.filter(organization_id=user_org)
+        # All other users: scoped to their memberships
+        from organizations.models import OrganizationMembership
+        memberships = OrganizationMembership.objects.filter(user=user).values_list(\"organization_id\", flat=True)
+        if memberships:
+            return Site.objects.filter(organization_id__in=memberships)
 
         return Site.objects.none()

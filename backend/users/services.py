@@ -29,18 +29,18 @@ class LoginSerializer(serializers.Serializer):
 class UserBriefSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ("id", "email", "name", "org_id", "role")
-        # org_id is on the model as organization_id
-        # but we use the actual DB field
+        fields = ("id", "email", "name")
 
 
 class MeSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField(source="name")
+    # orgId is now context-dependent or membership-based
+    # For the 'me' endpoint, we usually return the primary or last-active org
     orgId = serializers.UUIDField(source="organization_id", allow_null=True)
 
     class Meta:
         model = User
         fields = (
-            "id", "email", "fullName", "orgId", "role",
+            "id", "email", "fullName", "orgId",
             "is_staff", "is_active",
         )

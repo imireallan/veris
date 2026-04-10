@@ -12,7 +12,7 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-not-for-production")
 
 # Now it's safe to import base
-from config.settings.base import *  # noqa: F401,F403
+from config.settings.base import *  # noqa: F401,F403, E402
 
 DEBUG = True
 

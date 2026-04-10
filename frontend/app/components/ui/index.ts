@@ -7,6 +7,7 @@ export { cn } from "~/lib/utils"
 export { Button, buttonVariants } from "./button"
 export type { ButtonProps } from "./button"
 export { Input } from "./input"
+export { Textarea } from "./textarea"
 
 /* ─── Layout ─── */
 export {
@@ -34,6 +35,7 @@ export { Avatar, AvatarImage, AvatarFallback } from "./avatar"
 export {
   Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption
 } from "./table"
+export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./accordion"
 
 /* ─── Feedback ─── */
 export { Alert, AlertTitle, AlertDescription, alertVariants } from "./alert"

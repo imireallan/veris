@@ -9,7 +9,7 @@ import {
 } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
+import { api } from "~/.server/lib/api";
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,7 +33,7 @@ import { useWizardForm } from "~/hooks/useWizard";
 
 export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const formData = await request.formData();
 
   // Handle site creation inline (hidden field with JSON payload)
@@ -103,7 +103,7 @@ export async function action({ request }: ActionFunctionArgs) {
 const unwrap = (r: any) => (Array.isArray(r) ? r : (r?.results ?? []));
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const [sites, frameworks, focusAreas] = await Promise.all([
     api
       .get<any>("/api/sites/", token)

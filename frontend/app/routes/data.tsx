@@ -1,12 +1,12 @@
 import { useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
+import { api } from "~/.server/lib/api";
 import { useState } from "react";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const [findings, sites, reports, cipCycles, plans, frameworks, orgs] =
     await Promise.all([
       api.get("/api/findings/", token).catch(() => ({ count: 0, results: [] })),

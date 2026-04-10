@@ -1,7 +1,7 @@
 /** Server-side theme utilities. Only runs on the server (loaders/actions). */
 
 import type { ThemeConfig } from "~/types";
-import { api } from "./api";
+import { api } from "./lib/api";
 
 export async function fetchThemeConfig(orgId: string): Promise<ThemeConfig> {
   if (!orgId) return getDefaultTheme();

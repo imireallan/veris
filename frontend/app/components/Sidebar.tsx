@@ -12,6 +12,7 @@ import {
     LogOut,
     Leaf,
     Database,
+    Building2,
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "~/components/ui";
 import React from "react";
@@ -23,6 +24,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     MessageSquare,
     Paintbrush,
     Database,
+    Building2,
 };
 
 export default function Sidebar({
@@ -32,7 +34,7 @@ export default function Sidebar({
     navLinks: { to: string; label: string; icon: string }[];
     user: User;
 }) {
-    const initials = (user.firstName ?? user.fullName)
+    const initials = (user.fullName ?? user.firstName ?? user.email ?? "U")
         .split(" ")
         .map((n) => n[0])
         .join("")

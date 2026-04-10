@@ -1,8 +1,8 @@
 import { useLoaderData, Link, Form, redirect } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
-import { useState } from "react";
+import { api } from "~/.server/lib/api";
+import { useState, useRef } from "react";
 import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText } from "lucide-react";
 import {
   Badge,
@@ -20,17 +20,28 @@ import {
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
+  
+  // We need to resolve the assessment first to get its organization context
+  // since the route /assessments/:id doesn't explicitly have orgId in the URL
   const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token).catch(() => null);
+  
+  if (!assessment) {
+    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null };
+  }
+
+  const orgId = assessment.organization;
+
   const [findings, cipCycles, plan, tasks, report] = await Promise.all([
-    api.get<any[]>(`/api/findings/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/plans/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/tasks/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/reports/?assessment=${params.id}`, token).catch(() => []),
+    api.get<any[]>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
   ]);
+
   return {
-    assessment: assessment ?? null,
+    assessment: assessment,
     findings: Array.isArray(findings) ? findings : [],
     cipCycles: Array.isArray(cipCycles) ? cipCycles : [],
     plan: Array.isArray(plan) ? (plan[0] ?? null) : null,
@@ -40,7 +51,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
 
@@ -52,7 +63,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         overall_score: Number(formData.get("overall_score")) || 0,
         ai_summary: formData.get("ai_summary") ?? "",
       }, token);
-      return redirect(`${formData.get("return_to") || `/assessments/${params.id}`}`);
+      return redirect(`/assessments/${params.id}`);
     }
 
     if (intent === "create-finding") {
@@ -91,8 +102,6 @@ export async function action({ request, params }: ActionFunctionArgs) {
   return { error: "Unknown intent" };
 }
 
-/* ────────────── Assessment Detail Page ────────────── */
-
 export default function AssessmentDetailRoute() {
   const data = useLoaderData<typeof loader>();
   const [editMode, setEditMode] = useState(false);
@@ -104,6 +113,7 @@ export default function AssessmentDetailRoute() {
     ai_summary: data.assessment?.ai_summary ?? "",
   });
   const [editingFinding, setEditingFinding] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   if (!data.assessment) {
     return (
@@ -118,9 +128,12 @@ export default function AssessmentDetailRoute() {
 
   const a = data.assessment;
 
+  const handleSave = () => {
+    formRef.current?.submit();
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center gap-3">
         <Link to="/assessments" className="p-2 hover:bg-muted rounded-lg">
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
@@ -136,23 +149,19 @@ export default function AssessmentDetailRoute() {
         <EditModeToolbar
           editMode={editMode}
           onEdit={() => setEditMode(true)}
-          onSave={() => setEditMode(false)}
+          onSave={handleSave}
           onCancel={() => setEditMode(false)}
         />
       </div>
 
-      {/* Edit form for save action */}
-      {editMode && (
-        <Form method="post" className="inline">
-          <input type="hidden" name="intent" value="save-assessment" />
-          <input type="hidden" name="status" value={formData.status} />
-          <input type="hidden" name="risk_level" value={formData.risk_level} />
-          <input type="hidden" name="overall_score" value={String(formData.overall_score)} />
-          <input type="hidden" name="ai_summary" value={formData.ai_summary} />
-        </Form>
-      )}
+      <Form method="post" ref={formRef} className={editMode ? "inline" : "hidden"}>
+        <input type="hidden" name="intent" value="save-assessment" />
+        <input type="hidden" name="status" value={formData.status} />
+        <input type="hidden" name="risk_level" value={formData.risk_level} />
+        <input type="hidden" name="overall_score" value={String(formData.overall_score)} />
+        <input type="hidden" name="ai_summary" value={formData.ai_summary} />
+      </Form>
 
-      {/* Meta card */}
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-6">
@@ -216,12 +225,10 @@ export default function AssessmentDetailRoute() {
         </CardContent>
       </Card>
 
-      {/* Score bar */}
       {a.overall_score >= 0 && (
         <ProgressBar value={a.overall_score} size="md" />
       )}
 
-      {/* Tabs */}
       <TabsSection
         tabs={[
           { key: "overview", label: "Overview" },
@@ -233,8 +240,14 @@ export default function AssessmentDetailRoute() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
+      <Link
+        to={`/assessments/${a.id}/questionnaire`}
+        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+      >
+        <FileText className="w-4 h-4" />
+        Open Questionnaire
+      </Link>
 
-      {/* Tab content */}
       {activeTab === "overview" && (
         <SectionCard title="Summary" padding="compact">
           {a.ai_summary ? (
@@ -356,8 +369,6 @@ export default function AssessmentDetailRoute() {
   );
 }
 
-/* ────────────── Helper Components ────────────── */
-
 function FieldRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
@@ -397,8 +408,6 @@ const taskStatusVariant = (s: string) => {
       return "outline";
   }
 };
-
-/* ────────────── Findings Tab ────────────── */
 
 function FindingsTab({
   findings,
@@ -566,7 +575,6 @@ function EditFindingForm({
 const severityBadgeVariant = (s: string) => {
   switch (s) {
     case "CRITICAL":
-      return "destructive";
     case "HIGH":
       return "destructive";
     case "MEDIUM":
@@ -590,8 +598,6 @@ const findingStatusVariant = (s: string) => {
       return "outline";
   }
 };
-
-/* ────────────── Plan Details ────────────── */
 
 function PlanDetails({ plan }: { plan: any }) {
   return (

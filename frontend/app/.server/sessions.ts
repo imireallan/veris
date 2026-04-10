@@ -1,38 +1,80 @@
-/** Server-side session & auth utilities. */
+/** Session management for JWT-based auth with cookie sessions. */
 
-import { redirect } from "react-router";
-import { api, ApiError } from "./api";
+import {
+  createCookieSessionStorage,
+  redirect,
+} from "react-router";
+import type { User } from "~/types";
 
-const COOKIE_NAME = "access_token";
+const isProd = process.env.NODE_ENV === "production";
 
-/* ─────────────── helpers ─────────────── */
+const sessionStorage = createCookieSessionStorage({
+  cookie: {
+    name: "__session",
+    httpOnly: true,
+    path: "/",
+    sameSite: "lax",
+    secrets: [process.env.SESSION_SECRET || "dev-secret-change-me"],
+    secure: isProd,
+    maxAge: 60 * 60 * 24 * 7, // 7 days
+  },
+});
 
-export function decodeJwt(token: string): { exp: number } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    return JSON.parse(atob(parts[1]));
-  } catch {
-    return null;
+async function getSessionFromCookie(cookie: string | null) {
+  return sessionStorage.getSession(cookie ?? undefined);
+}
+
+export async function getSession(request: Request) {
+  const cookie = request.headers.get("Cookie");
+  return getSessionFromCookie(cookie);
+}
+
+/**
+ * Require authentication and fetch the full user profile from /api/auth/me/.
+ * Returns a normalized User object. Throws redirect to /login if unauthenticated.
+ */
+export async function requireUser(request: Request): Promise<User> {
+  const token = await getUserToken(request);
+  if (!token) {
+    throw redirect("/login");
   }
+
+  const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+  const response = await fetch(`${backendUrl}/api/auth/me/`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    // Token is invalid/expired — destroy session and redirect to login
+    const session = await getSession(request);
+    throw redirect("/login", {
+      headers: {
+        "Set-Cookie": await sessionStorage.destroySession(session),
+      },
+    });
+  }
+
+  const data = await response.json();
+
+  return {
+    id: data.id ?? "",
+    email: data.email ?? "",
+    fullName: data.full_name ?? data.email ?? "",
+    firstName: data.first_name ?? data.full_name?.split(" ")[0] ?? data.email?.split("@")[0] ?? "",
+    lastName: data.last_name ?? "",
+    orgId: data.org_id ?? "",
+    role: (data.role ?? "VIEWER").toUpperCase() as User["role"],
+    pictureUrl: data.picture_url ?? undefined,
+  };
 }
 
-export function isTokenExpired(token: string): boolean {
-  const payload = decodeJwt(token);
-  if (!payload || !payload.exp) return true;
-  const buffer = 30;
-  return (payload.exp - buffer) * 1000 < Date.now();
+/** Get the access token from a request (returns null if not authenticated). */
+export async function getUserToken(request: Request): Promise<string | null> {
+  const session = await getSession(request);
+  return (session.get("accessToken") as string) ?? null;
 }
 
-function getAccessToken(request: Request): string | null {
-  const cookieHeader = request.headers.get("Cookie");
-  if (!cookieHeader) return null;
-  const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]*)`));
-  return match ? match[1] : null;
-}
-
-/* ─────────────── session creation / destruction ─────────────── */
-
+/** Create a session with the given access token and redirect. */
 export async function createTokenSession({
   accessToken,
   redirectTo,
@@ -40,128 +82,51 @@ export async function createTokenSession({
   accessToken: string;
   redirectTo: string;
 }) {
-  const maxAge = 7 * 24 * 60 * 60;
+  const session = await sessionStorage.getSession();
+  session.set("accessToken", accessToken);
+
   return redirect(redirectTo, {
     headers: {
-      "Set-Cookie": `${COOKIE_NAME}=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge};`,
+      "Set-Cookie": await sessionStorage.commitSession(session),
     },
   });
 }
 
-export async function destroyTokenSession() {
+/** Destroy the current session (logout). */
+export async function destroySession(request: Request) {
+  const session = await getSession(request);
   return redirect("/login", {
     headers: {
-      "Set-Cookie": `${COOKIE_NAME}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0;`,
+      "Set-Cookie": await sessionStorage.destroySession(session),
     },
   });
 }
 
-/* ─────────────── user helpers ─────────────── */
-
-const isTestMode = (globalThis as any).__TEST_MODE__ || false;
-
-export interface AuthMeResponse {
-  id: string;
-  email: string;
-  full_name: string;
-  first_name?: string;
-  last_name?: string;
-  org_id: string;
-  role: string;
-  picture_url?: string;
-}
-
-export interface User {
-  id: string;
-  email: string;
-  fullName: string;
-  firstName?: string;
-  lastName?: string;
-  orgId: string;
-  role: "admin" | "manager" | "viewer";
-  pictureUrl?: string;
-}
-
-function mapUser(data: AuthMeResponse): User {
-  return {
-    id: data.id,
-    email: data.email,
-    fullName: data.full_name,
-    firstName: data.first_name,
-    lastName: data.last_name,
-    orgId: data.org_id,
-    role: (data.role as User["role"]) || "viewer",
-    pictureUrl: data.picture_url,
-  };
-}
-
-export async function getUserFromRequest(request: Request): Promise<User | null> {
-  if (isTestMode) {
-    const token = getAccessToken(request);
-    if (token && decodeJwt(token)) {
-      return {
-        id: "test-user-123",
-        email: "test@example.com",
-        fullName: "Test User",
-        firstName: "Test",
-        lastName: "User",
-        orgId: "org-1",
-        role: "admin",
-        pictureUrl: "https://example.com/avatar.png",
-      };
-    }
-  }
-
-  const token = getAccessToken(request);
-  if (!token) return null;
-
-  try {
-    const data = await api.get<AuthMeResponse>("/api/auth/me", token);
-    return mapUser(data);
-  } catch {
-    return null;
-  }
-}
-
+/** Login against the backend API and return token or error. */
 export async function loginUser(
   email: string,
-  password: string,
+  password: string
 ): Promise<{ accessToken: string } | { error: string }> {
   try {
-    const data = await api.post<{ access_token: string }>(
-      "/api/auth/login",
-      { email, password },
-    );
-    return { accessToken: data.access_token };
-  } catch (err) {
-    if (err instanceof ApiError) {
-      return { error: err.status === 401 ? "Invalid credentials" : err.message };
+    const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+    const response = await fetch(`${backendUrl}/api/auth/login/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Invalid credentials" }));
+      return { error: err.detail ?? "Login failed" };
     }
-    return { error: "Unable to reach authentication server" };
+
+    const data = await response.json();
+    const token = data.access_token ?? data.access;
+    if (!token || typeof token !== "string") {
+      return { error: "No token received from server" };
+    }
+    return { accessToken: token };
+  } catch {
+    return { error: "Network error — is the backend running?" };
   }
-}
-
-/**
- * Require authenticated user — throws redirect to /login if none.
- */
-export async function requireUser(request: Request): Promise<User> {
-  const token = getAccessToken(request);
-  if (!token || isTokenExpired(token)) {
-    const url = new URL(request.url);
-    const search = new URLSearchParams([["redirectTo", url.pathname]]);
-    throw redirect(`/login?${search}`);
-  }
-
-  const user = await getUserFromRequest(request);
-  if (!user) {
-    const url = new URL(request.url);
-    const search = new URLSearchParams([["redirectTo", url.pathname]]);
-    throw redirect(`/login?${search}`);
-  }
-
-  return user;
-}
-
-export function getUserToken(request: Request): string | null {
-  return getAccessToken(request);
 }

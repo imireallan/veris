@@ -1,16 +1,13 @@
-import { useLoaderData } from "react-router";
-import type { Route } from "./+types/index";
-import { requireUser } from "~/.server/sessions";
-import Dashboard from "~/components/Dashboard";
+import { useOutletContext } from "react-router";
 import type { User } from "~/types";
-
-export async function loader({ request }: { request: Request }) {
-  const user = await requireUser(request) as User;
-  return { user };
-}
+import Dashboard from "~/components/Dashboard";
 
 export default function IndexRoute() {
-  const { user } = useLoaderData<Route.ComponentProps["loaderData"]>();
+  const { user } = useOutletContext<{ user: User | null }>();
+
+  if (!user) {
+    return <div className="p-8 text-center">Loading user profile...</div>;
+  }
+
   return <Dashboard user={user} />;
 }
-

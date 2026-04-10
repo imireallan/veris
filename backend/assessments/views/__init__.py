@@ -1,9 +1,8 @@
+from users.permissions import IsAssessmentOwner, IsOrganizationMember, IsOrganizationOwnerOrAdmin
 from rest_framework import viewsets
-from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db import models
-from django.utils import timezone
 from assessments.models import (
     ESGFocusArea,
     ExternalRating,
@@ -41,10 +40,12 @@ from assessments.serializers import (
 class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Framework.objects.all()
     serializer_class = FrameworkSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class ESGFocusAreaViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ESGFocusAreaSerializer
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         return ESGFocusArea.objects.filter(
@@ -54,6 +55,7 @@ class ESGFocusAreaViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ExternalRatingViewSet(viewsets.ModelViewSet):
     serializer_class = ExternalRatingSerializer
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         return ExternalRating.objects.filter(
@@ -68,7 +70,7 @@ class ExternalRatingViewSet(viewsets.ModelViewSet):
 class AssessmentViewSet(viewsets.ModelViewSet):
     """Full CRUD for assessments."""
     serializer_class = AssessmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationOwnerOrAdmin]
 
     def get_queryset(self):
         qs = Assessment.objects.all()
@@ -88,7 +90,7 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
     No org_pk needed — looks up by assessment pk directly.
     """
     serializer_class = AssessmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAssessmentOwner]
 
     def get_queryset(self):
         return Assessment.objects.select_related(
@@ -127,6 +129,7 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AssessmentTemplateViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentTemplateSerializer
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         return AssessmentTemplate.objects.filter(
@@ -136,25 +139,51 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
 
 class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AssessmentQuestionSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return AssessmentQuestion.objects.all()
+        # Filter questions by the template associated with the specific assessment
+        assessment_pk = self.kwargs.get("assessment_pk")
+        org_pk = self.kwargs.get("org_pk")
+        
+        if assessment_pk:
+            # Get the template associated with this assessment
+            from assessments.models import Assessment
+            try:
+                assessment = Assessment.objects.get(id=assessment_pk)
+                template = assessment.template
+                if template:
+                    return AssessmentQuestion.objects.filter(template=template)
+            except Assessment.DoesNotExist:
+                return AssessmentQuestion.objects.none()
+        
+        # Fallback: Filter questions by organization if assessment_pk is missing
+        if org_pk:
+            return AssessmentQuestion.objects.filter(
+                template__organization_id=org_pk
+            )
+        return AssessmentQuestion.objects.none()
 
 
 class AssessmentResponseViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentResponseSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAssessmentOwner]
 
     def get_queryset(self):
-        return AssessmentResponse.objects.filter(
-            assessment_id=self.kwargs.get("assessment_pk")
-        )
+        assessment_pk = self.kwargs.get("assessment_pk")
+        org_pk = self.kwargs.get("org_pk")
+        if assessment_pk:
+            queryset = AssessmentResponse.objects.filter(assessment_id=assessment_pk)
+            # Additional org scoping if org_pk is provided
+            if org_pk:
+                queryset = queryset.filter(assessment__organization_id=org_pk)
+            return queryset
+        return AssessmentResponse.objects.none()
 
 
 class AIInsightViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = AIInsightSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         return AIInsight.objects.filter(
@@ -164,7 +193,7 @@ class AIInsightViewSet(viewsets.ReadOnlyModelViewSet):
 
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         return Task.objects.filter(
@@ -174,7 +203,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class SiteViewSet(viewsets.ModelViewSet):
     serializer_class = SiteSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         org_id = self.kwargs.get("org_pk") or self.request.query_params.get("organization")

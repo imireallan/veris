@@ -1,36 +1,49 @@
 import { useLoaderData, Link, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, FileText, Plus } from "lucide-react";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/api";
-import { Clock, FileText, Plus } from "lucide-react";
-import { Badge, Card, CardContent, ProgressBar } from "~/components/ui";
+import { api } from "~/.server/lib/api";
 import { PageHeader, SearchBar, EmptyState, Button } from "~/components/ui";
+import { AssessmentCard } from "~/components/AssessmentCard";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
-  const token = getUserToken(request);
+  const token = await getUserToken(request);
+  const url = new URL(request.url);
+  const orgFilter = url.searchParams.get("org");
 
-  const fetchWithLog = async (url: string, label: string) => {
+  const fetchWithLog = async (path: string, label: string) => {
     try {
-      const result = await api.get<any>(url, token);
-      // DRF paginated responses are { count, results }, unwrap to plain array
+      const result = await api.get<any>(path, token);
       return Array.isArray(result) ? result : (result?.results ?? []);
-    } catch (err) {
-      console.error(`[Assessments] Failed to fetch ${label}:`, err);
+    } catch {
       return [];
     }
   };
 
-  const [assessments, sites, frameworks, focusAreas] = await Promise.all([
-    fetchWithLog("/api/assessments/", "assessments"),
-    fetchWithLog("/api/sites/", "sites"),
-    fetchWithLog("/api/frameworks/", "frameworks"),
-    fetchWithLog("/api/focus-areas/", "focusAreas"),
-  ]);
+  // Non-admin users are server-side scoped to their own org by default.
+  // For admins, optionally pass ?organization= to filter.
+  const isSuperAdmin = user.role === "SUPERADMIN";
 
-  return { assessments, sites, frameworks, focusAreas, user };
+  const assessmentsPath = isSuperAdmin && orgFilter
+    ? `/api/assessments/?organization=${orgFilter}`
+    : "/api/assessments/";
+
+  const orgPath = orgFilter
+    ? `/api/organizations/?organization=${orgFilter}`
+    : `/api/organizations/`;
+
+  const [assessments, sites, frameworks, focusAreas, organizations] =
+    await Promise.all([
+      fetchWithLog(assessmentsPath, "assessments"),
+      fetchWithLog("/api/sites/", "sites"),
+      fetchWithLog("/api/frameworks/", "frameworks"),
+      fetchWithLog("/api/focus-areas/", "focusAreas"),
+      fetchWithLog(orgPath, "organizations"),
+    ]);
+
+  return { assessments, sites, frameworks, focusAreas, organizations, orgFilter, user };
 }
 
 const statusVariant = (
@@ -55,7 +68,6 @@ const riskVariant = (
 ): "default" | "destructive" | "secondary" | "success" => {
   switch (r) {
     case "CRITICAL":
-      return "destructive";
     case "HIGH":
       return "destructive";
     case "MEDIUM":
@@ -68,22 +80,25 @@ const riskVariant = (
 };
 
 export default function AssessmentsListRoute() {
-  const { assessments, sites, frameworks, focusAreas } =
+  const { assessments, sites, frameworks, focusAreas, organizations, orgFilter, user } =
     useLoaderData<typeof loader>();
-  console.log("Loaded assessments:", sites);
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
+  const activeOrg = searchParams.get("org") || "";
+
+  const isSuperAdmin = user.role === "SUPERADMIN";
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search]);
+  }, [search, activeOrg]);
 
   const PAGE_SIZE = 5;
   const allItems = Array.isArray(assessments) ? assessments : [];
   const items = allItems.filter(
     (a: any) =>
-      !search || a.ai_summary?.toLowerCase().includes(search.toLowerCase()),
+      (!search || a.ai_summary?.toLowerCase().includes(search.toLowerCase())) &&
+      (!activeOrg || a.organization === activeOrg)
   );
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
   const paginatedItems = items.slice(
@@ -91,6 +106,12 @@ export default function AssessmentsListRoute() {
     currentPage * PAGE_SIZE,
   );
 
+  const orgMap = new Map(
+    (Array.isArray(organizations) ? organizations : []).map((o: any) => [
+      o.id,
+      o.name,
+    ]),
+  );
   const fwMap = new Map(
     (Array.isArray(frameworks) ? frameworks : []).map((f: any) => [
       f.id,
@@ -114,8 +135,7 @@ export default function AssessmentsListRoute() {
     <div className="flex items-center justify-between mt-6">
       <div className="text-sm text-muted-foreground">
         Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, items.length)} to{" "}
-        {Math.min(currentPage * PAGE_SIZE, items.length)} of {items.length}{" "}
-        assessments
+        {Math.min(currentPage * PAGE_SIZE, items.length)} of {items.length} assessments
       </div>
       <div className="flex items-center gap-1">
         <Button
@@ -159,13 +179,57 @@ export default function AssessmentsListRoute() {
         title="Assessments"
         subtitle="Create, track, and manage sustainability assessments."
         action={
-          <Link to="/assessments/new">
-            <Button>
-              <Plus className="w-4 h-4" /> New Assessment
-            </Button>
-          </Link>
+          !isSuperAdmin && (
+            <Link to="/assessments/new">
+              <Button>
+                <Plus className="w-4 h-4" /> New Assessment
+              </Button>
+            </Link>
+          )
         }
       />
+
+      {isSuperAdmin && (
+        <div className="flex gap-3 items-center">
+          <div className="relative">
+            <select
+              value={activeOrg}
+              onChange={(e) => {
+                const v = e.target.value;
+                const next = new URLSearchParams(searchParams);
+                if (v) next.set("org", v);
+                else next.delete("org");
+                next.delete("q");
+                setSearchParams(next);
+              }}
+              className="appearance-none bg-background border rounded-lg pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">All Organizations</option>
+              {Array.isArray(organizations) &&
+                organizations.map((o: any) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+            </select>
+            <Filter className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          </div>
+          {activeOrg && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("org");
+                setSearchParams(next);
+              }}
+              className="text-xs h-8"
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      )}
 
       <SearchBar
         value={search}
@@ -195,9 +259,10 @@ export default function AssessmentsListRoute() {
               >
                 <AssessmentCard
                   assessment={a}
-                  siteName={undefined} // Could add siteMap if needed
+                  siteName={undefined}
                   frameworkName={fwMap.get(a.framework)}
                   focusAreaName={faMap.get(a.focus_area)}
+                  orgName={orgMap?.get(a.organization)}
                 />
               </Link>
             ))}
@@ -206,61 +271,5 @@ export default function AssessmentsListRoute() {
         </>
       )}
     </div>
-  );
-}
-
-/** Reusable assessment card — keeps the display logic in one place. */
-function AssessmentCard({
-  assessment,
-  focusAreaName,
-  frameworkName,
-  siteName,
-}: {
-  assessment: any;
-  focusAreaName?: string;
-  frameworkName?: string;
-  siteName?: string;
-}) {
-  const name =
-    focusAreaName || frameworkName || `Assessment ${assessment.id.slice(0, 8)}`;
-
-  return (
-    <Card className="hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 hover:shadow-primary/10 transition-all duration-300 group">
-      <CardContent className="p-5 space-y-3">
-        <div className="flex items-center gap-3 flex-wrap">
-          <Clock className="w-5 h-5 text-blue-500 shrink-0" />
-          <Badge variant={riskVariant(assessment.risk_level)}>
-            {assessment.risk_level}
-          </Badge>
-          <Badge variant={statusVariant(assessment.status)}>
-            {assessment.status.replace(/_/g, " ")}
-          </Badge>
-          {assessment.overall_score > 0 && (
-            <span className="text-xs font-mono text-muted-foreground">
-              Score: {assessment.overall_score}%
-            </span>
-          )}
-        </div>
-
-        <h3 className="font-medium group-hover:text-primary transition-colors">
-          {name}
-        </h3>
-
-        <p className="text-xs text-muted-foreground">
-          Due:{" "}
-          {assessment.due_date
-            ? new Date(assessment.due_date).toLocaleDateString()
-            : "—"}
-        </p>
-
-        {assessment.ai_summary && (
-          <p className="text-xs text-muted-foreground line-clamp-1">
-            {assessment.ai_summary.replace(/<[^>]*>/g, "")}
-          </p>
-        )}
-
-        <ProgressBar value={assessment.overall_score} size="sm" />
-      </CardContent>
-    </Card>
   );
 }

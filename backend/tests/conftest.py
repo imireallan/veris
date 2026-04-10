@@ -73,7 +73,9 @@ def make_custom_role():
     """Create and return a CustomRole."""
 
     def _make(organization, name="Admin", permissions=None, **kwargs):
-        permissions = permissions or ["user:invite", "report:edit"]
+        # Use provided permissions (including empty list) or default
+        if permissions is None:
+            permissions = ["user:invite", "report:edit"]
         return CustomRole.objects.create(
             organization=organization,
             name=name,

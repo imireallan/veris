@@ -1,5 +1,6 @@
 """
 Organization-scoped permission classes for multi-tenant security.
+Supports both fallback roles and custom roles with dynamic permissions.
 """
 
 from rest_framework import permissions
@@ -54,8 +55,11 @@ class IsOrganizationMemberOrReadOnly(permissions.BasePermission):
 
 class IsOrganizationOwnerOrAdmin(permissions.BasePermission):
     """
-    Permission that checks if the user is an admin or belongs to the organization.
-    Superusers / SUPERADMIN role always pass. Regular users must belong to the org.
+    Permission that checks if the user has admin-level permissions.
+    Supports both fallback roles (ADMIN) and custom roles with 'role:manage' permission.
+    Superusers always pass.
+
+    For backward compatibility, custom roles named "Admin" (case-insensitive) also pass.
     """
 
     def has_permission(self, request, view):
@@ -68,24 +72,82 @@ class IsOrganizationOwnerOrAdmin(permissions.BasePermission):
 
         org_pk = view.kwargs.get("org_pk")
         if not org_pk:
-            org_pk = request.query_params.get("organization")
+            org_pk = (
+                request.query_params.get("organization")
+                if hasattr(request, "query_params")
+                else request.GET.get("organization")
+            )
 
         if not org_pk:
             return True
 
-        # Check membership for role
+        # Check membership for role/permissions
         membership = OrganizationMembership.objects.filter(
             user=request.user, organization_id=org_pk
         ).first()
 
-        if membership:
-            # Check if membership role (custom or fallback) is Admin
-            if membership.fallback_role == "ADMIN" or (
-                membership.role and membership.role.name == "Admin"
-            ):
-                return True
+        if not membership:
+            return False
+
+        # Check if membership grants admin-level permissions
+        # 1. Has 'role:manage' permission (custom or fallback)
+        # 2. Is ADMIN fallback role (backward compatibility)
+        # 3. Custom role named "Admin" (backward compatibility)
+        if membership.has_permission("role:manage"):
+            return True
+
+        if membership.fallback_role == "ADMIN":
+            return True
+
+        # Backward compatibility: custom role named "Admin"
+        if membership.role and membership.role.name.lower() == "admin":
+            return True
 
         return False
+
+
+class HasPermission(permissions.BasePermission):
+    """
+    Generic permission class that checks for a specific permission key.
+    Usage: permission_classes = [HasPermission('user:invite')]
+
+    Can be instantiated with a permission string or used as a base class.
+    """
+
+    required_permission = None
+
+    def __init__(self, permission_key=None):
+        super().__init__()
+        self.required_permission = permission_key or self.required_permission
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        org_pk = view.kwargs.get("org_pk")
+        if not org_pk:
+            # Try to get from query params (DRF request)
+            if hasattr(request, "query_params"):
+                org_pk = request.query_params.get("organization")
+            # Try to get from GET params (Django request)
+            elif hasattr(request, "GET"):
+                org_pk = request.GET.get("organization")
+
+        if not org_pk:
+            # For non-org-scoped routes, cannot check permissions
+            return False
+
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not membership:
+            return False
+
+        return membership.has_permission(self.required_permission)
 
 
 class IsAssessmentOwner(permissions.BasePermission):

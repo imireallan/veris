@@ -58,9 +58,15 @@ class CustomRole(models.Model):
     class Meta:
         db_table = "custom_roles"
         unique_together = ("organization", "name")
+        verbose_name = "Custom Role"
+        verbose_name_plural = "Custom Roles"
 
     def __str__(self):
         return f"{self.name} ({self.organization.name})"
+
+    def has_permission(self, permission_key: str) -> bool:
+        """Check if this role has a specific permission."""
+        return permission_key in self.permissions
 
 
 class OrganizationMembership(models.Model):
@@ -101,6 +107,61 @@ class OrganizationMembership(models.Model):
     class Meta:
         db_table = "organization_memberships"
         unique_together = ("user", "organization")
+        verbose_name = "Organization Membership"
+        verbose_name_plural = "Organization Memberships"
 
     def __str__(self):
         return f"{self.user.email} @ {self.organization.name}"
+
+    def has_permission(self, permission_key: str) -> bool:
+        """
+        Check if this membership grants a specific permission.
+        Prioritizes custom role permissions, falls back to fallback_role defaults.
+        """
+        # If custom role exists, use its permissions
+        if self.role:
+            return self.role.has_permission(permission_key)
+
+        # Fallback: map fallback_role to default permissions
+        DEFAULT_ROLE_PERMISSIONS = {
+            "ADMIN": [
+                "user:invite",
+                "user:remove",
+                "role:manage",
+                "org:settings",
+                "assessment:create",
+                "assessment:edit",
+                "assessment:delete",
+                "assessment:approve",
+                "report:view",
+                "report:export",
+                "evidence:upload",
+                "evidence:approve",
+            ],
+            "COORDINATOR": [
+                "assessment:create",
+                "assessment:edit",
+                "report:view",
+                "report:export",
+                "evidence:upload",
+                "user:invite",
+            ],
+            "ASSESSOR": [
+                "assessment:view",
+                "assessment:edit",
+                "evidence:upload",
+                "evidence:review",
+                "report:view",
+            ],
+            "CONSULTANT": [
+                "assessment:view",
+                "assessment:edit",
+                "evidence:upload",
+                "report:view",
+            ],
+            "EXECUTIVE": ["assessment:view", "report:view", "report:export"],
+            "OPERATOR": ["assessment:view", "evidence:upload"],
+        }
+
+        role_perms = DEFAULT_ROLE_PERMISSIONS.get(self.fallback_role, [])
+        return permission_key in role_perms

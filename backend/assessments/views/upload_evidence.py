@@ -1,6 +1,10 @@
 """
 File upload endpoint for evidence documents.
 Supports any file type — not just images.
+
+Uses configured storage backend:
+- Local (development): ./media/ directory
+- S3 (production): AWS S3 bucket
 """
 
 import os
@@ -46,6 +50,15 @@ MAX_SIZE = 25 * 1024 * 1024  # 25MB
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def upload_evidence_document(request):
+    """
+    Upload evidence document to configured storage (local or S3).
+    
+    Returns:
+        - url: Full URL to access the file
+        - file_name: Original filename
+        - file_size: Size in bytes
+        - content_type: MIME type
+    """
     uploaded_file = request.FILES.get("file")
     if not uploaded_file:
         return Response(
@@ -75,7 +88,7 @@ def upload_evidence_document(request):
     unique_name = f"{uuid.uuid4().hex}_{uploaded_file.name}"
     upload_path = f"evidence_documents/{unique_name}"
 
-    # Save file
+    # Save file using configured storage (local or S3)
     file_path = default_storage.save(upload_path, uploaded_file)
     file_url = default_storage.url(file_path)
 

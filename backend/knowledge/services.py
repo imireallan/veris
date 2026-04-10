@@ -4,12 +4,20 @@ Evidence Pipeline: Upload → Chunk → Embed → Store in Pinecone
 Note: This is a temporary MVP implementation in Django.
 Planned migration to ai_engine service when scale requires it.
 See docs/ai-architecture-decision.md for details.
+
+File Storage:
+- Uses Django's default_storage (local in dev, S3 in production)
+- For S3 files, downloads to temp file before processing
 """
 
+import os
+import tempfile
 from dataclasses import dataclass
 from typing import List
 
+import requests
 from django.conf import settings
+from django.core.files.storage import default_storage
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -89,13 +97,43 @@ def extract_text_from_pdf(file_path: str) -> str:
 
 
 def extract_text_from_file(file_path: str, file_type: str) -> str:
-    """Extract text from file based on type."""
-    if file_type.upper() == "PDF":
-        return extract_text_from_pdf(file_path)
+    """
+    Extract text from file based on type.
+    
+    Handles both local paths and S3 URLs:
+    - Local: reads directly from filesystem
+    - S3/HTTP: downloads to temp file first
+    """
+    # Check if file_path is a URL (S3 or external)
+    if file_path.startswith("http://") or file_path.startswith("https://"):
+        # Download file to temp location
+        response = requests.get(file_path, timeout=30)
+        response.raise_for_status()
+        
+        with tempfile.NamedTemporaryFile(
+            delete=False, suffix=f".{file_type.lower()}"
+        ) as tmp_file:
+            tmp_file.write(response.content)
+            tmp_path = tmp_file.name
+        
+        try:
+            if file_type.upper() == "PDF":
+                text = extract_text_from_pdf(tmp_path)
+            else:
+                with open(tmp_path, "r", encoding="utf-8", errors="ignore") as f:
+                    text = f.read()
+        finally:
+            # Clean up temp file
+            os.unlink(tmp_path)
+        
+        return text
     else:
-        # For other file types, read as plain text
-        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            return f.read()
+        # Local file path
+        if file_type.upper() == "PDF":
+            return extract_text_from_pdf(file_path)
+        else:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                return f.read()
 
 
 def chunk_document(

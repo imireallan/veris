@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.utils import timezone
 
 
 class Organization(models.Model):
@@ -165,3 +166,118 @@ class OrganizationMembership(models.Model):
 
         role_perms = DEFAULT_ROLE_PERMISSIONS.get(self.fallback_role, [])
         return permission_key in role_perms
+
+
+class Invitation(models.Model):
+    """Invitation to join an organization with a specific role."""
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        ACCEPTED = "ACCEPTED", "Accepted"
+        DECLINED = "DECLINED", "Declined"
+        EXPIRED = "EXPIRED", "Expired"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="invitations"
+    )
+    email = models.EmailField()
+    # Role assignment (custom role or fallback)
+    role = models.ForeignKey(
+        CustomRole, on_delete=models.SET_NULL, null=True, blank=True
+    )
+    fallback_role = models.CharField(
+        max_length=20,
+        choices=[
+            ("ADMIN", "Admin"),
+            ("COORDINATOR", "Coordinator"),
+            ("OPERATOR", "Operator"),
+            ("EXECUTIVE", "Executive"),
+            ("ASSESSOR", "Assessor"),
+            ("CONSULTANT", "Consultant"),
+        ],
+        default="OPERATOR",
+    )
+    # Token for secure acceptance link
+    token = models.CharField(max_length=64, unique=True, editable=False)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_invitations",
+    )
+    # Timestamps
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "invitations"
+        ordering = ["-created_at"]
+        verbose_name = "Invitation"
+        verbose_name_plural = "Invitations"
+
+    def __str__(self):
+        return f"{self.email} → {self.organization.name} ({self.status})"
+
+    def save(self, *args, **kwargs):
+        # Generate token on creation
+        if not self.token:
+            self.token = self._generate_token()
+        # Set default expiry (7 days) if not set
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timezone.timedelta(days=7)
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_token() -> str:
+        """Generate a secure random token for invitation acceptance."""
+        import secrets
+
+        return secrets.token_urlsafe(32)
+
+    def is_expired(self) -> bool:
+        """Check if invitation has expired."""
+        return timezone.now() > self.expires_at
+
+    def accept(self, user) -> bool:
+        """
+        Accept the invitation for a user.
+        Creates OrganizationMembership and marks invitation as accepted.
+        Returns True if successful, False if invitation is invalid/expired.
+        """
+        if self.status != self.Status.PENDING:
+            return False
+
+        if self.is_expired():
+            self.status = self.Status.EXPIRED
+            self.save(update_fields=["status"])
+            return False
+
+        # Create membership
+        OrganizationMembership.objects.get_or_create(
+            user=user,
+            organization=self.organization,
+            defaults={
+                "role": self.role,
+                "fallback_role": self.fallback_role,
+            },
+        )
+
+        # Mark as accepted
+        self.status = self.Status.ACCEPTED
+        self.accepted_at = timezone.now()
+        self.save(update_fields=["status", "accepted_at"])
+        return True
+
+    def decline(self) -> bool:
+        """Decline the invitation. Returns True if successful."""
+        if self.status != self.Status.PENDING:
+            return False
+
+        self.status = self.Status.DECLINED
+        self.save(update_fields=["status"])
+        return True

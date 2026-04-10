@@ -1,8 +1,6 @@
 """Shared test fixtures and factories for Veris test suite."""
 
 import pytest
-from django.test import RequestFactory
-from rest_framework.test import APIRequestFactory
 
 from organizations.models import CustomRole, Organization, OrganizationMembership
 from users.models import User
@@ -12,11 +10,15 @@ from users.models import User
 
 @pytest.fixture
 def api_factory():
-    return APIRequestFactory()
+    from rest_framework.test import APIClient
+
+    return APIClient()
 
 
 @pytest.fixture
 def request_factory():
+    from django.test import RequestFactory
+
     return RequestFactory()
 
 

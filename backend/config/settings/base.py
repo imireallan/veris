@@ -134,6 +134,14 @@ REST_FRAMEWORK = {
 # CORS
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+# AI / Pinecone Configuration
+# Note: Evidence pipeline is in Django for MVP. Plan to migrate to ai_engine service.
+# See docs/ai-architecture-decision.md for refactor plan.
+PINECONE_API_KEY = env("PINECONE_API_KEY", default="")
+PINECONE_ENVIRONMENT = env("PINECONE_ENVIRONMENT", default="us-east1-gcp")
+PINECONE_INDEX_NAME = env("PINECONE_INDEX_NAME", default="sustainability-ai")
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+
 # Logging
 LOGGING = {
     "version": 1,

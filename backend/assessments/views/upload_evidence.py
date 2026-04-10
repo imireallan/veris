@@ -52,7 +52,7 @@ MAX_SIZE = 25 * 1024 * 1024  # 25MB
 def upload_evidence_document(request):
     """
     Upload evidence document to configured storage (local or S3).
-    
+
     Returns:
         - url: Full URL to access the file
         - file_name: Original filename

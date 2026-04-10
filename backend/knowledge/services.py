@@ -17,7 +17,6 @@ from typing import List
 
 import requests
 from django.conf import settings
-from django.core.files.storage import default_storage
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -99,7 +98,7 @@ def extract_text_from_pdf(file_path: str) -> str:
 def extract_text_from_file(file_path: str, file_type: str) -> str:
     """
     Extract text from file based on type.
-    
+
     Handles both local paths and S3 URLs:
     - Local: reads directly from filesystem
     - S3/HTTP: downloads to temp file first
@@ -109,13 +108,13 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
         # Download file to temp location
         response = requests.get(file_path, timeout=30)
         response.raise_for_status()
-        
+
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=f".{file_type.lower()}"
         ) as tmp_file:
             tmp_file.write(response.content)
             tmp_path = tmp_file.name
-        
+
         try:
             if file_type.upper() == "PDF":
                 text = extract_text_from_pdf(tmp_path)
@@ -125,7 +124,7 @@ def extract_text_from_file(file_path: str, file_type: str) -> str:
         finally:
             # Clean up temp file
             os.unlink(tmp_path)
-        
+
         return text
     else:
         # Local file path

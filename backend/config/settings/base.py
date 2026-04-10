@@ -137,7 +137,11 @@ CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 # File Storage Configuration
 # Local (development) vs S3 (production)
 USE_S3 = env.bool("USE_S3", default=False)
-MEDIA_URL = "/media/" if not env.bool("USE_S3", default=False) else f"https://{env('AWS_S3_CUSTOM_DOMAIN', default='')}/"
+MEDIA_URL = (
+    "/media/"
+    if not env.bool("USE_S3", default=False)
+    else f"https://{env('AWS_S3_CUSTOM_DOMAIN', default='')}/"
+)
 MEDIA_ROOT = BASE_DIR / "media" if not env.bool("USE_S3", default=False) else None
 
 # AWS S3 Settings (required when USE_S3=True)
@@ -145,7 +149,9 @@ AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
 AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
 AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
 AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
-AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")  # Optional: CloudFront domain
+AWS_S3_CUSTOM_DOMAIN = env(
+    "AWS_S3_CUSTOM_DOMAIN", default=""
+)  # Optional: CloudFront domain
 AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=86400",
 }

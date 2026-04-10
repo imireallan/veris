@@ -12,7 +12,7 @@ Settings (add to .env):
     AWS_STORAGE_BUCKET_NAME=veris-media-prod
     AWS_S3_REGION_NAME=us-east-1
     AWS_S3_CUSTOM_DOMAIN=  # Optional: CloudFront domain
-    
+
     # Or use for dev too (optional)
     USE_S3=true
 """
@@ -25,7 +25,7 @@ from storages.backends.s3boto3 import S3Boto3Storage
 class S3MediaStorage(S3Boto3Storage):
     """
     S3 storage for media files (evidence documents, uploads).
-    
+
     Configuration via Django settings:
     - AWS_STORAGE_BUCKET_NAME
     - AWS_S3_REGION_NAME
@@ -33,6 +33,7 @@ class S3MediaStorage(S3Boto3Storage):
     - AWS_SECRET_ACCESS_KEY
     - AWS_S3_CUSTOM_DOMAIN (optional, for CloudFront)
     """
+
     location = "media"
     default_acl = "private"  # Keep documents private, access via signed URLs
     file_overwrite = False  # Don't overwrite existing files
@@ -44,20 +45,21 @@ class LocalMediaStorage(FileSystemStorage):
     Local filesystem storage for development.
     Files stored in MEDIA_ROOT directory.
     """
+
     pass
 
 
 def get_media_storage():
     """
     Return appropriate storage backend based on settings.
-    
+
     Usage in models:
         from config.storage import get_media_storage
         file_storage = get_media_storage()
         file_storage.save('path/file.pdf', content)
     """
     use_s3 = getattr(settings, "USE_S3", False)
-    
+
     if use_s3:
         # Validate required settings
         required = [

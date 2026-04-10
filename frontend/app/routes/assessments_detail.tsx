@@ -21,16 +21,27 @@ import {
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
+  
+  // We need to resolve the assessment first to get its organization context
+  // since the route /assessments/:id doesn't explicitly have orgId in the URL
   const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token).catch(() => null);
+  
+  if (!assessment) {
+    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null };
+  }
+
+  const orgId = assessment.organization;
+
   const [findings, cipCycles, plan, tasks, report] = await Promise.all([
-    api.get<any[]>(`/api/findings/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/plans/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/tasks/?assessment=${params.id}`, token).catch(() => []),
-    api.get<any[]>(`/api/reports/?assessment=${params.id}`, token).catch(() => []),
+    api.get<any[]>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
   ]);
+
   return {
-    assessment: assessment ?? null,
+    assessment: assessment,
     findings: Array.isArray(findings) ? findings : [],
     cipCycles: Array.isArray(cipCycles) ? cipCycles : [],
     plan: Array.isArray(plan) ? (plan[0] ?? null) : null,

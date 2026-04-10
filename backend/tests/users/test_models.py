@@ -10,6 +10,7 @@ from users.models import User
 
 
 @pytest.mark.django_db
+@pytest.mark.integrated
 class TestUserModel:
     """User model should work without flat org/role fields."""
 

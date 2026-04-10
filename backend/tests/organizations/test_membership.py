@@ -11,6 +11,7 @@ from users.models import User
 
 
 @pytest.mark.django_db
+@pytest.mark.integrated
 class TestOrganizationMembership:
     """OrganizationMembership should support multi-org, multi-role users."""
 

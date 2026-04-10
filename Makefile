@@ -6,7 +6,7 @@ SHELL := /bin/bash
         frontend-install frontend-logs \
         ai-shell ai-bash ai-test \
         logs logs-backend logs-frontend logs-ai clean \
-        lint format test test-cov test-users test-orgs
+        lint format test test-cov test-isolated test-integrated test-profiling
 
 # ─────────────────────────────────────────────
 # Help
@@ -193,17 +193,20 @@ format: ## Auto-fix isort + black
 # ─────────────────────────────────────────────
 # Testing (local, via uv — uses SQLite, no Docker needed)
 # ─────────────────────────────────────────────
-test: ## Run all backend tests locally (SQLite, fast)
-	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
+test: ## Run all backend tests (excludes profiling)
+	cd backend && uv run pytest
 
 test-cov: ## Run tests with coverage report
-	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest --cov=. --cov-report=term-missing
+	cd backend && uv run pytest --cov=. --cov-report=term-missing
 
-test-users: ## Run only user model tests
-	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest tests/users/
+test-isolated: ## Run only isolated (unit) tests
+	cd backend && uv run pytest -m isolated
 
-test-orgs: ## Run only organization / membership tests
-	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest tests/organizations/
+test-integrated: ## Run only integrated (DB) tests
+	cd backend && uv run pytest -m integrated
+
+test-profiling: ## Run profiling tests only
+	cd backend && uv run pytest -m profiling
 
 # ─────────────────────────────────────────────
 # Utility

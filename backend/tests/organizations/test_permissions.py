@@ -10,6 +10,7 @@ from users.permissions import IsOrganizationMember, IsOrganizationOwnerOrAdmin
 
 
 @pytest.mark.django_db
+@pytest.mark.integrated
 class TestOrganizationPermissions:
     """Test RBAC and membership-based access."""
 
@@ -21,7 +22,6 @@ class TestOrganizationPermissions:
         org = make_org()
         make_membership(user=user, organization=org)
 
-        # Mock DRF request and view
         request = request_factory.get(f"/api/organizations/{org.id}/")
         request.user = user
         view = type("View", (), {"kwargs": {"org_pk": org.id}})()

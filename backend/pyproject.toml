@@ -64,12 +64,20 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
-addopts = "-q --no-header"
+addopts = "--ds=config.settings.testing --nomigrations --tb=short -q -m 'not profiling'"
 testpaths = ["tests"]
-DJANGO_SETTINGS_MODULE = "config.settings.testing"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "isolated: Unit tests — no DB, no network, pure logic",
+    "integrated: Tests that hit the DB via Django ORM / DRF test client",
+    "profiling: Performance / load tests (excluded from default run)",
+]
+
+[tool.pytest-env]
+ENVIRONMENT = "test"
+USE_DEFAULT_STATICFILES_STORAGE = "true"
 
 [tool.coverage.run]
 source = [".", "config", "organizations", "users", "themes", "assessments", "knowledge"]

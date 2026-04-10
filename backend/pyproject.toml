@@ -16,7 +16,7 @@ dependencies = [
     "psycopg2-binary==2.9.10",
     "bcrypt>=4.0.1",
     "pillow>=12.2.0",
-    "pinecone-client>=5.0.0",
+    "pinecone>=6.0.0",
     "langchain>=0.3.0",
     "langchain-openai>=0.2.0",
     "langchain-text-splitters>=0.3.0",

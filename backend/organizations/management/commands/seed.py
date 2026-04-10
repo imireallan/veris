@@ -554,43 +554,31 @@ class Command(BaseCommand):
                 )
 
         # ─────────────────────────────────────────────────────
-        # Assessor Profile (Bettercoal-style)
+        # Summary
         # ─────────────────────────────────────────────────────
-        from users.models import AssessorProfile
-
-        admin_user = User.objects.filter(is_superuser=True).first()
-        if admin_user and not hasattr(admin_user, "assessor_profile"):
-            AssessorProfile.objects.create(
-                user=admin_user,
-                role=AssessorProfile.Role.LEAD,
-                specializations=[
-                    AssessorProfile.Specialization.COAL,
-                    AssessorProfile.Specialization.OIL_GAS,
-                ],
-                can_be_lead_assessor=True,
-                biography="Senior ESG assessor with 15+ years in mining and energy sector audits.",
-                direct_phone_number="+27 82 000 0000",
-                country="ZA",
-                region="Gauteng",
-                current_organisation="Bettercoal",
-                is_registration_completed=True,
-            )
-            self.stdout.write(
-                self.style.SUCCESS("  [Created] Assessor Profile for admin")
-            )
 
         # Assign admin user to the first organization if not already assigned
+        from organizations.models import OrganizationMembership
+
         admin_user = User.objects.filter(email="admin@example.com").first()
-        if admin_user and not admin_user.organization_id:
-            first_org = Organization.objects.first()
-            if first_org:
-                admin_user.organization = first_org
-                admin_user.save(update_fields=["organization"])
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        "  [Updated] Assigned admin user to Demo Energy Corp"
+        if admin_user:
+            # Check if admin has any membership
+            has_membership = OrganizationMembership.objects.filter(
+                user=admin_user
+            ).exists()
+            if not has_membership:
+                first_org = Organization.objects.first()
+                if first_org:
+                    OrganizationMembership.objects.create(
+                        user=admin_user,
+                        organization=first_org,
+                        fallback_role="ADMIN",
                     )
-                )
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            "  [Updated] Assigned admin user to Demo Energy Corp"
+                        )
+                    )
 
         # Summary
         self.stdout.write(self.style.SUCCESS("=" * 50))

@@ -2,6 +2,7 @@ import { useLoaderData, Link, Form, useOutletContext } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import type { User } from "~/types";
+import { UserRole } from "~/types/rbac";
 import { api } from "~/.server/lib/api";
 import { Plus } from "lucide-react";
 import { Button, Input } from "~/components/ui";
@@ -10,7 +11,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  if (user.role === "SUPERADMIN") {
+  if (user.role === UserRole.SUPERADMIN) {
     const response = await api.get<any>("/api/organizations/", token).catch(() => []);
     const orgsList = Array.isArray(response) ? response : (response?.results || []);
     return { orgs: orgsList };
@@ -33,7 +34,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  if (user.role !== "SUPERADMIN") {
+  if (user.role !== UserRole.SUPERADMIN) {
     throw new Response("Forbidden", { status: 403 });
   }
 
@@ -56,12 +57,11 @@ export default function OrganizationsRoute() {
   if (!user) {
     return <div className="p-8 text-center">Please sign in to view your organizations.</div>;
   }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Organizations</h1>
-        {user.role === "SUPERADMIN" && (
+        {user.role === UserRole.SUPERADMIN && (
           <Form method="post" className="flex gap-2">
             <Input 
               name="name" 

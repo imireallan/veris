@@ -31,17 +31,26 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   
   const assessmentId = params.id;
-  const orgId = user.orgId;
+  
+  // First, fetch the assessment to get its organization_id
+  // This allows superadmins (user.orgId === null) to still access the questionnaire
+  const assessment = await api.get<any>(`/api/assessments/${assessmentId}/`, token).catch(() => null);
+  
+  if (!assessment) {
+    throw new Response("Assessment not found", { status: 404 });
+  }
+
+  const orgId = assessment.organization || assessment.organization_id;
   
   if (!orgId) {
-    throw new Response("User is not associated with an organization", { status: 403 });
+    throw new Response("Assessment is not associated with an organization", { status: 400 });
   }
 
   const [questions, responses] = await Promise.all([
     api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/questions/`, token).catch(() => []),
     api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/responses/`, token).catch(() => []),
   ]);
-
+  
   return {
     assessmentId,
     orgId,

@@ -28,14 +28,16 @@ export type ThemeContextValue = {
 /**
  * User shape returned by the auth session helpers.
  */
+import { UserRole } from "~/types/rbac";
+
 export interface User {
   id: string;
   email: string;
   fullName: string;
   firstName?: string;
   lastName?: string;
-  orgId: string;
-  role: "SUPERADMIN" | "ADMIN" | "MANAGER" | "VIEWER";
+  orgId: string | null;
+  role: UserRole;
   pictureUrl?: string;
 }
 

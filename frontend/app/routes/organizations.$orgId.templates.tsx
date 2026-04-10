@@ -2,21 +2,22 @@ import { useLoaderData, Link, Form, redirect } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { Plus, FileText, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { Plus, FileText, Trash2 } from "lucide-react";
 import { 
   Card, 
   CardContent, 
   Button, 
   Badge 
 } from "~/components/ui";
+import { RBAC } from "~/types/rbac";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const orgId = params.orgId;
 
-  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && String(user.orgId) !== String(orgId)) {
+  if (!RBAC.isOrgMember(user, orgId!)) {
     throw new Response("Access denied", { status: 403 });
   }
 

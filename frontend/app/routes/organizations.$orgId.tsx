@@ -2,6 +2,7 @@ import { useLoaderData, Link, Outlet } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import type { User } from "~/types";
+import { RBAC } from "~/types/rbac";
 import { api } from "~/.server/lib/api";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -28,11 +29,7 @@ export default function OrganizationDetailRoute() {
     return <div className="p-8 text-center">Loading user profile...</div>;
   }
 
-  const isSuperAdmin = user.role === "SUPERADMIN";
-  const isAdmin = user.role === "ADMIN";
-  const belongsToOrg = String(user.orgId) === String(org.id);
-
-  if (!isSuperAdmin && !isAdmin && !belongsToOrg) {
+  if (!RBAC.isOrgMember(user, org.id)) {
     throw new Response("Access denied", { status: 403 });
   }
 
@@ -77,7 +74,7 @@ export default function OrganizationDetailRoute() {
             View Assessments →
           </Link>
           
-          {(isAdmin || isSuperAdmin) && (
+          {RBAC.canManageTemplates(user, org.id) && (
             <Link
               to={`/organizations/${org.id}/templates`}
               className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"

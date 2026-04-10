@@ -16,13 +16,14 @@ import {
   AccordionContent
 } from "~/components/ui";
 import { useState } from "react";
+import { RBAC } from "~/types/rbac";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const { orgId, templateId } = params;
 
-  if (user.role !== "ADMIN" && user.role !== "SUPERADMIN" && String(user.orgId) !== String(orgId)) {
+  if (!RBAC.isOrgMember(user, orgId!)) {
     throw new Response("Access denied", { status: 403 });
   }
 
@@ -72,16 +73,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function TemplateEditor() {
-  const { template, questions, orgId, templateId } = useLoaderData<{
-    template: any;
-    questions: any[];
-    orgId: string;
-    templateId: string;
-    user: any;
-  }>();
+  const { template, questions, orgId, templateId, user } = useLoaderData<typeof loader>();
   const [isAdding, setIsAdding] = useState(false);
 
-  // Group questions by category
   const groupedQuestions = questions.reduce((acc: Record<string, any[]>, q: any) => {
     const cat = q.category || "General";
     if (!acc[cat]) acc[cat] = [];
@@ -129,58 +123,60 @@ export default function TemplateEditor() {
               </div>
             ) : (
               <Accordion type="multiple" className="space-y-4">
-                {Object.entries(groupedQuestions).map(([category, qs]) => (
-                  <AccordionItem 
-                     key={category} 
-                    value={category} 
-                    className="border rounded-lg px-4 bg-card overflow-hidden"
-                  >
-                    <AccordionTrigger className="hover:no-underline py-4">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="font-medium uppercase text-[10px] tracking-wider">
-                          {category}
-                        </Badge>
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {qs.length} Questions
-                        </span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-2 pb-6 space-y-4">
-                      {qs.map((q) => (
-                        <div 
-                          key={q.id} 
-                          className="group flex items-start gap-3 p-3 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
-                        >
-                          <GripVertical className="w-4 h-4 text-muted-foreground mt-1 cursor-grab" />
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-primary uppercase">{q.type || 'text'}</span>
-                              <p className="text-sm font-medium leading-relaxed">{q.text}</p>
-                            </div>
-                          </div>
-                          <Form method="post">
-                            <input type="hidden" name="intent" value="delete-question" />
-                            <input type="hidden" name="question_id" value={q.id} />
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive transition-opacity"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </Form>
+                {Object.entries(groupedQuestions).map(([category, qs]) => {
+                  const typedQs = qs as any[];
+                  return (
+                    <AccordionItem 
+                       key={category} 
+                      value={category} 
+                      className="border rounded-lg px-4 bg-card overflow-hidden"
+                    >
+                      <AccordionTrigger className="hover:no-underline py-4">
+                        <div className="flex items-center gap-3">
+                          <Badge variant="outline" className="font-medium uppercase text-[10px] tracking-wider">
+                            {category}
+                          </Badge>
+                          <span className="text-sm font-medium text-muted-foreground">
+                            {typedQs.length} Questions
+                          </span>
                         </div>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2 pb-6 space-y-4">
+                        {typedQs.map((q: any) => (
+                          <div 
+                            key={q.id} 
+                            className="group flex items-start gap-3 p-3 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
+                          >
+                            <GripVertical className="w-4 h-4 text-muted-foreground mt-1 cursor-grab" />
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-primary uppercase">{q.type || 'text'}</span>
+                                <p className="text-sm font-medium leading-relaxed">{q.text}</p>
+                              </div>
+                            </div>
+                            <Form method="post">
+                              <input type="hidden" name="intent" value="delete-question" />
+                              <input type="hidden" name="question_id" value={q.id} />
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 opacity-0 group-hover:opacity-100 text-destructive hover:text-destructive transition-opacity"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </Form>
+                          </div>
+                        ))}
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
               </Accordion>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Quick Add Modal */}
       {isAdding && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <Card className="w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">

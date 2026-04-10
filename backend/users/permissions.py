@@ -3,7 +3,8 @@ Organization-scoped permission classes for multi-tenant security.
 """
 
 from rest_framework import permissions
-from organizations.models import Organization
+
+from organizations.models import OrganizationMembership
 
 
 class IsOrganizationMember(permissions.BasePermission):
@@ -17,9 +18,9 @@ class IsOrganizationMember(permissions.BasePermission):
             return False
 
         # Get organization ID from URL kwargs
-        org_pk = view.kwargs.get('org_pk')
+        org_pk = view.kwargs.get("org_pk")
         if not org_pk:
-            org_pk = request.query_params.get('organization')
+            org_pk = request.query_params.get("organization")
 
         if not org_pk:
             # For non-nested routes, rely on get_queryset filtering
@@ -29,9 +30,10 @@ class IsOrganizationMember(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
-        # Check if user belongs to this organization (compare as strings for UUID safety)
-        user_org_id = getattr(request.user, 'organization_id', None)
-        return user_org_id and str(user_org_id) == str(org_pk)
+        # Check if user has a membership in this organization
+        return OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).exists()
 
 
 class IsOrganizationMemberOrReadOnly(permissions.BasePermission):
@@ -64,22 +66,24 @@ class IsOrganizationOwnerOrAdmin(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
-        org_pk = view.kwargs.get('org_pk')
+        org_pk = view.kwargs.get("org_pk")
         if not org_pk:
-            org_pk = request.query_params.get('organization')
+            org_pk = request.query_params.get("organization")
 
         if not org_pk:
             return True
 
-        user_role = getattr(request.user, 'role', None)
-        # SUPERADMIN or ADMIN role always allowed
-        if user_role in ('ADMIN', 'SUPERADMIN'):
-            return True
+        # Check membership for role
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
 
-        # Org member check — compare as strings to handle UUID vs str mismatches
-        user_org_id = getattr(request.user, 'organization_id', None)
-        if user_org_id and str(user_org_id) == str(org_pk):
-            return True
+        if membership:
+            # Check if membership role (custom or fallback) is Admin
+            if membership.fallback_role == "ADMIN" or (
+                membership.role and membership.role.name == "Admin"
+            ):
+                return True
 
         return False
 
@@ -99,25 +103,22 @@ class IsAssessmentOwner(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         user = request.user
         # Admin/superuser always allowed
-        if getattr(user, 'role', None) in ('ADMIN', 'SUPERADMIN') or user.is_superuser:
+        if user.is_superuser:
             return True
+
         # Check org membership
-        org_id = getattr(obj, 'organization_id', None) or getattr(obj, 'assessment', None)
+        org_id = getattr(obj, "organization_id", None) or getattr(
+            obj, "assessment", None
+        )
         if org_id:
             # If org_id is a model instance (FK), get its id
-            if hasattr(org_id, 'id'):
+            if hasattr(org_id, "id"):
                 org_id = str(org_id.id)
-            user_org = getattr(user, 'organization_id', None)
-            if user_org and str(user_org) == str(org_id):
-                return True
-        # Check assessment FK
-        assessment_obj = getattr(obj, 'assessment', None)
-        if assessment_obj:
-            assessment_org = getattr(assessment_obj, 'organization_id', None)
-            if assessment_org:
-                if hasattr(assessment_org, 'id'):
-                    assessment_org = str(assessment_org.id)
-                user_org = getattr(user, 'organization_id', None)
-                if user_org and str(user_org) == str(assessment_org):
-                    return True
+            elif hasattr(org_id, "organization_id"):
+                org_id = str(org_id.organization_id)
+
+            return OrganizationMembership.objects.filter(
+                user=user, organization_id=org_id
+            ).exists()
+
         return False

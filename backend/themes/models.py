@@ -17,7 +17,9 @@ class Theme(models.Model):
     text_color = models.CharField(max_length=20, default="#20190D")
     logo_url = models.URLField(max_length=1000, blank=True, default="")
     favicon_url = models.URLField(max_length=1000, blank=True, default="")
-    font_family = models.CharField(max_length=200, default="Inter, system-ui, sans-serif")
+    font_family = models.CharField(
+        max_length=200, default="Inter, system-ui, sans-serif"
+    )
     button_radius = models.FloatField(default=4.0)
     custom_css = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

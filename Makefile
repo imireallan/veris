@@ -5,7 +5,8 @@ SHELL := /bin/bash
         backend-makemigrations backend-migrate backend-seed backend-shell backend-bash backend-test \
         frontend-install frontend-logs \
         ai-shell ai-bash ai-test \
-        logs logs-backend logs-frontend logs-ai clean
+        logs logs-backend logs-frontend logs-ai clean \
+        lint format test test-cov test-isolated test-integrated test-profiling
 
 # ─────────────────────────────────────────────
 # Help
@@ -170,6 +171,42 @@ logs-frontend: ## Tail frontend logs
 
 logs-ai: ## Tail AI engine logs
 	docker compose logs -f ai_engine
+
+# ─────────────────────────────────────────────
+# Utility
+# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# Linting & Formatting (local, via uv)
+# ─────────────────────────────────────────────
+lint: ## Run flake8, isort --check, and black --check
+	@echo "\033[33m>>> flake8\033[0m"
+	cd backend && uv run flake8 . --config=.flake8
+	@echo "\033[33m>>> isort (check)\033[0m"
+	cd backend && uv run isort --check --diff --settings-path pyproject.toml .
+	@echo "\033[33m>>> black (check)\033[0m"
+	cd backend && uv run black --check --config pyproject.toml . --extend-exclude 'seed_orm\.py'
+
+format: ## Auto-fix isort + black
+	cd backend && uv run isort --settings-path pyproject.toml .
+	cd backend && uv run black --config pyproject.toml . --extend-exclude 'seed_orm\.py'
+
+# ─────────────────────────────────────────────
+# Testing (local, via uv — uses SQLite, no Docker needed)
+# ─────────────────────────────────────────────
+test: ## Run all backend tests (excludes profiling)
+	cd backend && uv run pytest
+
+test-cov: ## Run tests with coverage report
+	cd backend && uv run pytest --cov=. --cov-report=term-missing
+
+test-isolated: ## Run only isolated (unit) tests
+	cd backend && uv run pytest -m isolated
+
+test-integrated: ## Run only integrated (DB) tests
+	cd backend && uv run pytest -m integrated
+
+test-profiling: ## Run profiling tests only
+	cd backend && uv run pytest -m profiling
 
 # ─────────────────────────────────────────────
 # Utility

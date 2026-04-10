@@ -1,19 +1,20 @@
 from django.contrib import admin
+
 from assessments.models import (
-    Framework,
+    AIInsight,
+    Assessment,
+    AssessmentPlan,
+    AssessmentQuestion,
+    AssessmentReport,
+    AssessmentResponse,
+    AssessmentTemplate,
+    CIPCycle,
     ESGFocusArea,
     ExternalRating,
-    Assessment,
-    AssessmentTemplate,
-    AssessmentQuestion,
-    AssessmentResponse,
-    AIInsight,
-    Task,
-    Site,
-    AssessmentReport,
     Finding,
-    CIPCycle,
-    AssessmentPlan,
+    Framework,
+    Site,
+    Task,
 )
 
 
@@ -26,7 +27,14 @@ class FrameworkAdmin(admin.ModelAdmin):
 
 @admin.register(ESGFocusArea)
 class ESGFocusAreaAdmin(admin.ModelAdmin):
-    list_display = ("name", "internal_label", "organization", "current_score", "trend", "ai_risk_level")
+    list_display = (
+        "name",
+        "internal_label",
+        "organization",
+        "current_score",
+        "trend",
+        "ai_risk_level",
+    )
     list_filter = ("trend", "ai_risk_level", "is_active")
     search_fields = ("name", "internal_label", "description")
     readonly_fields = ("id", "created_at", "updated_at")
@@ -35,7 +43,14 @@ class ESGFocusAreaAdmin(admin.ModelAdmin):
 
 @admin.register(ExternalRating)
 class ExternalRatingAdmin(admin.ModelAdmin):
-    list_display = ("organization", "agency", "rating_grade", "score", "score_date", "trend_vs_previous")
+    list_display = (
+        "organization",
+        "agency",
+        "rating_grade",
+        "score",
+        "score_date",
+        "trend_vs_previous",
+    )
     list_filter = ("agency",)
     search_fields = ("organization__name", "ai_analysis")
     readonly_fields = ("id", "created_at")
@@ -62,7 +77,14 @@ class AIInsightInline(admin.TabularInline):
 
 @admin.register(Assessment)
 class AssessmentAdmin(admin.ModelAdmin):
-    list_display = ("id", "organization", "status", "overall_score", "risk_level", "due_date")
+    list_display = (
+        "id",
+        "organization",
+        "status",
+        "overall_score",
+        "risk_level",
+        "due_date",
+    )
     list_filter = ("status", "risk_level", "framework")
     search_fields = ("organization__name",)
     readonly_fields = ("id", "created_at", "updated_at", "completed_at")
@@ -86,7 +108,14 @@ class AssessmentQuestionAdmin(admin.ModelAdmin):
 
 @admin.register(AssessmentResponse)
 class AssessmentResponseAdmin(admin.ModelAdmin):
-    list_display = ("id", "assessment", "focus_area", "answer_score", "ai_score_suggestion", "ai_validated")
+    list_display = (
+        "id",
+        "assessment",
+        "focus_area",
+        "answer_score",
+        "ai_score_suggestion",
+        "ai_validated",
+    )
     list_filter = ("ai_validated",)
     search_fields = ("answer_text",)
     readonly_fields = ("id", "created_at", "updated_at")
@@ -94,7 +123,14 @@ class AssessmentResponseAdmin(admin.ModelAdmin):
 
 @admin.register(AIInsight)
 class AIInsightAdmin(admin.ModelAdmin):
-    list_display = ("id", "insight_type", "organization", "assessment", "confidence_score", "action_required")
+    list_display = (
+        "id",
+        "insight_type",
+        "organization",
+        "assessment",
+        "confidence_score",
+        "action_required",
+    )
     list_filter = ("insight_type", "action_required")
     search_fields = ("insight_text",)
     readonly_fields = ("id", "created_at", "updated_at")
@@ -102,7 +138,14 @@ class AIInsightAdmin(admin.ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ("title", "organization", "priority", "status", "assigned_to", "due_date")
+    list_display = (
+        "title",
+        "organization",
+        "priority",
+        "status",
+        "assigned_to",
+        "due_date",
+    )
     list_filter = ("priority", "status", "ai_nudged")
     search_fields = ("title", "description")
     readonly_fields = ("id", "created_at", "updated_at")
@@ -110,7 +153,13 @@ class TaskAdmin(admin.ModelAdmin):
 
 @admin.register(Site)
 class SiteAdmin(admin.ModelAdmin):
-    list_display = ("name", "type", "organization", "country_code", "operational_status")
+    list_display = (
+        "name",
+        "type",
+        "organization",
+        "country_code",
+        "operational_status",
+    )
     list_filter = ("type", "operational_status", "country_code")
     search_fields = ("name", "description", "region")
     readonly_fields = ("id", "created_at", "updated_at")
@@ -119,7 +168,13 @@ class SiteAdmin(admin.ModelAdmin):
 
 @admin.register(AssessmentReport)
 class AssessmentReportAdmin(admin.ModelAdmin):
-    list_display = ("title", "assessment", "organization", "status", "report_published_date")
+    list_display = (
+        "title",
+        "assessment",
+        "organization",
+        "status",
+        "report_published_date",
+    )
     list_filter = ("status",)
     search_fields = ("title",)
     readonly_fields = ("id", "created_at", "updated_at")
@@ -136,7 +191,14 @@ class FindingAdmin(admin.ModelAdmin):
 
 @admin.register(CIPCycle)
 class CIPCycleAdmin(admin.ModelAdmin):
-    list_display = ("label", "assessment", "organization", "status", "start_date", "deadline_period_months")
+    list_display = (
+        "label",
+        "assessment",
+        "organization",
+        "status",
+        "start_date",
+        "deadline_period_months",
+    )
     list_filter = ("status",)
     search_fields = ("label",)
     readonly_fields = ("id", "created_at", "updated_at")
@@ -144,6 +206,11 @@ class CIPCycleAdmin(admin.ModelAdmin):
 
 @admin.register(AssessmentPlan)
 class AssessmentPlanAdmin(admin.ModelAdmin):
-    list_display = ("assessment", "site_assessment_start", "site_assessment_end", "draft_report_deadline")
+    list_display = (
+        "assessment",
+        "site_assessment_start",
+        "site_assessment_end",
+        "draft_report_deadline",
+    )
     search_fields = ("notes",)
     readonly_fields = ("id", "created_at", "updated_at")

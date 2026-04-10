@@ -1,4 +1,5 @@
-from rest_framework import viewsets, permissions
+from rest_framework import permissions, viewsets
+
 from organizations.models import Organization
 from organizations.serializers import OrganizationSerializer
 
@@ -9,6 +10,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     - SUPERADMIN / Django superuser: can see all organizations.
     - All other users (including org ADMIN): only their own organization.
     """
+
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
     permission_classes = [permissions.IsAuthenticated]

@@ -44,16 +44,24 @@ class ESGFocusArea(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.CASCADE, related_name="focus_areas"
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="focus_areas",
     )
     name = models.CharField(max_length=200)
     internal_label = models.CharField(max_length=100)
     owner = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="owned_areas"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_areas",
     )
     description = models.TextField(blank=True, default="")
     current_score = models.FloatField(default=0.0)
-    trend = models.CharField(max_length=30, choices=Trend.choices, default=Trend.INSUFFICIENT_DATA)
+    trend = models.CharField(
+        max_length=30, choices=Trend.choices, default=Trend.INSUFFICIENT_DATA
+    )
     last_assessed = models.DateTimeField(null=True, blank=True)
     ai_risk_level = models.CharField(
         max_length=20, choices=AIRiskLevel.choices, default=AIRiskLevel.LOW
@@ -86,7 +94,9 @@ class ExternalRating(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.CASCADE, related_name="external_ratings"
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="external_ratings",
     )
     agency = models.CharField(max_length=30, choices=Agency.choices)
     score = models.FloatField(null=True, blank=True)
@@ -123,32 +133,62 @@ class Assessment(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.CASCADE, related_name="assessments"
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="assessments",
     )
     site = models.ForeignKey(
-        "assessments.Site", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessments"
+        "assessments.Site",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessments",
     )
     template = models.ForeignKey(
-        "assessments.AssessmentTemplate", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessments"
+        "assessments.AssessmentTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessments",
     )
     focus_area = models.ForeignKey(
-        "assessments.ESGFocusArea", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessments"
+        "assessments.ESGFocusArea",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessments",
     )
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.DRAFT
+    )
     framework = models.ForeignKey(
-        "assessments.Framework", on_delete=models.SET_NULL, null=True, blank=True, related_name="assessments"
+        "assessments.Framework",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessments",
     )
     start_date = models.DateTimeField()
     due_date = models.DateTimeField()
     completed_at = models.DateTimeField(null=True, blank=True)
     overall_score = models.FloatField(default=0.0)
-    risk_level = models.CharField(max_length=20, choices=RiskLevel.choices, default=RiskLevel.LOW)
+    risk_level = models.CharField(
+        max_length=20, choices=RiskLevel.choices, default=RiskLevel.LOW
+    )
     ai_summary = models.TextField(blank=True, default="")
     created_by = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="created_assessments"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_assessments",
     )
     assigned_to = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_assessments"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_assessments",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -171,7 +211,11 @@ class AssessmentTemplate(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True, default="")
     framework = models.ForeignKey(
-        "assessments.Framework", on_delete=models.SET_NULL, null=True, blank=True, related_name="templates"
+        "assessments.Framework",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="templates",
     )
     questions = models.JSONField(default=list)
     is_system = models.BooleanField(default=False)
@@ -192,7 +236,9 @@ class AssessmentQuestion(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     template = models.ForeignKey(
-        "assessments.AssessmentTemplate", on_delete=models.CASCADE, related_name="assessment_questions"
+        "assessments.AssessmentTemplate",
+        on_delete=models.CASCADE,
+        related_name="assessment_questions",
     )
     text = models.TextField()
     order = models.PositiveIntegerField(default=0)
@@ -216,10 +262,18 @@ class AssessmentResponse(models.Model):
         "assessments.Assessment", on_delete=models.CASCADE, related_name="responses"
     )
     focus_area = models.ForeignKey(
-        "assessments.ESGFocusArea", on_delete=models.SET_NULL, null=True, blank=True, related_name="responses"
+        "assessments.ESGFocusArea",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="responses",
     )
     question = models.ForeignKey(
-        "assessments.AssessmentQuestion", on_delete=models.SET_NULL, null=True, blank=True, related_name="responses"
+        "assessments.AssessmentQuestion",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="responses",
     )
     answer_text = models.TextField(blank=True, default="")
     answer_score = models.FloatField(default=0.0)
@@ -229,7 +283,11 @@ class AssessmentResponse(models.Model):
     ai_validated = models.BooleanField(default=False)
     frameworks_mapped_to = models.JSONField(default=list)
     created_by = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="responses"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="responses",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -254,16 +312,26 @@ class AIInsight(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.CASCADE, related_name="ai_insights"
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="ai_insights",
     )
     assessment = models.ForeignKey(
         "assessments.Assessment", on_delete=models.CASCADE, related_name="ai_insights"
     )
     response = models.ForeignKey(
-        "assessments.AssessmentResponse", on_delete=models.SET_NULL, null=True, blank=True, related_name="ai_insights"
+        "assessments.AssessmentResponse",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ai_insights",
     )
     focus_area = models.ForeignKey(
-        "assessments.ESGFocusArea", on_delete=models.SET_NULL, null=True, blank=True, related_name="ai_insights"
+        "assessments.ESGFocusArea",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ai_insights",
     )
     insight_type = models.CharField(max_length=30, choices=InsightType.choices)
     insight_text = models.TextField()
@@ -304,14 +372,26 @@ class Task(models.Model):
         "organizations.Organization", on_delete=models.CASCADE, related_name="tasks"
     )
     focus_area = models.ForeignKey(
-        "assessments.ESGFocusArea", on_delete=models.SET_NULL, null=True, blank=True, related_name="tasks"
+        "assessments.ESGFocusArea",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="tasks",
     )
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True, default="")
-    priority = models.CharField(max_length=20, choices=Priority.choices, default=Priority.MEDIUM)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    priority = models.CharField(
+        max_length=20, choices=Priority.choices, default=Priority.MEDIUM
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
     assigned_to = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_tasks"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_tasks",
     )
     due_date = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -363,7 +443,9 @@ class Site(models.Model):
     name = models.CharField(max_length=300)
     type = models.CharField(max_length=20, choices=SiteType.choices)
     operational_status = models.CharField(
-        max_length=20, choices=OperationalStatus.choices, default=OperationalStatus.ACTIVE
+        max_length=20,
+        choices=OperationalStatus.choices,
+        default=OperationalStatus.ACTIVE,
     )
     risk_profile = models.CharField(
         max_length=20, choices=RiskProfile.choices, default=RiskProfile.MEDIUM
@@ -372,7 +454,9 @@ class Site(models.Model):
     # Location
     country_code = models.CharField(max_length=3)
     region = models.CharField(max_length=200, blank=True, default="")
-    coordinates = models.JSONField(default=dict, help_text="{'lat': float, 'lng': float}")
+    coordinates = models.JSONField(
+        default=dict, help_text="{'lat': float, 'lng': float}"
+    )
 
     # Industry-specific fields (stored as JSON for flexibility across industries)
     industry_data = models.JSONField(
@@ -402,7 +486,9 @@ class Site(models.Model):
     certifications = models.JSONField(default=list)
     other_certifications = models.TextField(blank=True, default="")
     is_in_indigenous_territory = models.BooleanField(default=False)
-    is_in_conflict_zone = models.BooleanField(default=False, help_text="CAHRA or similar")
+    is_in_conflict_zone = models.BooleanField(
+        default=False, help_text="CAHRA or similar"
+    )
 
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -420,6 +506,7 @@ class Site(models.Model):
 # Assessment Reports & Findings (Bettercoal-compatible)
 # ─────────────────────────────────────────────────────────────
 
+
 class AssessmentReport(models.Model):
     """Structured assessment report with multiple sections.
     Mirrors Bettercoal's multi-section report model but simplified.
@@ -434,7 +521,9 @@ class AssessmentReport(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.CASCADE, related_name="assessment_reports"
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="assessment_reports",
     )
     assessment = models.OneToOneField(
         "assessments.Assessment", on_delete=models.CASCADE, related_name="report"
@@ -570,7 +659,9 @@ class CIPCycle(models.Model):
         on_delete=models.CASCADE,
         related_name="cip_cycles",
     )
-    label = models.CharField(max_length=100, help_text="e.g. '12 Month Review', 'Phase 2'")
+    label = models.CharField(
+        max_length=100, help_text="e.g. '12 Month Review', 'Phase 2'"
+    )
     deadline_period_months = models.PositiveIntegerField(
         default=12, help_text="Monitoring period in months"
     )
@@ -628,10 +719,15 @@ class AssessmentPlan(models.Model):
 
 class UploadedImage(models.Model):
     """Images uploaded via the rich-text editor for assessments."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     file = models.ImageField(upload_to="assessment_images/")
     uploaded_by = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="uploaded_images"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="uploaded_images",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -640,4 +736,3 @@ class UploadedImage(models.Model):
 
     def __str__(self):
         return f"Image {self.id} ({self.file.name})"
-

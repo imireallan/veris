@@ -1,39 +1,44 @@
-from users.permissions import IsAssessmentOwner, IsOrganizationMember, IsOrganizationOwnerOrAdmin
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
 from assessments.models import (
+    AIInsight,
+    Assessment,
+    AssessmentPlan,
+    AssessmentQuestion,
+    AssessmentReport,
+    AssessmentResponse,
+    AssessmentTemplate,
+    CIPCycle,
     ESGFocusArea,
     ExternalRating,
-    Assessment,
-    AssessmentTemplate,
-    AssessmentQuestion,
-    AssessmentResponse,
-    AIInsight,
-    Task,
-    Site,
-    Framework,
-    AssessmentReport,
     Finding,
-    CIPCycle,
-    AssessmentPlan,
+    Framework,
+    Site,
+    Task,
 )
 from assessments.serializers import (
-    ESGFocusAreaSerializer,
-    ExternalRatingSerializer,
+    AIInsightSerializer,
+    AssessmentPlanSerializer,
+    AssessmentQuestionSerializer,
+    AssessmentReportSerializer,
+    AssessmentResponseSerializer,
     AssessmentSerializer,
     AssessmentTemplateSerializer,
-    AssessmentQuestionSerializer,
-    AssessmentResponseSerializer,
-    AIInsightSerializer,
-    TaskSerializer,
-    SiteSerializer,
-    FrameworkSerializer,
-    AssessmentReportSerializer,
-    FindingSerializer,
     CIPCycleSerializer,
-    AssessmentPlanSerializer,
+    ESGFocusAreaSerializer,
+    ExternalRatingSerializer,
+    FindingSerializer,
+    FrameworkSerializer,
+    SiteSerializer,
+    TaskSerializer,
+)
+from users.permissions import (
+    IsAssessmentOwner,
+    IsOrganizationMember,
+    IsOrganizationOwnerOrAdmin,
 )
 
 
@@ -48,9 +53,7 @@ class ESGFocusAreaViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return ESGFocusArea.objects.filter(
-            organization_id=self.kwargs.get("org_pk")
-        )
+        return ESGFocusArea.objects.filter(organization_id=self.kwargs.get("org_pk"))
 
 
 class ExternalRatingViewSet(viewsets.ModelViewSet):
@@ -58,9 +61,7 @@ class ExternalRatingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return ExternalRating.objects.filter(
-            organization_id=self.kwargs.get("org_pk")
-        )
+        return ExternalRating.objects.filter(organization_id=self.kwargs.get("org_pk"))
 
     def perform_create(self, serializer):
         org_id = self.kwargs.get("org_pk")
@@ -69,15 +70,20 @@ class ExternalRatingViewSet(viewsets.ModelViewSet):
 
 class AssessmentViewSet(viewsets.ModelViewSet):
     """Full CRUD for assessments."""
+
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated, IsOrganizationOwnerOrAdmin]
 
     def get_queryset(self):
         qs = Assessment.objects.all()
-        org_id = self.kwargs.get("org_pk") or self.request.query_params.get("organization")
+        org_id = self.kwargs.get("org_pk") or self.request.query_params.get(
+            "organization"
+        )
         if org_id:
             qs = qs.filter(organization_id=org_id)
-        return qs.select_related("site", "focus_area", "framework", "created_by", "assigned_to")
+        return qs.select_related(
+            "site", "focus_area", "framework", "created_by", "assigned_to"
+        )
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -89,6 +95,7 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
     Read-only detail endpoint that bundles assessment + report + findings + plan + cip cycles.
     No org_pk needed — looks up by assessment pk directly.
     """
+
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated, IsAssessmentOwner]
 
@@ -101,30 +108,34 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
     def full_detail(self, request, pk=None):
         """Return assessment with all related data in one request."""
         assessment = self.get_object()
-        
+
         report_qs = AssessmentReport.objects.filter(assessment=assessment)
-        report = AssessmentReportSerializer(report_qs.first() if report_qs.exists() else None)
-        
+        report = AssessmentReportSerializer(
+            report_qs.first() if report_qs.exists() else None
+        )
+
         findings = Finding.objects.filter(assessment=assessment)
         findings_data = FindingSerializer(findings, many=True).data
-        
+
         plan_qs = AssessmentPlan.objects.filter(assessment=assessment)
         plan = AssessmentPlanSerializer(plan_qs.first() if plan_qs.exists() else None)
-        
+
         cip_cycles = CIPCycle.objects.filter(assessment=assessment)
         cip_data = CIPCycleSerializer(cip_cycles, many=True).data
-        
+
         tasks = Task.objects.filter(assessment=assessment)
         tasks_data = TaskSerializer(tasks, many=True).data
-        
-        return Response({
-            "assessment": AssessmentSerializer(assessment).data,
-            "report": report.data,
-            "findings": findings_data,
-            "plan": plan.data,
-            "cip_cycles": cip_data,
-            "tasks": tasks_data,
-        })
+
+        return Response(
+            {
+                "assessment": AssessmentSerializer(assessment).data,
+                "report": report.data,
+                "findings": findings_data,
+                "plan": plan.data,
+                "cip_cycles": cip_data,
+                "tasks": tasks_data,
+            }
+        )
 
 
 class AssessmentTemplateViewSet(viewsets.ModelViewSet):
@@ -145,10 +156,11 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
         # Filter questions by the template associated with the specific assessment
         assessment_pk = self.kwargs.get("assessment_pk")
         org_pk = self.kwargs.get("org_pk")
-        
+
         if assessment_pk:
             # Get the template associated with this assessment
             from assessments.models import Assessment
+
             try:
                 assessment = Assessment.objects.get(id=assessment_pk)
                 template = assessment.template
@@ -156,12 +168,10 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
                     return AssessmentQuestion.objects.filter(template=template)
             except Assessment.DoesNotExist:
                 return AssessmentQuestion.objects.none()
-        
+
         # Fallback: Filter questions by organization if assessment_pk is missing
         if org_pk:
-            return AssessmentQuestion.objects.filter(
-                template__organization_id=org_pk
-            )
+            return AssessmentQuestion.objects.filter(template__organization_id=org_pk)
         return AssessmentQuestion.objects.none()
 
 
@@ -186,9 +196,7 @@ class AIInsightViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return AIInsight.objects.filter(
-            organization_id=self.kwargs.get("org_pk")
-        )
+        return AIInsight.objects.filter(organization_id=self.kwargs.get("org_pk"))
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -196,9 +204,7 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return Task.objects.filter(
-            organization_id=self.kwargs.get("org_pk")
-        )
+        return Task.objects.filter(organization_id=self.kwargs.get("org_pk"))
 
 
 class SiteViewSet(viewsets.ModelViewSet):
@@ -206,7 +212,9 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        org_id = self.kwargs.get("org_pk") or self.request.query_params.get("organization")
+        org_id = self.kwargs.get("org_pk") or self.request.query_params.get(
+            "organization"
+        )
         qs = Site.objects.all()
         if org_id:
             qs = qs.filter(organization_id=org_id)

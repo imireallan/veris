@@ -2,33 +2,32 @@
 Flat API routes for assessment resources — used by assessment detail page.
 These are org-scoped via permission checks and query params, not URL kwargs.
 """
-from rest_framework import viewsets, permissions
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import status
+
+from rest_framework import permissions, viewsets
+
 from assessments.models import (
     Assessment,
-    AssessmentResponse,
+    AssessmentPlan,
     AssessmentQuestion,
     AssessmentReport,
-    Finding,
+    AssessmentResponse,
     CIPCycle,
-    AssessmentPlan,
+    Finding,
     Site,
     Task,
 )
 from assessments.serializers import (
-    AssessmentSerializer,
-    AssessmentResponseSerializer,
+    AssessmentPlanSerializer,
     AssessmentQuestionSerializer,
     AssessmentReportSerializer,
-    FindingSerializer,
+    AssessmentResponseSerializer,
+    AssessmentSerializer,
     CIPCycleSerializer,
-    AssessmentPlanSerializer,
+    FindingSerializer,
     SiteSerializer,
     TaskSerializer,
 )
-from users.permissions import IsAssessmentOwner, IsOrganizationMember
+from organizations.models import OrganizationMembership
 
 
 class FlatAssessmentViewSet(viewsets.ModelViewSet):
@@ -38,6 +37,7 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
     - SUPERADMIN / Django superuser: can see all orgs (platform admin).
     - Any user requesting ?organization=<id>: scoped to that org.
     """
+
     serializer_class = AssessmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -47,16 +47,25 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
         # Explicit org filter requested — scope to that org
         if org_id:
+            if not OrganizationMembership.objects.filter(
+                user=user, organization_id=org_id
+            ).exists():
+                if not (
+                    user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"
+                ):
+                    return Assessment.objects.none()
             return Assessment.objects.filter(organization_id=org_id)
 
         # Platform-level admins: can see all orgs when no filter specified
         if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
             return Assessment.objects.all()
 
-        # All other users (including org ADMIN): scoped to their own org only
-        user_org = getattr(user, "organization_id", None)
-        if user_org:
-            return Assessment.objects.filter(organization_id=user_org)
+        # All other users: scoped to their memberships
+        memberships = OrganizationMembership.objects.filter(user=user).values_list(
+            "organization_id", flat=True
+        )
+        if memberships:
+            return Assessment.objects.filter(organization_id__in=memberships)
 
         return Assessment.objects.none()
 
@@ -64,14 +73,16 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
         user = self.request.user
         org_id = self.request.query_params.get("organization")
         if not org_id:
-            # Non-platform-admins default to their own org
+            # Non-platform-admins default to their first membership
             if not (user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"):
-                org_id = getattr(user, "organization_id", None)
+                membership = OrganizationMembership.objects.filter(user=user).first()
+                org_id = membership.organization_id if membership else None
         serializer.save(organization_id=org_id, created_by=user)
 
 
 class FlatFindingViewSet(viewsets.ModelViewSet):
     """Flat finding routes — /api/findings/ (filtered by assessment query param)."""
+
     serializer_class = FindingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -79,14 +90,23 @@ class FlatFindingViewSet(viewsets.ModelViewSet):
         qs = Finding.objects.select_related("assessment", "site", "provision")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if (
+                    OrganizationMembership.objects.filter(
+                        user=self.request.user,
+                        organization_id=assessment.organization_id,
+                    ).exists()
+                    or self.request.user.is_superuser
+                ):
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
 class FlatCIPCycleViewSet(viewsets.ModelViewSet):
     """Flat CIP cycle routes — /api/cip-cycles/ (filtered by assessment query param)."""
+
     serializer_class = CIPCycleSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -94,14 +114,23 @@ class FlatCIPCycleViewSet(viewsets.ModelViewSet):
         qs = CIPCycle.objects.select_related("assessment")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if (
+                    OrganizationMembership.objects.filter(
+                        user=self.request.user,
+                        organization_id=assessment.organization_id,
+                    ).exists()
+                    or self.request.user.is_superuser
+                ):
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
 class FlatAssessmentPlanViewSet(viewsets.ModelViewSet):
     """Flat assessment plan routes — /api/plans/ (filtered by assessment query param)."""
+
     serializer_class = AssessmentPlanSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -109,14 +138,23 @@ class FlatAssessmentPlanViewSet(viewsets.ModelViewSet):
         qs = AssessmentPlan.objects.select_related("assessment")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if (
+                    OrganizationMembership.objects.filter(
+                        user=self.request.user,
+                        organization_id=assessment.organization_id,
+                    ).exists()
+                    or self.request.user.is_superuser
+                ):
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
 class FlatTaskViewSet(viewsets.ModelViewSet):
     """Flat task routes — /api/tasks/ (filtered by assessment query param)."""
+
     serializer_class = TaskSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -124,14 +162,23 @@ class FlatTaskViewSet(viewsets.ModelViewSet):
         qs = Task.objects.select_related("assessment", "organization")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if (
+                    OrganizationMembership.objects.filter(
+                        user=self.request.user,
+                        organization_id=assessment.organization_id,
+                    ).exists()
+                    or self.request.user.is_superuser
+                ):
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
 class FlatAssessmentReportViewSet(viewsets.ModelViewSet):
     """Flat report routes — /api/reports/ (filtered by assessment query param)."""
+
     serializer_class = AssessmentReportSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -139,30 +186,48 @@ class FlatAssessmentReportViewSet(viewsets.ModelViewSet):
         qs = AssessmentReport.objects.select_related("assessment", "organization")
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            qs = qs.filter(assessment_id=assessment_id).filter(
-                assessment__organization=self.request.user.organization
-            )
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if (
+                    OrganizationMembership.objects.filter(
+                        user=self.request.user,
+                        organization_id=assessment.organization_id,
+                    ).exists()
+                    or self.request.user.is_superuser
+                ):
+                    return qs.filter(assessment_id=assessment_id)
+            return qs.none()
         return qs
 
 
 class FlatAssessmentResponseViewSet(viewsets.ModelViewSet):
     """Flat response routes — /api/responses/ (filtered by assessment query param)."""
+
     serializer_class = AssessmentResponseSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         assessment_id = self.request.query_params.get("assessment")
         if assessment_id:
-            return AssessmentResponse.objects.filter(
-                assessment_id=assessment_id
-            ).filter(
-                assessment__organization=self.request.user.organization
-            )
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if assessment:
+                if (
+                    OrganizationMembership.objects.filter(
+                        user=self.request.user,
+                        organization_id=assessment.organization_id,
+                    ).exists()
+                    or self.request.user.is_superuser
+                ):
+                    return AssessmentResponse.objects.filter(
+                        assessment_id=assessment_id
+                    )
+            return AssessmentResponse.objects.none()
         return AssessmentResponse.objects.none()
 
 
 class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
     """Flat question routes — /api/questions/ (filtered by template query param)."""
+
     serializer_class = AssessmentQuestionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -181,6 +246,7 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class FlatSiteViewSet(viewsets.ModelViewSet):
     """Flat site routes — /api/sites/ (org-scoped by default)."""
+
     serializer_class = SiteSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -189,15 +255,24 @@ class FlatSiteViewSet(viewsets.ModelViewSet):
         org_id = self.request.query_params.get("organization")
 
         if org_id:
-            return Site.objects.filter(organization_id=org_id)
+            if (
+                OrganizationMembership.objects.filter(
+                    user=user, organization_id=org_id
+                ).exists()
+                or user.is_superuser
+            ):
+                return Site.objects.filter(organization_id=org_id)
+            return Site.objects.none()
 
         # Platform-level admins: can see all orgs
         if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
             return Site.objects.all()
 
-        # All other users (including org ADMIN): scoped to their own org
-        user_org = getattr(user, "organization_id", None)
-        if user_org:
-            return Site.objects.filter(organization_id=user_org)
+        # All other users: scoped to their memberships
+        memberships = OrganizationMembership.objects.filter(user=user).values_list(
+            "organization_id", flat=True
+        )
+        if memberships:
+            return Site.objects.filter(organization_id__in=memberships)
 
         return Site.objects.none()

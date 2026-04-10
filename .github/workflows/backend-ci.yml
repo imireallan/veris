@@ -1,0 +1,80 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main, develop, feat/*]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-ci.yml"
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --group dev
+
+      - name: flake8
+        working-directory: backend
+        run: uv run flake8 . --config=.flake8
+
+      - name: isort
+        working-directory: backend
+        run: uv run isort --check --diff --settings-path pyproject.toml .
+
+      - name: black
+        working-directory: backend
+        run: uv run black --check --config pyproject.toml . --extend-exclude 'seed_orm\.py'
+
+  test-isolated:
+    name: Tests (isolated)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --group dev
+
+      - name: Run isolated tests
+        working-directory: backend
+        run: uv run pytest -m isolated --tb=short -q
+
+  test-integrated:
+    name: Tests (integrated)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync --group dev
+
+      - name: Run integrated tests
+        working-directory: backend
+        run: uv run pytest -m integrated --tb=short -q
+
+      - name: Coverage report
+        working-directory: backend
+        run: uv run pytest -m integrated --cov=. --cov-report=term-missing --tb=short -q

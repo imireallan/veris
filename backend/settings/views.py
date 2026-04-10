@@ -1,13 +1,13 @@
 """Settings views — admin pages for customizing client configurations."""
 
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 
+from assessments.models import ESGFocusArea, Framework
 from organizations.models import Organization
 from themes.models import Theme
 from users.models import User
-from assessments.models import Framework, ESGFocusArea
 
 
 def _get_org(request, org_id=None):
@@ -55,7 +55,9 @@ def org_settings(request, org_id=None):
     if request.method == "POST":
         org.name = request.POST.get("name", org.name)
         org.slug = request.POST.get("slug", org.slug)
-        org.subscription_tier = request.POST.get("subscription_tier", org.subscription_tier)
+        org.subscription_tier = request.POST.get(
+            "subscription_tier", org.subscription_tier
+        )
         org.status = request.POST.get("status", org.status)
         org.custom_domain = request.POST.get("custom_domain", org.custom_domain)
         org.save()
@@ -80,9 +82,13 @@ def theme_settings(request, org_id=None):
 
     if request.method == "POST":
         theme.primary_color = request.POST.get("primary_color", theme.primary_color)
-        theme.secondary_color = request.POST.get("secondary_color", theme.secondary_color)
+        theme.secondary_color = request.POST.get(
+            "secondary_color", theme.secondary_color
+        )
         theme.accent_color = request.POST.get("accent_color", theme.accent_color)
-        theme.background_color = request.POST.get("background_color", theme.background_color)
+        theme.background_color = request.POST.get(
+            "background_color", theme.background_color
+        )
         theme.text_color = request.POST.get("text_color", theme.text_color)
         theme.logo_url = request.POST.get("logo_url", theme.logo_url)
         theme.favicon_url = request.POST.get("favicon_url", theme.favicon_url)

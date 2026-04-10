@@ -1,4 +1,5 @@
 from rest_framework import serializers
+
 from knowledge.models import KnowledgeDocument
 
 
@@ -22,4 +23,10 @@ class KnowledgeDocumentSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at", "chunk_count", "vector_ids"]
+        read_only_fields = [
+            "id",
+            "created_at",
+            "updated_at",
+            "chunk_count",
+            "vector_ids",
+        ]

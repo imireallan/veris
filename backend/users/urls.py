@@ -1,6 +1,7 @@
 """URL routes for the users app's authentication endpoints."""
 
 from django.urls import path
+
 from users.views.auth import login_view, me_view
 
 app_name = "users"

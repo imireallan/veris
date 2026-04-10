@@ -1,8 +1,10 @@
 import os
 import sys
+
 django_settings = "config.settings.development"
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", django_settings)
 import django
+
 django.setup()
 
 from assessments.models import Assessment

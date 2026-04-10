@@ -5,7 +5,7 @@ DEBUG = False
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
-SECRET_KEY = env.str("SECRET_KEY")
+SECRET_KEY = env.str("DJANGO_SECRET_KEY")
 
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS")
 
@@ -14,6 +14,9 @@ CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
+
+# Production uses S3 for file storage
+USE_S3 = True
 
 LOGGING = {
     "version": 1,

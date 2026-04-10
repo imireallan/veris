@@ -134,6 +134,47 @@ REST_FRAMEWORK = {
 # CORS
 CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
+# File Storage Configuration
+# Local (development) vs S3 (production)
+USE_S3 = env.bool("USE_S3", default=False)
+MEDIA_URL = (
+    "/media/"
+    if not env.bool("USE_S3", default=False)
+    else f"https://{env('AWS_S3_CUSTOM_DOMAIN', default='')}/"
+)
+MEDIA_ROOT = BASE_DIR / "media" if not env.bool("USE_S3", default=False) else None
+
+# AWS S3 Settings (required when USE_S3=True)
+AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID", default="")
+AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY", default="")
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default="")
+AWS_S3_REGION_NAME = env("AWS_S3_REGION_NAME", default="us-east-1")
+AWS_S3_CUSTOM_DOMAIN = env(
+    "AWS_S3_CUSTOM_DOMAIN", default=""
+)  # Optional: CloudFront domain
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": "max-age=86400",
+}
+AWS_DEFAULT_ACL = "private"  # Keep documents private
+AWS_QUERYSTRING_AUTH = True  # Use signed URLs
+
+# AI / Pinecone Configuration
+# Note: Evidence pipeline is in Django for MVP. Plan to migrate to ai_engine service.
+# See docs/ai-architecture-decision.md for refactor plan.
+PINECONE_API_KEY = env("PINECONE_API_KEY", default="")
+PINECONE_ENVIRONMENT = env("PINECONE_ENVIRONMENT", default="us-east1-gcp")
+PINECONE_INDEX_NAME = env("PINECONE_INDEX_NAME", default="sustainability-ai")
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+HUGGINGFACE_API_KEY = env("HUGGINGFACE_API_KEY", default="")
+
+# Embedding Model Selection: 'openai' or 'huggingface'
+# HuggingFace is free (with rate limits), OpenAI is paid but faster/more reliable
+EMBEDDING_MODEL_PROVIDER = env("EMBEDDING_MODEL_PROVIDER", default="openai")
+EMBEDDING_MODEL_NAME = env(
+    "EMBEDDING_MODEL_NAME",
+    default="sentence-transformers/all-MiniLM-L6-v2",  # Free HuggingFace model
+)
+
 # Logging
 LOGGING = {
     "version": 1,

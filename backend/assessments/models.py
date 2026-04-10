@@ -278,9 +278,28 @@ class AssessmentResponse(models.Model):
     answer_text = models.TextField(blank=True, default="")
     answer_score = models.FloatField(default=0.0)
     evidence_files = models.JSONField(default=list)
+
+    # AI Validation Fields (Phase 2)
     ai_score_suggestion = models.FloatField(null=True, blank=True)
     ai_feedback = models.TextField(blank=True, default="")
     ai_validated = models.BooleanField(default=False)
+    validation_status = models.CharField(
+        max_length=25,
+        choices=[
+            ("pending", "Pending"),
+            ("validated", "Validated"),
+            ("flagged", "Flagged"),
+            ("insufficient_evidence", "Insufficient Evidence"),
+        ],
+        default="pending",
+    )
+    confidence_score = models.FloatField(
+        null=True, blank=True, help_text="AI confidence 0-1"
+    )
+    citations = models.JSONField(
+        default=list, help_text="Referenced evidence document IDs"
+    )
+
     frameworks_mapped_to = models.JSONField(default=list)
     created_by = models.ForeignKey(
         "users.User",

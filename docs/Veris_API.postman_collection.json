@@ -1,0 +1,443 @@
+{
+  "info": {
+    "name": "Veris API",
+    "description": "Veris Sustainability Platform API - Evidence Pipeline + Core Features",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "organization_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('access_token', response.access);",
+                  "pm.collectionVariables.set('user_id', response.user.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/token/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "token/"]
+            },
+            "description": "Get JWT access token. Saves token to collection variable."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{refresh_token}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/token/refresh/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "token/refresh/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/me/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "me/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/organizations/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "organizations/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Organization Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/organizations/{{organization_id}}/members/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "organizations", "{{organization_id}}", "members/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Invitations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/organizations/{{organization_id}}/invitations/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "organizations", "{{organization_id}}", "invitations/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Invitation",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"consultant@example.com\",\n  \"role_id\": \"<role-uuid>\",\n  \"expires_in_days\": 7\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/organizations/{{organization_id}}/invitations/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "organizations", "{{organization_id}}", "invitations/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Evidence Pipeline (AI)",
+      "item": [
+        {
+          "name": "Upload Evidence Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.environment.set('uploaded_file_url', response.url);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/sustainability-report.pdf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/upload-evidence/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "upload-evidence/"]
+            },
+            "description": "Upload a PDF/document. Returns file URL for creating KnowledgeDocument."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Knowledge Document",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "pm.collectionVariables.set('document_id', response.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organization\": \"{{organization_id}}\",\n  \"title\": \"Sustainability Report 2025\",\n  \"description\": \"Annual sustainability report with ESG metrics\",\n  \"file_url\": \"{{uploaded_file_url}}\",\n  \"file_type\": \"PDF\",\n  \"file_size\": 1024000,\n  \"category\": \"evidence\",\n  \"framework_tags\": [\"bettercoal\", \"oecd\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/documents/?organization={{organization_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents/"],
+              "query": [
+                {
+                  "key": "organization",
+                  "value": "{{organization_id}}"
+                }
+              ]
+            },
+            "description": "Create a KnowledgeDocument record after upload."
+          },
+          "response": []
+        },
+        {
+          "name": "List Knowledge Documents",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents/"]
+            },
+            "description": "Returns documents scoped to user's organizations."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Document Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{document_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{document_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Process Document (AI Embedding)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{document_id}}/process/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{document_id}}", "process/"]
+            },
+            "description": "Trigger AI pipeline: Extract text → Chunk → Embed → Store in Pinecone. Returns chunk_count and vector_count."
+          },
+          "response": []
+        },
+        {
+          "name": "Reprocess Document",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{document_id}}/reprocess/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{document_id}}", "reprocess/"]
+            },
+            "description": "Delete old vectors and re-embed document. Useful when changing embedding models."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/documents/{{document_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "documents", "{{document_id}}/"]
+            },
+            "description": "Delete document record (note: vectors in Pinecone are NOT automatically deleted)."
+          },
+          "response": []
+        }
+      ],
+      "description": "Evidence Pipeline: Upload documents → AI processing → Vector storage for RAG"
+    },
+    {
+      "name": "Assessments",
+      "item": [
+        {
+          "name": "List Assessments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/organizations/{{organization_id}}/assessments/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "organizations", "{{organization_id}}", "assessments/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assessment Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/assessments/{{assessment_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "assessments", "{{assessment_id}}/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Questions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/organizations/{{organization_id}}/assessments/{{assessment_id}}/questions/",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "organizations",
+                "{{organization_id}}",
+                "assessments",
+                "{{assessment_id}}",
+                "questions/"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Response",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question_id\": \"<question-uuid>\",\n  \"answer_text\": \"Our policy covers...\",\n  \"evidence_documents\": [\"<document-uuid>\"],\n  \"confidence_score\": 0.85\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/organizations/{{organization_id}}/assessments/{{assessment_id}}/responses/",
+              "host": ["{{base_url}}"],
+              "path": [
+                "api",
+                "organizations",
+                "{{organization_id}}",
+                "assessments",
+                "{{assessment_id}}",
+                "responses/"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Frameworks",
+      "item": [
+        {
+          "name": "List Frameworks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/frameworks/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "frameworks/"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Framework Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/frameworks/{{framework_id}}/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "frameworks", "{{framework_id}}/"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Health Check",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/health/",
+          "host": ["{{base_url}}"],
+          "path": ["api", "health/"]
+        },
+        "description": "Public health check endpoint (no auth required)"
+      },
+      "response": []
+    }
+  ]
+}

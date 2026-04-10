@@ -1,7 +1,9 @@
-from assessments.models import Assessment, AssessmentTemplate, AssessmentQuestion
-from organizations.models import Organization
-from django.utils import timezone
 import datetime
+
+from django.utils import timezone
+
+from assessments.models import Assessment, AssessmentQuestion, AssessmentTemplate
+from organizations.models import Organization
 
 org = Organization.objects.first()
 template, _ = AssessmentTemplate.objects.get_or_create(

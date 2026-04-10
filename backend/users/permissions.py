@@ -3,7 +3,8 @@ Organization-scoped permission classes for multi-tenant security.
 """
 
 from rest_framework import permissions
-from organizations.models import Organization, OrganizationMembership
+
+from organizations.models import OrganizationMembership
 
 
 class IsOrganizationMember(permissions.BasePermission):
@@ -17,9 +18,9 @@ class IsOrganizationMember(permissions.BasePermission):
             return False
 
         # Get organization ID from URL kwargs
-        org_pk = view.kwargs.get('org_pk')
+        org_pk = view.kwargs.get("org_pk")
         if not org_pk:
-            org_pk = request.query_params.get('organization')
+            org_pk = request.query_params.get("organization")
 
         if not org_pk:
             # For non-nested routes, rely on get_queryset filtering
@@ -31,8 +32,7 @@ class IsOrganizationMember(permissions.BasePermission):
 
         # Check if user has a membership in this organization
         return OrganizationMembership.objects.filter(
-            user=request.user, 
-            organization_id=org_pk
+            user=request.user, organization_id=org_pk
         ).exists()
 
 
@@ -66,22 +66,23 @@ class IsOrganizationOwnerOrAdmin(permissions.BasePermission):
         if request.user.is_superuser:
             return True
 
-        org_pk = view.kwargs.get('org_pk')
+        org_pk = view.kwargs.get("org_pk")
         if not org_pk:
-            org_pk = request.query_params.get('organization')
+            org_pk = request.query_params.get("organization")
 
         if not org_pk:
             return True
 
         # Check membership for role
         membership = OrganizationMembership.objects.filter(
-            user=request.user, 
-            organization_id=org_pk
+            user=request.user, organization_id=org_pk
         ).first()
-        
+
         if membership:
             # Check if membership role (custom or fallback) is Admin
-            if membership.fallback_role == 'ADMIN' or (membership.role and membership.role.name == 'Admin'):
+            if membership.fallback_role == "ADMIN" or (
+                membership.role and membership.role.name == "Admin"
+            ):
                 return True
 
         return False
@@ -104,19 +105,20 @@ class IsAssessmentOwner(permissions.BasePermission):
         # Admin/superuser always allowed
         if user.is_superuser:
             return True
-            
+
         # Check org membership
-        org_id = getattr(obj, 'organization_id', None) or getattr(obj, 'assessment', None)
+        org_id = getattr(obj, "organization_id", None) or getattr(
+            obj, "assessment", None
+        )
         if org_id:
             # If org_id is a model instance (FK), get its id
-            if hasattr(org_id, 'id'):
+            if hasattr(org_id, "id"):
                 org_id = str(org_id.id)
-            elif hasattr(org_id, 'organization_id'):
+            elif hasattr(org_id, "organization_id"):
                 org_id = str(org_id.organization_id)
-                
+
             return OrganizationMembership.objects.filter(
-                user=user, 
-                organization_id=org_id
+                user=user, organization_id=org_id
             ).exists()
-            
+
         return False

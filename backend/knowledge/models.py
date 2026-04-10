@@ -19,9 +19,15 @@ class KnowledgeDocument(models.Model):
     embeddings_indexed = models.BooleanField(default=False)
     chunk_count = models.PositiveIntegerField(default=0)
     vector_ids = models.JSONField(default=list)
-    framework_tags = models.JSONField(default=list, help_text="Which frameworks this document relates to")
+    framework_tags = models.JSONField(
+        default=list, help_text="Which frameworks this document relates to"
+    )
     created_by = models.ForeignKey(
-        "users.User", on_delete=models.SET_NULL, null=True, blank=True, related_name="documents"
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="documents",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

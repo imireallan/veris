@@ -1,6 +1,8 @@
 import uuid
-from django.db import models
+
 from django.conf import settings
+from django.db import models
+
 
 class Organization(models.Model):
     """Multi-tenant organization (tenant) model."""
@@ -18,7 +20,9 @@ class Organization(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=500)
     slug = models.SlugField(max_length=500, unique=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.TRIAL)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.TRIAL
+    )
     subscription_tier = models.CharField(
         max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.FREE
     )
@@ -35,16 +39,18 @@ class Organization(models.Model):
     def __str__(self):
         return self.name
 
+
 class CustomRole(models.Model):
     """Organization-specific roles with custom names and permission sets."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="custom_roles"
     )
     name = models.CharField(max_length=100)
     permissions = models.JSONField(
-        default=list, 
-        help_text="List of permission keys, e.g., ['user:invite', 'report:edit']"
+        default=list,
+        help_text="List of permission keys, e.g., ['user:invite', 'report:edit']",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -56,8 +62,10 @@ class CustomRole(models.Model):
     def __str__(self):
         return f"{self.name} ({self.organization.name})"
 
+
 class OrganizationMembership(models.Model):
     """Through-table enabling users to belong to multiple organizations with different roles."""
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
@@ -71,7 +79,7 @@ class OrganizationMembership(models.Model):
     )
     # Fallback to standard roles if no custom role is assigned
     fallback_role = models.CharField(
-        max_length=20, 
+        max_length=20,
         choices=[
             ("ADMIN", "Admin"),
             ("COORDINATOR", "Coordinator"),
@@ -80,14 +88,14 @@ class OrganizationMembership(models.Model):
             ("ASSESSOR", "Assessor"),
             ("CONSULTANT", "Consultant"),
         ],
-        default="OPERATOR"
+        default="OPERATOR",
     )
-    
+
     # Membership-specific attributes (Merged from AssessorProfile)
     is_lead_assessor = models.BooleanField(default=False)
     specializations = models.JSONField(default=list, blank=True)
     current_organisation_name = models.CharField(max_length=255, blank=True, null=True)
-    
+
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

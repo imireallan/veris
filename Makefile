@@ -5,7 +5,8 @@ SHELL := /bin/bash
         backend-makemigrations backend-migrate backend-seed backend-shell backend-bash backend-test \
         frontend-install frontend-logs \
         ai-shell ai-bash ai-test \
-        logs logs-backend logs-frontend logs-ai clean
+        logs logs-backend logs-frontend logs-ai clean \
+        lint format test test-cov test-users test-orgs
 
 # ─────────────────────────────────────────────
 # Help
@@ -170,6 +171,39 @@ logs-frontend: ## Tail frontend logs
 
 logs-ai: ## Tail AI engine logs
 	docker compose logs -f ai_engine
+
+# ─────────────────────────────────────────────
+# Utility
+# ─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+# Linting & Formatting (local, via uv)
+# ─────────────────────────────────────────────
+lint: ## Run flake8, isort --check, and black --check
+	@echo "\033[33m>>> flake8\033[0m"
+	cd backend && uv run flake8 . --config=.flake8
+	@echo "\033[33m>>> isort (check)\033[0m"
+	cd backend && uv run isort --check --diff --settings-path pyproject.toml .
+	@echo "\033[33m>>> black (check)\033[0m"
+	cd backend && uv run black --check --config pyproject.toml . --extend-exclude 'seed_orm\.py'
+
+format: ## Auto-fix isort + black
+	cd backend && uv run isort --settings-path pyproject.toml .
+	cd backend && uv run black --config pyproject.toml . --extend-exclude 'seed_orm\.py'
+
+# ─────────────────────────────────────────────
+# Testing (local, via uv — uses SQLite, no Docker needed)
+# ─────────────────────────────────────────────
+test: ## Run all backend tests locally (SQLite, fast)
+	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest
+
+test-cov: ## Run tests with coverage report
+	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest --cov=. --cov-report=term-missing
+
+test-users: ## Run only user model tests
+	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest tests/users/
+
+test-orgs: ## Run only organization / membership tests
+	cd backend && DJANGO_SETTINGS_MODULE=config.settings.testing uv run pytest tests/organizations/
 
 # ─────────────────────────────────────────────
 # Utility

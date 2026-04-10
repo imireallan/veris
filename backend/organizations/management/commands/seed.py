@@ -1,7 +1,7 @@
 """Management command to seed the database with demo data."""
 
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 
 User = get_user_model()
 
@@ -19,7 +19,9 @@ class Command(BaseCommand):
                 name="Admin",
                 password="admin",
             )
-            self.stdout.write(self.style.SUCCESS("Created superuser admin@example.com / admin"))
+            self.stdout.write(
+                self.style.SUCCESS("Created superuser admin@example.com / admin")
+            )
         else:
             self.stdout.write(self.style.WARNING("Superuser already exists"))
 
@@ -122,7 +124,10 @@ class Command(BaseCommand):
                     "reporting": "Public reporting",
                     "remediation": "Remediation processes",
                 },
-                "scoring_methodology": {"type": "binary_compliance", "scale": "pass/fail"},
+                "scoring_methodology": {
+                    "type": "binary_compliance",
+                    "scale": "pass/fail",
+                },
                 "reporting_period": "Annual",
             },
             {
@@ -156,34 +161,106 @@ class Command(BaseCommand):
             {
                 "org_slug": "demo-energy",
                 "areas": [
-                    {"name": "Ethics", "internal_label": "ethics", "description": "Business ethics and corporate governance"},
-                    {"name": "Low Emissions", "internal_label": "low_emissions", "description": "GHG emissions and climate targets"},
-                    {"name": "Retirement of Assets", "internal_label": "retirement_of_assets", "description": "Decommissioning and site restoration"},
-                    {"name": "Rights", "internal_label": "rights", "description": "Indigenous Peoples rights and land access"},
-                    {"name": "Community Relations", "internal_label": "community_relations", "description": "Social impact and community engagement"},
-                    {"name": "Talent Attraction", "internal_label": "talent_attraction", "description": "Talent attraction, retention, and engagement"},
+                    {
+                        "name": "Ethics",
+                        "internal_label": "ethics",
+                        "description": "Business ethics and corporate governance",
+                    },
+                    {
+                        "name": "Low Emissions",
+                        "internal_label": "low_emissions",
+                        "description": "GHG emissions and climate targets",
+                    },
+                    {
+                        "name": "Retirement of Assets",
+                        "internal_label": "retirement_of_assets",
+                        "description": "Decommissioning and site restoration",
+                    },
+                    {
+                        "name": "Rights",
+                        "internal_label": "rights",
+                        "description": "Indigenous Peoples rights and land access",
+                    },
+                    {
+                        "name": "Community Relations",
+                        "internal_label": "community_relations",
+                        "description": "Social impact and community engagement",
+                    },
+                    {
+                        "name": "Talent Attraction",
+                        "internal_label": "talent_attraction",
+                        "description": "Talent attraction, retention, and engagement",
+                    },
                 ],
             },
             {
                 "org_slug": "demo-mining",
                 "areas": [
-                    {"name": "Ethics", "internal_label": "ethics", "description": "Business ethics and corporate governance"},
-                    {"name": "Low Emissions", "internal_label": "low_emissions", "description": "GHG emissions and climate targets"},
-                    {"name": "Community Relations", "internal_label": "community_relations", "description": "Community engagement and social investment"},
-                    {"name": "Supply Chain Diligence", "internal_label": "supply_chain", "description": "Supplier due diligence and traceability"},
-                    {"name": "Environmental Management", "internal_label": "environment", "description": "Biodiversity, water, and land management"},
-                    {"name": "Artisanal Mining", "internal_label": "asm", "description": "ASM engagement and formalisation"},
+                    {
+                        "name": "Ethics",
+                        "internal_label": "ethics",
+                        "description": "Business ethics and corporate governance",
+                    },
+                    {
+                        "name": "Low Emissions",
+                        "internal_label": "low_emissions",
+                        "description": "GHG emissions and climate targets",
+                    },
+                    {
+                        "name": "Community Relations",
+                        "internal_label": "community_relations",
+                        "description": "Community engagement and social investment",
+                    },
+                    {
+                        "name": "Supply Chain Diligence",
+                        "internal_label": "supply_chain",
+                        "description": "Supplier due diligence and traceability",
+                    },
+                    {
+                        "name": "Environmental Management",
+                        "internal_label": "environment",
+                        "description": "Biodiversity, water, and land management",
+                    },
+                    {
+                        "name": "Artisanal Mining",
+                        "internal_label": "asm",
+                        "description": "ASM engagement and formalisation",
+                    },
                 ],
             },
             {
                 "org_slug": "demo-automotive",
                 "areas": [
-                    {"name": "Ethics", "internal_label": "ethics", "description": "Business ethics and anti-corruption"},
-                    {"name": "Carbon Reduction", "internal_label": "carbon", "description": "Scope 1, 2, 3 emissions tracking"},
-                    {"name": "Supply Chain", "internal_label": "supply_chain", "description": "Supply chain due diligence and BoM risk"},
-                    {"name": "Labour Standards", "internal_label": "labour", "description": "Worker rights and fair labour practices"},
-                    {"name": "Circular Economy", "internal_label": "circular", "description": "Recycling, reuse, and end-of-life management"},
-                    {"name": "Product Safety", "internal_label": "safety", "description": "Product quality and consumer safety"},
+                    {
+                        "name": "Ethics",
+                        "internal_label": "ethics",
+                        "description": "Business ethics and anti-corruption",
+                    },
+                    {
+                        "name": "Carbon Reduction",
+                        "internal_label": "carbon",
+                        "description": "Scope 1, 2, 3 emissions tracking",
+                    },
+                    {
+                        "name": "Supply Chain",
+                        "internal_label": "supply_chain",
+                        "description": "Supply chain due diligence and BoM risk",
+                    },
+                    {
+                        "name": "Labour Standards",
+                        "internal_label": "labour",
+                        "description": "Worker rights and fair labour practices",
+                    },
+                    {
+                        "name": "Circular Economy",
+                        "internal_label": "circular",
+                        "description": "Recycling, reuse, and end-of-life management",
+                    },
+                    {
+                        "name": "Product Safety",
+                        "internal_label": "safety",
+                        "description": "Product quality and consumer safety",
+                    },
                 ],
             },
         ]
@@ -193,7 +270,9 @@ class Command(BaseCommand):
         for group in focus_area_data:
             org = org_map.get(group["org_slug"])
             if not org:
-                self.stdout.write(self.style.ERROR(f"Organization not found: {group['org_slug']}"))
+                self.stdout.write(
+                    self.style.ERROR(f"Organization not found: {group['org_slug']}")
+                )
                 continue
             for fa in group["areas"]:
                 _, created = ESGFocusArea.objects.get_or_create(
@@ -296,20 +375,27 @@ class Command(BaseCommand):
         # Assessment + Plan + Report + Finding + CIP Cycle demo
         # ─────────────────────────────────────────────────────
         from datetime import date, timedelta
+
         from assessments.models import (
             Assessment,
             AssessmentPlan,
             AssessmentReport,
-            Finding,
             CIPCycle,
+            Finding,
             Task,
         )
 
         mining_org = org_map.get("demo-mining")
         energy_org = org_map.get("demo-energy")
-        site1 = Site.objects.filter(organization=mining_org).first() if mining_org else None
-        site3 = Site.objects.filter(organization=energy_org).first() if energy_org else None
-        framework_ecs = Framework.objects.filter(name="Energy Certification Standard").first()
+        site1 = (
+            Site.objects.filter(organization=mining_org).first() if mining_org else None
+        )
+        site3 = (
+            Site.objects.filter(organization=energy_org).first() if energy_org else None
+        )
+        framework_ecs = Framework.objects.filter(
+            name="Energy Certification Standard"
+        ).first()
 
         # Demo assessment with full Bettercoal-style flow
         demo_assessment = None
@@ -393,7 +479,9 @@ class Command(BaseCommand):
                     topic=f_data["topic"],
                     defaults={**f_data, "site": site1, "provision": framework_ecs},
                 )
-                self.stdout.write(f"  [{'Created' if created else 'Exists'}] Finding: {f_data['topic']}")
+                self.stdout.write(
+                    f"  [{'Created' if created else 'Exists'}] Finding: {f_data['topic']}"
+                )
 
             # CIP Cycles
             for label, months in [("12 Month Review", 12), ("24 Month Follow-up", 24)]:
@@ -410,6 +498,7 @@ class Command(BaseCommand):
 
             # Tasks (linked to findings)
             from assessments.models import Finding as FindingModel
+
             open_findings = FindingModel.objects.filter(
                 assessment=demo_assessment, status=Finding.Status.OPEN
             )
@@ -420,7 +509,11 @@ class Command(BaseCommand):
                     title=f"Address: {finding.topic}",
                     defaults={
                         "description": finding.recommended_actions,
-                        "priority": Task.Priority.HIGH if finding.severity == Finding.Severity.HIGH else Task.Priority.MEDIUM,
+                        "priority": (
+                            Task.Priority.HIGH
+                            if finding.severity == Finding.Severity.HIGH
+                            else Task.Priority.MEDIUM
+                        ),
                         "status": Task.Status.PENDING,
                         "focus_area": demo_assessment.focus_area,
                     },
@@ -470,7 +563,10 @@ class Command(BaseCommand):
             AssessorProfile.objects.create(
                 user=admin_user,
                 role=AssessorProfile.Role.LEAD,
-                specializations=[AssessorProfile.Specialization.COAL, AssessorProfile.Specialization.OIL_GAS],
+                specializations=[
+                    AssessorProfile.Specialization.COAL,
+                    AssessorProfile.Specialization.OIL_GAS,
+                ],
                 can_be_lead_assessor=True,
                 biography="Senior ESG assessor with 15+ years in mining and energy sector audits.",
                 direct_phone_number="+27 82 000 0000",
@@ -479,7 +575,9 @@ class Command(BaseCommand):
                 current_organisation="Bettercoal",
                 is_registration_completed=True,
             )
-            self.stdout.write(self.style.SUCCESS("  [Created] Assessor Profile for admin"))
+            self.stdout.write(
+                self.style.SUCCESS("  [Created] Assessor Profile for admin")
+            )
 
         # Assign admin user to the first organization if not already assigned
         admin_user = User.objects.filter(email="admin@example.com").first()
@@ -488,7 +586,11 @@ class Command(BaseCommand):
             if first_org:
                 admin_user.organization = first_org
                 admin_user.save(update_fields=["organization"])
-                self.stdout.write(self.style.SUCCESS("  [Updated] Assigned admin user to Demo Energy Corp"))
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        "  [Updated] Assigned admin user to Demo Energy Corp"
+                    )
+                )
 
         # Summary
         self.stdout.write(self.style.SUCCESS("=" * 50))

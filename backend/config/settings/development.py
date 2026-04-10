@@ -5,7 +5,9 @@ ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["*"])
 
 
 DEBUG = env.bool("DEBUG", default=True)
-SECRET_KEY = env.str("DJANGO_SECRET_KEY", default="django-insecure-change-me-in-production")
+SECRET_KEY = env.str(
+    "DJANGO_SECRET_KEY", default="django-insecure-change-me-in-production"
+)
 
 INSTALLED_APPS = INSTALLED_APPS + ["django_extensions"]
 

@@ -1,18 +1,18 @@
 from rest_framework import viewsets
+
+from assessments.views import (
+    AssessmentResponseViewSet,
+    AssessmentViewSet,
+    ESGFocusAreaViewSet,
+    ExternalRatingViewSet,
+    FrameworkViewSet,
+    SiteViewSet,
+    TaskViewSet,
+)
+from knowledge.views import KnowledgeDocumentViewSet
 from organizations.views import OrganizationViewSet
 from themes.views import ThemeViewSet
 from users.views import UserViewSet
-from assessments.views import (
-    FrameworkViewSet,
-    ESGFocusAreaViewSet,
-    ExternalRatingViewSet,
-    AssessmentViewSet,
-    AssessmentResponseViewSet,
-    TaskViewSet,
-    SiteViewSet,
-)
-from knowledge.views import KnowledgeDocumentViewSet
-
 
 # Export all ViewSets for use in urls.py
 __all__ = [

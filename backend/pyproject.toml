@@ -40,6 +40,7 @@ profile = "black"
 line_length = 88
 multi_line_output = 3
 force_grid_wrap = 0
+extend_skip = [".venv", "seed_orm.py"]
 
 [tool.flake8]
 max-line-length = 88
@@ -63,7 +64,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
-addopts = "-q"
+addopts = "-q --no-header"
 testpaths = ["tests"]
 DJANGO_SETTINGS_MODULE = "config.settings.testing"
 python_files = ["test_*.py"]

@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 88
+ignore = E501,W503,E203,B008,B042
+exclude = migrations,.venv,__pycache__,*/migrations/*,seed_bettercoal.py,seed_orm.py,seed_questionnaire.py,check_assess.py,migrate_bettercoal.py,v1.py
+per-file-ignores =
+    settings/*.py:F405,F403,E402
+    manage.py:F401
+    config/health.py:F401
+    config/settings/base.py:E402
+    config/settings/development.py:F405
+    settings/admin.py:F401
+    organizations/management/commands/import_bettercoal.py:F401,F841
+    assessments/views/upload_evidence.py:F401

@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
 from users.models import User
 
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     model = User
@@ -17,7 +18,10 @@ class UserAdmin(BaseUserAdmin):
     fieldsets = (
         ("Personal info", {"fields": ("email", "name")}),
         ("Role & Status", {"fields": ("status", "timezone")}),
-        ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "password")}),
+        (
+            "Permissions",
+            {"fields": ("is_active", "is_staff", "is_superuser", "password")},
+        ),
         ("Timestamps", {"fields": ("created_at", "updated_at")}),
     )
 

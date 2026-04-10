@@ -1,5 +1,6 @@
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
+
 from users.models import User
 
 
@@ -41,6 +42,10 @@ class MeSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
-            "id", "email", "fullName", "orgId",
-            "is_staff", "is_active",
+            "id",
+            "email",
+            "fullName",
+            "orgId",
+            "is_staff",
+            "is_active",
         )

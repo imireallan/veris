@@ -1,7 +1,6 @@
 from config.settings.base import *  # noqa: F401,F403
 from config.settings.base import env
 
-
 DEBUG = False
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")

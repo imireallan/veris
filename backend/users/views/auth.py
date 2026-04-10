@@ -1,9 +1,10 @@
 """Authentication API views: login (JWT) and user profile."""
 
-from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from users.models import User
 
 
@@ -29,12 +30,14 @@ def login_view(request):
         return Response({"detail": "Account is disabled"}, status=401)
 
     refresh = RefreshToken.for_user(user)
-    
-    return Response({
-        "access_token": str(refresh.access_token),
-        "refresh_token": str(refresh),
-        "user_id": str(user.id),
-    })
+
+    return Response(
+        {
+            "access_token": str(refresh.access_token),
+            "refresh_token": str(refresh),
+            "user_id": str(user.id),
+        }
+    )
 
 
 @api_view(["GET"])
@@ -42,13 +45,15 @@ def login_view(request):
 def me_view(request):
     """Return the authenticated user's profile."""
     user = request.user
-    return Response({
-        "id": str(user.id),
-        "email": user.email,
-        "full_name": user.name,
-        "first_name": None,
-        "last_name": None,
-        "org_id": str(user.organization_id) if user.organization_id else None,
-        "role": user.role,
-        "picture_url": None,
-    })
+    return Response(
+        {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.name,
+            "first_name": None,
+            "last_name": None,
+            "org_id": str(user.organization_id) if user.organization_id else None,
+            "role": user.role,
+            "picture_url": None,
+        }
+    )

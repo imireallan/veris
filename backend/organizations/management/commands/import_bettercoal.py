@@ -22,8 +22,8 @@ import re
 import uuid
 from datetime import date, timedelta
 
-from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
+from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 User = get_user_model()
@@ -64,16 +64,24 @@ class Command(BaseCommand):
             return
 
         # Perform the import
-        from organizations.models import Organization
         from assessments.models import (
-            Framework, Site, Assessment, AssessmentReport,
-            Finding, CIPCycle, AssessmentPlan, ESGFocusArea,
+            Assessment,
+            AssessmentPlan,
+            AssessmentReport,
+            CIPCycle,
+            ESGFocusArea,
+            Finding,
+            Framework,
+            Site,
         )
+        from organizations.models import Organization
         from users.models import AssessorProfile
 
         # ── Organization ──
         company_data = tables.get("users_company", [])
-        org_name = company_data[0]["company_name"] if company_data else "Bettercoal Import"
+        org_name = (
+            company_data[0]["company_name"] if company_data else "Bettercoal Import"
+        )
         org, _ = Organization.objects.get_or_create(
             slug=org_slug,
             defaults={"name": org_name, "status": Organization.Status.ACTIVE},
@@ -109,7 +117,8 @@ class Command(BaseCommand):
 
                 # Add provisions as ESG focus areas (linked to org)
                 provs_for_principle = [
-                    pv for pv in provisions
+                    pv
+                    for pv in provisions
                     if str(pv.get("category_id")) in fw_cats.get(pid, {})
                 ]
                 for pv in provs_for_principle:
@@ -117,17 +126,23 @@ class Command(BaseCommand):
                         organization=org,
                         internal_label=f"provision_{pv['id']}",
                         defaults={
-                            "name": pv.get("description", "")[:200] or f"Provision {pv['id']}",
+                            "name": pv.get("description", "")[:200]
+                            or f"Provision {pv['id']}",
                             "description": pv.get("description", ""),
                         },
                     )
-                self.stdout.write(f"       {len(provs_for_principle)} provisions → focus areas")
+                self.stdout.write(
+                    f"       {len(provs_for_principle)} provisions → focus areas"
+                )
 
         else:
             # No CIP code data - create placeholder framework
             fw, _ = Framework.objects.get_or_create(
                 name="Bettercoal ESG Framework",
-                defaults={"version": "Import", "description": "Placeholder for Bettercoal import"},
+                defaults={
+                    "version": "Import",
+                    "description": "Placeholder for Bettercoal import",
+                },
             )
             self.stdout.write(f"  [OK] Framework: {fw.name} (placeholder)")
 
@@ -138,55 +153,78 @@ class Command(BaseCommand):
 
         all_sites = []
         for ms in mine_sites:
-            all_sites.append({
-                "name": ms.get("name", "Unknown Mine"),
-                "type": Site.SiteType.MINE,
-                "country_code": ms.get("country") or "XX",
-                "region": "Region" + str(ms.get("id", "")),
-                "coordinates": {
-                    "lat": float(ms.get("latitude", 0)) if ms.get("latitude") else 0,
-                    "lng": float(ms.get("longitude", 0)) if ms.get("longitude") else 0,
-                },
-                "operational_status": Site.OperationalStatus.ACTIVE,
-                "industry_data": {
-                    "type_of_coal": ms.get("type_of_coal", ""),
-                    "type_of_mine": ms.get("type_of_mine", ""),
-                    "certifications": self._parse_csv(ms.get("certifications", "")),
-                    "fatalities_last_12m": int(ms.get("number_of_fatalities_in_the_last_12_months") or 0),
-                    "employee_count": int(ms.get("number_of_employee") or 0),
+            all_sites.append(
+                {
+                    "name": ms.get("name", "Unknown Mine"),
+                    "type": Site.SiteType.MINE,
+                    "country_code": ms.get("country") or "XX",
+                    "region": "Region" + str(ms.get("id", "")),
+                    "coordinates": {
+                        "lat": (
+                            float(ms.get("latitude", 0)) if ms.get("latitude") else 0
+                        ),
+                        "lng": (
+                            float(ms.get("longitude", 0)) if ms.get("longitude") else 0
+                        ),
+                    },
+                    "operational_status": Site.OperationalStatus.ACTIVE,
+                    "industry_data": {
+                        "type_of_coal": ms.get("type_of_coal", ""),
+                        "type_of_mine": ms.get("type_of_mine", ""),
+                        "certifications": self._parse_csv(ms.get("certifications", "")),
+                        "fatalities_last_12m": int(
+                            ms.get("number_of_fatalities_in_the_last_12_months") or 0
+                        ),
+                        "employee_count": int(ms.get("number_of_employee") or 0),
+                        "contractor_count": int(ms.get("number_of_contractors") or 0),
+                    },
                     "contractor_count": int(ms.get("number_of_contractors") or 0),
-                },
-                "contractor_count": int(ms.get("number_of_contractors") or 0),
-                "employee_count": int(ms.get("number_of_employee") or 0),
-                "operational_since": int(ms.get("mine_start_date") or 0) if ms.get("mine_start_date") else None,
-                "is_in_indigenous_territory": ms.get("is_located_in_or_near_indigenous_peoples_territories") == "True",
-                "is_in_conflict_zone": ms.get("is_located_inside_cahra") == "True",
-                "description": ms.get("nearby_local_communities", ""),
-            })
+                    "employee_count": int(ms.get("number_of_employee") or 0),
+                    "operational_since": (
+                        int(ms.get("mine_start_date") or 0)
+                        if ms.get("mine_start_date")
+                        else None
+                    ),
+                    "is_in_indigenous_territory": ms.get(
+                        "is_located_in_or_near_indigenous_peoples_territories"
+                    )
+                    == "True",
+                    "is_in_conflict_zone": ms.get("is_located_inside_cahra") == "True",
+                    "description": ms.get("nearby_local_communities", ""),
+                }
+            )
 
         for ro in regional_offices:
-            all_sites.append({
-                "name": ro.get("name", "Unknown Office"),
-                "type": Site.SiteType.OFFICE,
-                "country_code": ro.get("country") or "XX",
-                "region": ro.get("region", ""),
-                "coordinates": {"lat": 0, "lng": 0},
-                "operational_status": Site.OperationalStatus.ACTIVE,
-                "description": f"Phone: {ro.get('phone_number', '')}",
-            })
+            all_sites.append(
+                {
+                    "name": ro.get("name", "Unknown Office"),
+                    "type": Site.SiteType.OFFICE,
+                    "country_code": ro.get("country") or "XX",
+                    "region": ro.get("region", ""),
+                    "coordinates": {"lat": 0, "lng": 0},
+                    "operational_status": Site.OperationalStatus.ACTIVE,
+                    "description": f"Phone: {ro.get('phone_number', '')}",
+                }
+            )
 
         for pf in port_facilities:
-            all_sites.append({
-                "name": pf.get("name", "Unknown Port"),
-                "type": Site.SiteType.PORT,
-                "country_code": pf.get("country") or "XX",
-                "region": pf.get("region", ""),
-                "coordinates": {
-                    "lat": float(pf.get("latitude", 0)) if pf.get("latitude") else 0,
-                    "lng": float(pf.get("longitude", 0)) if pf.get("longitude") else 0,
-                },
-                "operational_status": Site.OperationalStatus.ACTIVE,
-            })
+            all_sites.append(
+                {
+                    "name": pf.get("name", "Unknown Port"),
+                    "type": Site.SiteType.PORT,
+                    "country_code": pf.get("country") or "XX",
+                    "region": pf.get("region", ""),
+                    "coordinates": {
+                        "lat": (
+                            float(pf.get("latitude", 0)) if pf.get("latitude") else 0
+                        ),
+                        "lng": (
+                            float(pf.get("longitude", 0)) if pf.get("longitude") else 0
+                        ),
+                    },
+                    "operational_status": Site.OperationalStatus.ACTIVE,
+                }
+            )
 
         for s_data in all_sites:
             site, created = Site.objects.get_or_create(
@@ -213,8 +251,14 @@ class Command(BaseCommand):
                 assessment = Assessment.objects.create(
                     organization=org,
                     status=Assessment.Status.IN_PROGRESS,
-                    start_date=timezone.make_aware(timezone.datetime.today().replace(hour=0, minute=0, second=0)),
-                    due_date=timezone.make_aware((timezone.datetime.today() + timedelta(days=90)).replace(hour=0, minute=0, second=0)),
+                    start_date=timezone.make_aware(
+                        timezone.datetime.today().replace(hour=0, minute=0, second=0)
+                    ),
+                    due_date=timezone.make_aware(
+                        (timezone.datetime.today() + timedelta(days=90)).replace(
+                            hour=0, minute=0, second=0
+                        )
+                    ),
                     ai_summary=f"Imported from Bettercoal assurance process #{aid}",
                 )
                 self.stdout.write(f"  [OK] Assessment from assurance process #{aid}")
@@ -228,7 +272,10 @@ class Command(BaseCommand):
                                 "organization": org,
                                 "site_assessment_start": date.today(),
                                 "site_assessment_end": date.today(),
-                                "draft_report_deadline": plan.get("draft_assessment_report_deadline") or date.today(),
+                                "draft_report_deadline": plan.get(
+                                    "draft_assessment_report_deadline"
+                                )
+                                or date.today(),
                                 "notes": "Imported from Bettercoal",
                             },
                         )
@@ -238,16 +285,25 @@ class Command(BaseCommand):
         if findings:
             target_assessment = Assessment.objects.filter(organization=org).first()
             for f_data in findings:
-                topic = f_data.get("topic") or f"Imported Finding #{f_data.get('id', '?')}"
-                summary = f_data.get("summary") or f_data.get("recommended_actions") or ""
+                topic = (
+                    f_data.get("topic") or f"Imported Finding #{f_data.get('id', '?')}"
+                )
+                summary = (
+                    f_data.get("summary") or f_data.get("recommended_actions") or ""
+                )
                 rec_actions = f_data.get("recommended_actions") or ""
-                is_completed = f_data.get("marked_as_completed") == "t" or f_data.get("marked_as_completed") is True
+                is_completed = (
+                    f_data.get("marked_as_completed") == "t"
+                    or f_data.get("marked_as_completed") is True
+                )
 
                 defaults = {
                     "summary": summary,
                     "recommended_actions": rec_actions,
                     "severity": Finding.Severity.MEDIUM,
-                    "status": Finding.Status.CLOSED if is_completed else Finding.Status.OPEN,
+                    "status": (
+                        Finding.Status.CLOSED if is_completed else Finding.Status.OPEN
+                    ),
                 }
                 if target_assessment:
                     defaults["assessment"] = target_assessment
@@ -263,13 +319,25 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("\n" + "=" * 50))
         self.stdout.write(self.style.SUCCESS("Bettercoal import complete!"))
         self.stdout.write(self.style.SUCCESS("=" * 50))
-        self.stdout.write(f"Organization:  {Organization.objects.filter(slug=org_slug).count()}")
-        self.stdout.write(f"Sites:         {Site.objects.filter(organization=org).count()}")
+        self.stdout.write(
+            f"Organization:  {Organization.objects.filter(slug=org_slug).count()}"
+        )
+        self.stdout.write(
+            f"Sites:         {Site.objects.filter(organization=org).count()}"
+        )
         self.stdout.write(f"Frameworks:    {Framework.objects.count()}")
-        self.stdout.write(f"Focus Areas:   {ESGFocusArea.objects.filter(organization=org).count()}")
-        self.stdout.write(f"Assessments:   {Assessment.objects.filter(organization=org).count()}")
-        self.stdout.write(f"Findings:      {Finding.objects.filter(organization=org).count()}")
-        self.stdout.write(f"CIP Cycles:    {CIPCycle.objects.filter(organization=org).count()}")
+        self.stdout.write(
+            f"Focus Areas:   {ESGFocusArea.objects.filter(organization=org).count()}"
+        )
+        self.stdout.write(
+            f"Assessments:   {Assessment.objects.filter(organization=org).count()}"
+        )
+        self.stdout.write(
+            f"Findings:      {Finding.objects.filter(organization=org).count()}"
+        )
+        self.stdout.write(
+            f"CIP Cycles:    {CIPCycle.objects.filter(organization=org).count()}"
+        )
 
     # ── Helpers ──
 
@@ -291,10 +359,17 @@ class Command(BaseCommand):
                 if not line or line.startswith("--"):
                     continue
                 # Skip constraints, keys, CHECK
-                if any(kw in line.upper() for kw in [
-                    "CONSTRAINT", "PRIMARY KEY", "FOREIGN KEY", "CHECK",
-                    "REFERENCES", "UNIQUE",
-                ]):
+                if any(
+                    kw in line.upper()
+                    for kw in [
+                        "CONSTRAINT",
+                        "PRIMARY KEY",
+                        "FOREIGN KEY",
+                        "CHECK",
+                        "REFERENCES",
+                        "UNIQUE",
+                    ]
+                ):
                     continue
                 col_name = line.split()[0].strip('"')
                 columns.append(col_name)

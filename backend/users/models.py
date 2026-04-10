@@ -1,8 +1,9 @@
 import uuid
 
-from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.hashers import make_password
 from django.db import models
+
 
 class UserManager(BaseUserManager):
     """Custom manager for the User model with email as username."""
@@ -46,14 +47,16 @@ class User(AbstractBaseUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     name = models.CharField(max_length=300, default="")
-    
+
     # Global Profile Attributes (merged from AssessorProfile)
     biography = models.TextField(blank=True, default="")
     direct_phone_number = models.CharField(max_length=50, blank=True, default="")
     country = models.CharField(max_length=2, blank=True, default="")
     region = models.CharField(max_length=255, blank=True, default="")
-    
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
     timezone = models.CharField(max_length=100, default="UTC")
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)

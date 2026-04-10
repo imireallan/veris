@@ -33,7 +33,13 @@ from assessments.views.upload_image import upload_image
 from knowledge.views import KnowledgeDocumentViewSet
 
 # App viewsets
-from organizations.views import OrganizationViewSet
+from organizations.views import (
+    CustomRoleViewSet,
+    InvitationAcceptView,
+    InvitationViewSet,
+    OrganizationMembershipViewSet,
+    OrganizationViewSet,
+)
 from themes.views import ThemeViewSet
 from users.views import UserViewSet
 
@@ -46,6 +52,21 @@ router.register(r"api/themes", ThemeViewSet, basename="theme")
 router.register(r"api/frameworks", FrameworkViewSet, basename="framework")
 
 # Nested routes with org_pk
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/roles",
+    CustomRoleViewSet,
+    basename="customrole",
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/members",
+    OrganizationMembershipViewSet,
+    basename="organizationmembership",
+)
+router.register(
+    r"api/organizations/(?P<org_pk>[^/.]+)/invitations",
+    InvitationViewSet,
+    basename="invitation",
+)
 router.register(
     r"api/organizations/(?P<org_pk>[^/.]+)/focus-areas",
     ESGFocusAreaViewSet,
@@ -105,6 +126,17 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/upload-image/", upload_image, name="upload-image"),
     path("api/upload-evidence/", upload_evidence_document, name="upload-evidence"),
+    # Invitation acceptance (no auth required)
+    path(
+        "api/invitations/<str:token>/",
+        InvitationAcceptView.as_view(),
+        name="invitation-check",
+    ),
+    path(
+        "api/invitations/<str:token>/<str:action>/",
+        InvitationAcceptView.as_view(),
+        name="invitation-action",
+    ),
 ]
 
 if settings.DEBUG:

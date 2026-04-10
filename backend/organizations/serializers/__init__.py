@@ -1,6 +1,102 @@
 from rest_framework import serializers
 
-from organizations.models import CustomRole, Organization, OrganizationMembership
+from organizations.models import (
+    CustomRole,
+    Invitation,
+    Organization,
+    OrganizationMembership,
+)
+
+
+class InvitationSerializer(serializers.ModelSerializer):
+    """Serializer for organization invitations."""
+
+    invited_by_email = serializers.EmailField(source="invited_by.email", read_only=True)
+    invited_by_name = serializers.CharField(source="invited_by.name", read_only=True)
+    role_name = serializers.SerializerMethodField()
+    is_expired = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = Invitation
+        fields = [
+            "id",
+            "organization",
+            "email",
+            "role",
+            "role_name",
+            "fallback_role",
+            "token",
+            "status",
+            "invited_by",
+            "invited_by_email",
+            "invited_by_name",
+            "expires_at",
+            "accepted_at",
+            "is_expired",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "organization",
+            "invited_by",
+            "token",
+            "status",
+            "expires_at",
+            "accepted_at",
+            "is_expired",
+            "created_at",
+        ]
+
+    def get_role_name(self, obj):
+        """Return custom role name or fallback role name."""
+        if obj.role:
+            return obj.role.name
+        return obj.get_fallback_role_display()
+
+    def validate_email(self, email):
+        """Check if user already exists or has pending invitation."""
+        from users.models import User
+
+        # Check if user already exists
+        if User.objects.filter(email=email).exists():
+            # Check if they already have membership in this org
+            org = self.context.get("organization")
+            if (
+                org
+                and OrganizationMembership.objects.filter(
+                    user__email=email, organization=org
+                ).exists()
+            ):
+                raise serializers.ValidationError(
+                    "User is already a member of this organization."
+                )
+
+        # Check for existing pending invitation
+        org = self.context.get("organization")
+        if (
+            org
+            and Invitation.objects.filter(
+                email=email, organization=org, status=Invitation.Status.PENDING
+            ).exists()
+        ):
+            raise serializers.ValidationError(
+                "An invitation has already been sent to this email."
+            )
+
+        return email
+
+    def validate(self, data):
+        """Validate role assignment."""
+        # Ensure role belongs to the same organization
+        role = data.get("role")
+        org = self.context.get("organization")
+
+        if role and org and role.organization != org:
+            raise serializers.ValidationError(
+                "Role must belong to the same organization."
+            )
+
+        return data
 
 
 class CustomRoleSerializer(serializers.ModelSerializer):

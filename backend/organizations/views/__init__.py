@@ -1,10 +1,17 @@
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
-from organizations.models import CustomRole, Organization, OrganizationMembership
+from organizations.models import (
+    CustomRole,
+    Invitation,
+    Organization,
+    OrganizationMembership,
+)
 from organizations.serializers import (
     CustomRoleSerializer,
+    InvitationSerializer,
     OrganizationMembershipSerializer,
     OrganizationSerializer,
 )
@@ -136,3 +143,233 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
         membership.save()
         return Response(self.get_serializer(membership).data)
+
+
+class InvitationViewSet(viewsets.ModelViewSet):
+    """Organization invitation routes — /api/organizations/:org_pk/invitations/.
+
+    Allows ADMIN users to invite new members via email.
+    """
+
+    serializer_class = InvitationSerializer
+    permission_classes = [permissions.IsAuthenticated, IsOrganizationOwnerOrAdmin]
+    lookup_field = "pk"
+
+    def get_queryset(self):
+        org_pk = self.kwargs.get("org_pk")
+        return (
+            Invitation.objects.filter(organization_id=org_pk)
+            .select_related("invited_by", "role")
+            .order_by("-created_at")
+        )
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        org_pk = self.kwargs.get("org_pk")
+        if org_pk:
+            context["organization"] = Organization.objects.get(id=org_pk)
+        return context
+
+    def perform_create(self, serializer):
+        org_pk = self.kwargs.get("org_pk")
+        organization = Organization.objects.get(id=org_pk)
+        invitation = serializer.save(
+            organization=organization,
+            invited_by=self.request.user,
+        )
+        # Send invitation email
+        from organizations.email_service import send_invitation_email
+
+        send_invitation_email(invitation)
+
+    @action(detail=True, methods=["post"])
+    def resend(self, request, pk=None, org_pk=None):
+        """Resend an invitation email."""
+        invitation = self.get_object()
+
+        if invitation.status != Invitation.Status.PENDING:
+            return Response(
+                {
+                    "detail": "Cannot resend invitation. It has been accepted or declined."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if invitation.is_expired():
+            invitation.status = Invitation.Status.EXPIRED
+            invitation.save(update_fields=["status"])
+            return Response(
+                {"detail": "Invitation has expired. Please create a new invitation."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # TODO: Send invitation email
+        # send_invitation_email(invitation)
+
+        return Response(
+            {"detail": "Invitation email resent successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=["post"])
+    def revoke(self, request, pk=None, org_pk=None):
+        """Revoke a pending invitation."""
+        invitation = self.get_object()
+
+        if invitation.status != Invitation.Status.PENDING:
+            return Response(
+                {"detail": "Can only revoke pending invitations."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        invitation.status = Invitation.Status.DECLINED
+        invitation.save(update_fields=["status"])
+
+        return Response(
+            {"detail": "Invitation revoked successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+
+# ─────────────────────────────────────────────────────
+# Standalone invitation acceptance (no auth required)
+# ─────────────────────────────────────────────────────
+
+
+class InvitationAcceptView(APIView):
+    """
+    Accept or decline an invitation using token.
+    No authentication required - token-based access.
+
+    GET /api/invitations/{token}/ — Check invitation status
+    POST /api/invitations/{token}/accept/ — Accept invitation (requires auth)
+    POST /api/invitations/{token}/decline/ — Decline invitation
+    """
+
+    permission_classes = []  # No auth required for checking
+
+    def get(self, request, token):
+        """Check invitation validity and return details."""
+        try:
+            invitation = Invitation.objects.select_related(
+                "organization", "role", "invited_by"
+            ).get(token=token)
+        except Invitation.DoesNotExist:
+            return Response(
+                {"detail": "Invalid invitation token."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check if expired
+        if invitation.is_expired():
+            invitation.status = Invitation.Status.EXPIRED
+            invitation.save(update_fields=["status"])
+            return Response(
+                {"detail": "This invitation has expired."},
+                status=status.HTTP_410_GONE,
+            )
+
+        # Check if already processed
+        if invitation.status != Invitation.Status.PENDING:
+            return Response(
+                {
+                    "detail": f"This invitation has already been {invitation.status.lower()}."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Return invitation details
+        return Response(
+            {
+                "email": invitation.email,
+                "organization": {
+                    "id": str(invitation.organization.id),
+                    "name": invitation.organization.name,
+                },
+                "role_name": (
+                    invitation.role.name
+                    if invitation.role
+                    else invitation.get_fallback_role_display()
+                ),
+                "invited_by": invitation.invited_by.name,
+                "expires_at": invitation.expires_at.isoformat(),
+            }
+        )
+
+    def post(self, request, token, action):
+        """Accept or decline invitation."""
+        if action not in ["accept", "decline"]:
+            return Response(
+                {"detail": "Invalid action. Use 'accept' or 'decline'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            invitation = Invitation.objects.get(token=token)
+        except Invitation.DoesNotExist:
+            return Response(
+                {"detail": "Invalid invitation token."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check if expired
+        if invitation.is_expired():
+            invitation.status = Invitation.Status.EXPIRED
+            invitation.save(update_fields=["status"])
+            return Response(
+                {"detail": "This invitation has expired."},
+                status=status.HTTP_410_GONE,
+            )
+
+        # Check if already processed
+        if invitation.status != Invitation.Status.PENDING:
+            return Response(
+                {
+                    "detail": f"This invitation has already been {invitation.status.lower()}."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if action == "decline":
+            invitation.decline()
+            return Response(
+                {"detail": "Invitation declined."},
+                status=status.HTTP_200_OK,
+            )
+
+        # Accept action
+        if not request.user or not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required to accept invitation."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        # Verify email matches
+        if request.user.email.lower() != invitation.email.lower():
+            return Response(
+                {
+                    "detail": "Invitation email does not match your account email. Please login with the correct email or create an account."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Accept the invitation
+        if invitation.accept(request.user):
+            # Send welcome email
+            from organizations.email_service import send_welcome_email
+
+            send_welcome_email(request.user, invitation.organization)
+
+            return Response(
+                {
+                    "detail": "Invitation accepted successfully. Welcome to the organization!"
+                },
+                status=status.HTTP_200_OK,
+            )
+        else:
+            return Response(
+                {
+                    "detail": "Failed to accept invitation. It may have expired or been revoked."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )

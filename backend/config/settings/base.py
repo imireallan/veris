@@ -141,6 +141,15 @@ PINECONE_API_KEY = env("PINECONE_API_KEY", default="")
 PINECONE_ENVIRONMENT = env("PINECONE_ENVIRONMENT", default="us-east1-gcp")
 PINECONE_INDEX_NAME = env("PINECONE_INDEX_NAME", default="sustainability-ai")
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+HUGGINGFACE_API_KEY = env("HUGGINGFACE_API_KEY", default="")
+
+# Embedding Model Selection: 'openai' or 'huggingface'
+# HuggingFace is free (with rate limits), OpenAI is paid but faster/more reliable
+EMBEDDING_MODEL_PROVIDER = env("EMBEDDING_MODEL_PROVIDER", default="openai")
+EMBEDDING_MODEL_NAME = env(
+    "EMBEDDING_MODEL_NAME",
+    default="sentence-transformers/all-MiniLM-L6-v2",  # Free HuggingFace model
+)
 
 # Logging
 LOGGING = {

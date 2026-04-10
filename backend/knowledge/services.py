@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import List
 
 from django.conf import settings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone, ServerlessSpec
@@ -40,12 +41,41 @@ def get_pinecone_client() -> Pinecone:
     return Pinecone(api_key=api_key)
 
 
-def get_embedding_model() -> OpenAIEmbeddings:
-    """Initialize OpenAI embeddings model from Django settings."""
-    api_key = settings.OPENAI_API_KEY
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY not configured in settings")
-    return OpenAIEmbeddings(model="text-embedding-3-small", api_key=api_key)
+def get_embedding_model():
+    """
+    Initialize embeddings model based on settings.
+    
+    Supports:
+    - OpenAI (paid, fast, reliable): text-embedding-3-small
+    - HuggingFace (free, rate-limited): sentence-transformers/all-MiniLM-L6-v2
+    """
+    provider = settings.EMBEDDING_MODEL_PROVIDER.lower()
+    
+    if provider == "huggingface":
+        model_name = settings.EMBEDDING_MODEL_NAME
+        api_key = settings.HUGGINGFACE_API_KEY
+        
+        # HuggingFace Inference API (serverless)
+        if api_key:
+            return HuggingFaceEmbeddings(
+                model_name=model_name,
+                model_kwargs={"token": api_key},
+            )
+        else:
+            # Local model (requires transformers + torch, slower on CPU)
+            return HuggingFaceEmbeddings(model_name=model_name)
+    
+    elif provider == "openai":
+        api_key = settings.OPENAI_API_KEY
+        if not api_key:
+            raise ValueError("OPENAI_API_KEY not configured in settings")
+        return OpenAIEmbeddings(model="text-embedding-3-small", api_key=api_key)
+    
+    else:
+        raise ValueError(
+            f"Unknown EMBEDDING_MODEL_PROVIDER: {provider}. "
+            "Must be 'openai' or 'huggingface'"
+        )
 
 
 def extract_text_from_pdf(file_path: str) -> str:

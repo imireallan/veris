@@ -107,7 +107,10 @@ User Upload → Django API → Redis Queue → ai_engine (Worker) → Pinecone
 ## Notes
 
 - Pinecone index name: `sustainability-ai` (configured in `.env`)
-- Embedding model: `text-embedding-3-small` (1536 dimensions)
+- Embedding models supported:
+  - **OpenAI** (`text-embedding-3-small`): Paid, fast, reliable, 1536 dimensions
+  - **HuggingFace** (`sentence-transformers/all-MiniLM-L6-v2`): Free, rate-limited, 384 dimensions
+- Switch via `EMBEDDING_MODEL_PROVIDER` in `.env` (`openai` or `huggingface`)
 - Chunk size: 1000 chars with 200 char overlap
 - Max file size: 25MB (enforced at upload)
 

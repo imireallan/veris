@@ -1,10 +1,10 @@
 import { useLoaderData, Link, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Filter, Clock, FileText, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, FileText, Plus } from "lucide-react";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { Badge, Card, CardContent, ProgressBar, PageHeader, SearchBar, EmptyState, Button } from "~/components/ui";
+import { PageHeader, SearchBar, EmptyState, Button } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -22,13 +22,21 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   };
 
+  // Non-admin users are server-side scoped to their own org by default.
+  // For admins, optionally pass ?organization= to filter.
+  const isSuperAdmin = user.role === "SUPERADMIN";
+
+  const assessmentsPath = isSuperAdmin && orgFilter
+    ? `/api/assessments/?organization=${orgFilter}`
+    : "/api/assessments/";
+
   const orgPath = orgFilter
     ? `/api/organizations/?organization=${orgFilter}`
     : `/api/organizations/`;
 
   const [assessments, sites, frameworks, focusAreas, organizations] =
     await Promise.all([
-      fetchWithLog("/api/assessments/", "assessments"),
+      fetchWithLog(assessmentsPath, "assessments"),
       fetchWithLog("/api/sites/", "sites"),
       fetchWithLog("/api/frameworks/", "frameworks"),
       fetchWithLog("/api/focus-areas/", "focusAreas"),
@@ -72,12 +80,14 @@ const riskVariant = (
 };
 
 export default function AssessmentsListRoute() {
-  const { assessments, sites, frameworks, focusAreas, organizations, orgFilter } =
+  const { assessments, sites, frameworks, focusAreas, organizations, orgFilter, user } =
     useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
   const activeOrg = searchParams.get("org") || "";
+
+  const isSuperAdmin = user.role === "SUPERADMIN";
 
   useEffect(() => {
     setCurrentPage(1);
@@ -169,53 +179,57 @@ export default function AssessmentsListRoute() {
         title="Assessments"
         subtitle="Create, track, and manage sustainability assessments."
         action={
-          <Link to="/assessments/new">
-            <Button>
-              <Plus className="w-4 h-4" /> New Assessment
-            </Button>
-          </Link>
+          !isSuperAdmin && (
+            <Link to="/assessments/new">
+              <Button>
+                <Plus className="w-4 h-4" /> New Assessment
+              </Button>
+            </Link>
+          )
         }
       />
 
-      <div className="flex gap-3 items-center">
-        <div className="relative">
-          <select
-            value={activeOrg}
-            onChange={(e) => {
-              const v = e.target.value;
-              const next = new URLSearchParams(searchParams);
-              if (v) next.set("org", v);
-              else next.delete("org");
-              next.delete("q");
-              setSearchParams(next);
-            }}
-            className="appearance-none bg-background border rounded-lg pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-          >
-            <option value="">All Organizations</option>
-            {Array.isArray(organizations) &&
-              organizations.map((o: any) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-          </select>
-          <Filter className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      {isSuperAdmin && (
+        <div className="flex gap-3 items-center">
+          <div className="relative">
+            <select
+              value={activeOrg}
+              onChange={(e) => {
+                const v = e.target.value;
+                const next = new URLSearchParams(searchParams);
+                if (v) next.set("org", v);
+                else next.delete("org");
+                next.delete("q");
+                setSearchParams(next);
+              }}
+              className="appearance-none bg-background border rounded-lg pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            >
+              <option value="">All Organizations</option>
+              {Array.isArray(organizations) &&
+                organizations.map((o: any) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+            </select>
+            <Filter className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          </div>
+          {activeOrg && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.delete("org");
+                setSearchParams(next);
+              }}
+              className="text-xs h-8"
+            >
+              Clear
+            </Button>
+          )}
         </div>
-        {activeOrg && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const next = new URLSearchParams(searchParams);
-              next.delete("org");
-              setSearchParams(next);
-            }}
-            className="text-xs h-8"
-          >
-            Clear
-          </Button>
-        )}
-      </div>
+      )}
 
       <SearchBar
         value={search}

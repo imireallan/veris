@@ -32,20 +32,42 @@ from users.permissions import IsAssessmentOwner, IsOrganizationMember
 
 
 class FlatAssessmentViewSet(viewsets.ModelViewSet):
-    """Flat assessment routes — /api/assessments/ (org-scoped via query param)."""
+    """Flat assessment routes — /api/assessments/ (org-scoped by default).
+
+    - Regular users: always scoped to their own organization.
+    - SUPERADMIN / Django superuser: can see all orgs (platform admin).
+    - Any user requesting ?organization=<id>: scoped to that org.
+    """
     serializer_class = AssessmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         org_id = self.request.query_params.get("organization")
+
+        # Explicit org filter requested — scope to that org
         if org_id:
             return Assessment.objects.filter(organization_id=org_id)
-        # No org specified — return all (admin/global view)
-        return Assessment.objects.all()
+
+        # Platform-level admins: can see all orgs when no filter specified
+        if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
+            return Assessment.objects.all()
+
+        # All other users (including org ADMIN): scoped to their own org only
+        user_org = getattr(user, "organization_id", None)
+        if user_org:
+            return Assessment.objects.filter(organization_id=user_org)
+
+        return Assessment.objects.none()
 
     def perform_create(self, serializer):
+        user = self.request.user
         org_id = self.request.query_params.get("organization")
-        serializer.save(organization_id=org_id, created_by=self.request.user)
+        if not org_id:
+            # Non-platform-admins default to their own org
+            if not (user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"):
+                org_id = getattr(user, "organization_id", None)
+        serializer.save(organization_id=org_id, created_by=user)
 
 
 class FlatFindingViewSet(viewsets.ModelViewSet):
@@ -158,13 +180,24 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class FlatSiteViewSet(viewsets.ModelViewSet):
-    """Flat site routes — /api/sites/ (filtered by org query param)."""
+    """Flat site routes — /api/sites/ (org-scoped by default)."""
     serializer_class = SiteSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        user = self.request.user
         org_id = self.request.query_params.get("organization")
-        qs = Site.objects.all()
+
         if org_id:
-            qs = qs.filter(organization_id=org_id)
-        return qs
+            return Site.objects.filter(organization_id=org_id)
+
+        # Platform-level admins: can see all orgs
+        if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
+            return Site.objects.all()
+
+        # All other users (including org ADMIN): scoped to their own org
+        user_org = getattr(user, "organization_id", None)
+        if user_org:
+            return Site.objects.filter(organization_id=user_org)
+
+        return Site.objects.none()

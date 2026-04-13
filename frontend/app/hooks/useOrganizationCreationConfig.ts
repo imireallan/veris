@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState, useEffect } from "react";
 
 interface Prerequisite {
   key: string;
@@ -17,25 +17,24 @@ interface OrganizationCreationConfig {
   };
 }
 
-// Use Vite's import.meta.env or fallback to default
-const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-
 export function useOrganizationCreationConfig(accessToken?: string) {
-  const [config, setConfig] = React.useState<OrganizationCreationConfig | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
+  const [config, setConfig] = useState<OrganizationCreationConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!accessToken) {
       setLoading(false);
       return;
     }
 
+    const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
     let mounted = true;
 
     fetch(`${API_URL}/api/creation-config/prerequisites/`, {
       headers: {
-        "Authorization": `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
       },
     })
       .then((res) => {

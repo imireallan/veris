@@ -178,6 +178,13 @@ export default function OrganizationMembersRoute() {
   const [inviteRole, setInviteRole] = useState("");
   const lastActionType = useRef<string | null>(null);
 
+  // Initialize role to first available option when modal opens
+  useEffect(() => {
+    if (showInviteModal && availableInviteRoles.length > 0 && !inviteRole) {
+      setInviteRole(availableInviteRoles[0]);
+    }
+  }, [showInviteModal, availableInviteRoles, inviteRole]);
+
   useEffect(() => {
     if (fetcher.data && !hasShownToast.current) {
       if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {

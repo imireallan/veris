@@ -5,8 +5,8 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { RBAC } from "~/types/rbac";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "~/components/ui";
-import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical } from "lucide-react";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
+import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
 
@@ -45,6 +45,26 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const actionType = formData.get("actionType") as string;
 
   try {
+    if (actionType === "create_invitation") {
+      const email = formData.get("email") as string;
+      const fallbackRole = formData.get("fallback_role") as string;
+
+      if (!email || !fallbackRole) {
+        return data(
+          { error: "Email and role are required" },
+          { status: 400 }
+        );
+      }
+
+      await api.post(
+        `/api/organizations/${orgId}/invitations/`,
+        { email, fallback_role: fallbackRole },
+        token,
+        request
+      );
+      return { success: true, message: `Invitation sent to ${email}` };
+    }
+
     if (actionType === "update_role") {
       const membershipId = formData.get("membershipId") as string;
       const role = formData.get("role") as string;
@@ -113,12 +133,23 @@ export default function OrganizationMembersRoute() {
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
   const hasShownToast = useRef(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("");
+  const lastActionType = useRef<string | null>(null);
 
   useEffect(() => {
     if (fetcher.data && !hasShownToast.current) {
       if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
         toastSuccess("Success", fetcher.data.message as string);
         hasShownToast.current = true;
+        // Close modal and reset form on successful invitation
+        if (lastActionType.current === "create_invitation") {
+          setShowInviteModal(false);
+          setInviteEmail("");
+          setInviteRole("");
+          lastActionType.current = null;
+        }
       } else if ("error" in fetcher.data && fetcher.data.error) {
         toastError("Action failed", fetcher.data.error);
         hasShownToast.current = true;
@@ -130,6 +161,13 @@ export default function OrganizationMembersRoute() {
   }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
 
   const isProcessing = fetcher.state === "submitting";
+
+  const handleInviteSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const formData = new FormData(e.currentTarget);
+    formData.set("actionType", "create_invitation");
+    lastActionType.current = "create_invitation";
+    fetcher.submit(formData, { method: "post" });
+  };
 
   return (
     <div className="space-y-6">
@@ -143,13 +181,22 @@ export default function OrganizationMembersRoute() {
             Manage team members and pending invitations
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => navigate(`/organizations/${orgId}`)}
-        >
-          ← Back
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/organizations/${orgId}`)}
+          >
+            ← Back
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Invite Member
+          </Button>
+        </div>
       </div>
 
       {fetcher.data?.error && (
@@ -321,6 +368,76 @@ export default function OrganizationMembersRoute() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Member Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Send an invitation to join your organization. The recipient will receive an email with a link to set up their account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <fetcher.Form method="post" onSubmit={handleInviteSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="colleague@company.com"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fallback_role">Role</Label>
+              <Select
+                value={inviteRole}
+                onValueChange={setInviteRole}
+                name="fallback_role"
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ADMIN">Admin - Full org management</SelectItem>
+                  <SelectItem value="COORDINATOR">Coordinator - Manage assessments</SelectItem>
+                  <SelectItem value="ASSESSOR">Assessor - View and edit assessments</SelectItem>
+                  <SelectItem value="CONSULTANT">Consultant - View and collaborate</SelectItem>
+                  <SelectItem value="OPERATOR">Operator - Basic access</SelectItem>
+                  <SelectItem value="EXECUTIVE">Executive - View only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {fetcher.data?.error && (
+              <Alert variant="destructive">
+                <AlertDescription>{fetcher.data.error}</AlertDescription>
+              </Alert>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowInviteModal(false)}
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isProcessing || !inviteEmail || !inviteRole}>
+                {isProcessing ? "Sending..." : "Send Invitation"}
+              </Button>
+            </DialogFooter>
+          </fetcher.Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

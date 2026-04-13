@@ -20,10 +20,9 @@ def send_invitation_email(invitation: Invitation) -> bool:
 
     For development, emails are logged to console by default.
     """
-    # Acceptance URL (frontend will handle this)
-    # For now, we'll use a placeholder - frontend needs to implement this route
+    # Acceptance URL - matches frontend route /invitations/:token
     frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
-    accept_url = f"{frontend_url}/invite/{invitation.token}"
+    accept_url = f"{frontend_url}/invitations/{invitation.token}"
 
     subject = f"You've been invited to join {invitation.organization.name} on Veris"
 

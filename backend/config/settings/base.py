@@ -187,3 +187,7 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+# Email Configuration
+# Delegates to config.settings.email for environment-specific settings
+from config.settings.email import *  # noqa

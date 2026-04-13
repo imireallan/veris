@@ -42,9 +42,10 @@ async function apiRequest(path: string, options?: RequestOptions, baseUrl?: stri
   const res = await fetch(url, { ...init, headers });
 
   if (!res.ok) {
-    // Handle 401 Unauthorized - destroy session and redirect to login
-    if (res.status === 401) {
-      // If we have the request object, destroy the session properly with redirect
+    // Handle 401 Unauthorized - only destroy session if we had a token (authenticated request)
+    // For public endpoints (no token), 401 is just a normal error response
+    if (res.status === 401 && token) {
+      // Authenticated request got 401 - session expired, destroy and redirect
       if (requestContext) {
         throw await destroySessionCookie(requestContext);
       }

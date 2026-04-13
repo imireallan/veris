@@ -199,6 +199,11 @@ class OrganizationMembershipSerializer(serializers.ModelSerializer):
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
+    # Write-only fields for organization creation (not model fields)
+    client_email = serializers.CharField(write_only=True, required=False)
+    framework = serializers.CharField(write_only=True, required=False)
+    sector = serializers.CharField(write_only=True, required=False)
+
     class Meta:
         model = Organization
         fields = [
@@ -210,8 +215,18 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "custom_domain",
             "created_at",
             "updated_at",
+            "client_email",
+            "framework",
+            "sector",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+    def create(self, validated_data):
+        # Remove write-only fields before creating Organization
+        validated_data.pop("client_email", None)
+        validated_data.pop("framework", None)
+        validated_data.pop("sector", None)
+        return super().create(validated_data)
 
 
 class OrganizationCreationConfigSerializer(serializers.ModelSerializer):

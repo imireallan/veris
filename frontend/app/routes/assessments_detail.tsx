@@ -10,12 +10,17 @@ import {
   Card,
   CardContent,
   ProgressBar,
-  PageHeader,
   SectionCard,
   EmptyState,
   TabsSection,
   EditableField,
   EditModeToolbar,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "~/components/ui";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -134,6 +139,18 @@ export default function AssessmentDetailRoute() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/assessments">Assessments</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Assessment {a.id.slice(0, 8)}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center gap-3">
         <Link to="/assessments" className="p-2 hover:bg-muted rounded-lg">
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />

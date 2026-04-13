@@ -87,6 +87,11 @@ export default function LoginRoute() {
                   required
                   autoComplete="current-password"
                 />
+                <div className="flex justify-end">
+                  <a href="/reset-password" className="text-xs text-primary hover:underline">
+                    Forgot password?
+                  </a>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>

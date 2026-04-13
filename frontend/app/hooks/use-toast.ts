@@ -35,6 +35,14 @@ export function useToast() {
   const warning = (title: string, description?: string) => toast(title, description, "warning")
   const info = (title: string, description?: string) => toast(title, description, "info")
   const loading = (title: string, description?: string) => toast(title, description, "loading")
+  
+  const dismiss = (id?: string | number) => {
+    sonnerToast.dismiss(id)
+  }
+  
+  const update = (id: string | number, title: string, description?: string, type?: ToastType) => {
+    sonnerToast.success(title, { description, id })
+  }
 
-  return { toast, success, error, warning, info, loading }
+  return { toast, success, error, warning, info, loading, dismiss, update }
 }

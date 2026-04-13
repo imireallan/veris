@@ -137,11 +137,8 @@ export function MultiStepForm({
           <Button
             type={isLastStep ? "submit" : "button"}
             onClick={isLastStep ? undefined : handleNext}
-            disabled={!isLastStep && !canProceed || isLastStep && (!canSubmit || isSubmitting)}
-            className={cn(
-              "gap-1",
-              (!canProceed || !canSubmit) && "opacity-50 bg-muted hover:bg-muted hover:text-muted-foreground"
-            )}
+            disabled={(!isLastStep && !canProceed) || (isLastStep && (!canSubmit || isSubmitting))}
+            className="gap-1"
           >
             {isLastStep ? (
               <>

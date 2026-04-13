@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 type WizardOptions<T> = {
   initialData: T;
@@ -13,38 +13,43 @@ export function useWizardForm<T>({
   onSubmit,
   persistKey,
 }: WizardOptions<T>) {
-  const [data, setData] = useState<T>(() => {
-    // Check if we are in the browser environment
-    if (typeof window !== "undefined" && persistKey) {
-      const saved = localStorage.getItem(persistKey);
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error("Failed to parse wizard draft", e);
-        }
-      }
-    }
-    return initialData;
-  });
-
+  const [data, setData] = useState<T>(initialData);
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   const submittedRef = useRef(false);
+
+  // Load from localStorage after hydration
+  useEffect(() => {
+    if (!persistKey) {
+      setIsHydrated(true);
+      return;
+    }
+    try {
+      const saved = localStorage.getItem(persistKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setData(parsed);
+      }
+    } catch (e) {
+      console.error("Failed to parse wizard draft", e);
+    }
+    setIsHydrated(true);
+  }, [persistKey]);
 
   // persist draft
   const update = useCallback(
     (key: keyof T) => (value: any) => {
       setData((prev) => {
         const next = { ...prev, [key]: value };
-        if (persistKey) {
+        if (persistKey && isHydrated) {
           localStorage.setItem(persistKey, JSON.stringify(next));
         }
         return next;
       });
     },
-    [persistKey],
+    [persistKey, isHydrated],
   );
 
   const next = useCallback(() => {

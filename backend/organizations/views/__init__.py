@@ -36,13 +36,16 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         user = self.request.user
 
         # Platform-level admins: can see all orgs
-        if user.is_superuser or getattr(user, "role", None) == "SUPERADMIN":
+        if user.is_superuser:
             return Organization.objects.all()
 
         # All other users (including org ADMIN): only their own org
-        user_org = getattr(user, "organization_id", None)
-        if user_org:
-            return Organization.objects.filter(id=user_org)
+        # Get user's organization from their first membership
+        from organizations.models import OrganizationMembership
+
+        membership = OrganizationMembership.objects.filter(user=user).first()
+        if membership:
+            return Organization.objects.filter(id=membership.organization_id)
 
         return Organization.objects.none()
 
@@ -235,8 +238,18 @@ class InvitationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # TODO: Send invitation email
-        # send_invitation_email(invitation)
+        # Send invitation email
+        from organizations.email_service import send_invitation_email
+
+        email_sent = send_invitation_email(invitation)
+
+        if not email_sent:
+            return Response(
+                {
+                    "detail": "Failed to send invitation email. Please try again or contact support."
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
         return Response(
             {"detail": "Invitation email resent successfully."},
@@ -301,8 +314,11 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_410_GONE,
             )
 
-        # Check if already processed
-        if invitation.status != Invitation.Status.PENDING:
+        # Allow PENDING and ACCEPTED status (ACCEPTED means password was just set)
+        if invitation.status not in [
+            Invitation.Status.PENDING,
+            Invitation.Status.ACCEPTED,
+        ]:
             return Response(
                 {
                     "detail": f"This invitation has already been {invitation.status.lower()}."
@@ -392,9 +408,14 @@ class InvitationAcceptView(APIView):
 
             send_welcome_email(request.user, invitation.organization)
 
+            # Check if user needs to set password (onboarding required)
+            needs_onboarding = not request.user.has_usable_password()
+
             return Response(
                 {
-                    "detail": "Invitation accepted successfully. Welcome to the organization!"
+                    "detail": "Invitation accepted successfully. Welcome to the organization!",
+                    "needs_onboarding": needs_onboarding,
+                    "token": invitation.token,
                 },
                 status=status.HTTP_200_OK,
             )

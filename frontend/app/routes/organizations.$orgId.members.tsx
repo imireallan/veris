@@ -96,7 +96,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         );
       }
 
-      await api.post(
+      const result = await api.post(
         `/api/organizations/${orgId}/invitations/`,
         { email, fallback_role: fallbackRole },
         token,
@@ -157,10 +157,12 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (error.status === 401) {
       throw error;
     }
+    // Log full error for debugging
+    console.error("Invitation error:", error);
     return data(
       {
         success: false,
-        error: error.body?.detail || error.message || "Action failed",
+        error: error.body?.detail || error.body?.email?.[0] || error.message || "Action failed",
       },
       { status: error.status || 500 }
     );
@@ -187,19 +189,21 @@ export default function OrganizationMembersRoute() {
 
   useEffect(() => {
     if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
-        toastSuccess("Success", fetcher.data.message as string);
-        hasShownToast.current = true;
-        // Close modal and reset form on successful invitation
-        if (lastActionType.current === "create_invitation") {
+      // Only show toast for the last action type
+      if (lastActionType.current === "create_invitation") {
+        if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
+          toastSuccess("Success", fetcher.data.message as string);
+          hasShownToast.current = true;
+          // Close modal and reset form on successful invitation
           setShowInviteModal(false);
           setInviteEmail("");
           setInviteRole("");
           lastActionType.current = null;
+        } else if ("error" in fetcher.data && fetcher.data.error) {
+          toastError("Invitation Failed", fetcher.data.error as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
         }
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Action failed", fetcher.data.error);
-        hasShownToast.current = true;
       }
     }
     if (fetcher.state === "idle" && fetcher.data === null) {

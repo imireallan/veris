@@ -19,7 +19,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Access denied", { status: 403 });
   }
 
-  const assessmentsResponse = await api.get<any>(`/api/organizations/${orgId}/assessments/?page=${page}`, token);
+  const assessmentsResponse = await api.get<any>(`/api/organizations/${orgId}/assessments/?page=${page}`, token, request);
   
   const data = assessmentsResponse?.results || (Array.isArray(assessmentsResponse) ? assessmentsResponse : []);
 
@@ -103,15 +103,15 @@ export default function OrganizationAssessments() {
       <PageHeader
         title="Organization Assessments"
         subtitle="Managing assessments for this organization."
-        action={
-          RBAC.canCreateAssessments(user, orgId!) ? (
-            <Link to={`/assessments/new`}>
-              <Button>
-                <Plus className="w-4 h-4" /> New Assessment
-              </Button>
-            </Link>
-          ) : undefined
-        }
+          action={
+            RBAC.canCreateAssessments(user, orgId!) ? (
+              <Link to={`/assessments/new?orgId=${orgId}`}>
+                <Button size="lg">
+                  <Plus className="w-5 h-5" /> New Assessment
+                </Button>
+              </Link>
+            ) : undefined
+          }
       />
 
       <SearchBar

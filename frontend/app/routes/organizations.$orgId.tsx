@@ -100,12 +100,14 @@ export default function OrganizationDetailRoute() {
                 Manage Templates →
               </Link>
               
-              <Link
-                to={`/organizations/${org.id}/members`}
-                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
-              >
-                Members & Invites →
-              </Link>
+              {RBAC.canManageOrg(user, org.id) && (
+                <Link
+                  to={`/organizations/${org.id}/members`}
+                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                >
+                  Members & Invites →
+                </Link>
+              )}
               
               {user.fallbackRole === "SUPERADMIN" && (
                 <Link

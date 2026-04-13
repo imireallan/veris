@@ -10,6 +10,34 @@ import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-r
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
 
+// Role hierarchy - higher number = more permissions
+const ROLE_HIERARCHY: Record<string, number> = {
+  SUPERADMIN: 100,
+  ADMIN: 80,
+  COORDINATOR: 60,
+  CONSULTANT: 50,
+  EXECUTIVE: 40,
+  ASSESSOR: 30,
+  OPERATOR: 20,
+};
+
+/**
+ * Get roles that this user can invite (equal or lower in hierarchy).
+ * Superusers can invite any role.
+ */
+function getAvailableRolesForInviter(userRole: string): string[] {
+  if (userRole === "SUPERADMIN") {
+    return ["ADMIN", "COORDINATOR", "ASSESSOR", "CONSULTANT", "OPERATOR", "EXECUTIVE"];
+  }
+  
+  const inviterPriority = ROLE_HIERARCHY[userRole] || 0;
+  
+  return Object.entries(ROLE_HIERARCHY)
+    .filter(([_, priority]) => priority <= inviterPriority)
+    .map(([role, _]) => role)
+    .filter(role => role !== "SUPERADMIN"); // Never allow inviting SUPERADMIN
+}
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
@@ -28,7 +56,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const members = Array.isArray(membersResponse) ? membersResponse : (membersResponse?.results || []);
   const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : (invitationsResponse?.results || []);
 
-  return { members, invitations, orgId };
+  // Get roles this user can invite based on their role
+  const availableInviteRoles = getAvailableRolesForInviter(user.fallbackRole);
+
+  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -53,6 +84,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
         return data(
           { error: "Email and role are required" },
           { status: 400 }
+        );
+      }
+
+      // Validate user can invite this role (can't invite higher roles)
+      const availableRoles = getAvailableRolesForInviter(user.fallbackRole);
+      if (!availableRoles.includes(fallbackRole)) {
+        return data(
+          { error: `You cannot invite users with ${fallbackRole} role. Your role allows inviting: ${availableRoles.join(", ")}` },
+          { status: 403 }
         );
       }
 
@@ -128,7 +168,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function OrganizationMembersRoute() {
-  const { members, invitations, orgId } = useLoaderData<typeof loader>();
+  const { members, invitations, orgId, availableInviteRoles, userRole } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -406,14 +446,21 @@ export default function OrganizationMembersRoute() {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ADMIN">Admin - Full org management</SelectItem>
-                  <SelectItem value="COORDINATOR">Coordinator - Manage assessments</SelectItem>
-                  <SelectItem value="ASSESSOR">Assessor - View and edit assessments</SelectItem>
-                  <SelectItem value="CONSULTANT">Consultant - View and collaborate</SelectItem>
-                  <SelectItem value="OPERATOR">Operator - Basic access</SelectItem>
-                  <SelectItem value="EXECUTIVE">Executive - View only</SelectItem>
+                  {availableInviteRoles.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role === "ADMIN" && "Admin - Full org management"}
+                      {role === "COORDINATOR" && "Coordinator - Manage assessments"}
+                      {role === "ASSESSOR" && "Assessor - View and edit assessments"}
+                      {role === "CONSULTANT" && "Consultant - View and collaborate"}
+                      {role === "OPERATOR" && "Operator - Basic access"}
+                      {role === "EXECUTIVE" && "Executive - View only"}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                You can only invite users with roles equal to or lower than your own ({userRole}).
+              </p>
             </div>
 
             {fetcher.data?.error && (

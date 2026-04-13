@@ -9,6 +9,7 @@ export type { ButtonProps } from "./button"
 export { Input } from "./input"
 export { Label } from "./label"
 export { Textarea } from "./textarea"
+export { Select } from "./select"
 
 /* ─── Layout ─── */
 export {

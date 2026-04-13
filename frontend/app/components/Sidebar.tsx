@@ -14,7 +14,6 @@ import {
     Database,
     Building2,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "~/components/ui";
 import React from "react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -74,34 +73,6 @@ export default function Sidebar({
                     );
                 })}
             </nav>
-
-            {/* User footer - fixed at bottom */}
-            <div className="px-3 py-3 border-t shrink-0">
-                <div className="flex items-center gap-3 px-3 py-2">
-                    <Avatar>
-                        <AvatarFallback className="text-xs">
-                            {initials}
-                        </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium truncate">
-                            {user.fullName}
-                        </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                            {user.email}
-                        </div>
-                    </div>
-                </div>
-                <Form method="post" action="/logout">
-                    <button
-                        type="submit"
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
-                    >
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                    </button>
-                </Form>
-            </div>
         </aside>
     );
 }

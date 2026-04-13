@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { Menu, X, Sun, Moon } from "lucide-react"
 import Sidebar from "~/components/Sidebar"
+import { UserDropdown } from "~/components/UserDropdown"
 import type { User } from "~/types"
 
 interface AppLayoutProps {
@@ -46,7 +47,7 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
   const closeSidebar = () => setSidebarOpen(false)
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen bg-background">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -75,7 +76,7 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-end px-4 py-2.5 border-b bg-card shrink-0">
+        <header className="sticky top-0 z-30 flex items-center justify-end px-5 py-4 border-b border-t bg-card shrink-0">
           {/* Mobile hamburger */}
           <button
             className="p-1.5 rounded-md hover:bg-muted -ml-2 lg:hidden"
@@ -90,11 +91,14 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-md hover:bg-muted transition-colors"
+            className="p-2 rounded-md hover:bg-muted transition-colors mr-2"
             aria-label="Toggle theme"
           >
             {dark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
+
+          {/* User dropdown */}
+          <UserDropdown user={user} />
         </header>
 
         {/* Page content — responsive padding */}

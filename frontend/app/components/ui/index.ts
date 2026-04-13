@@ -7,6 +7,7 @@ export { cn } from "~/lib/utils"
 export { Button, buttonVariants } from "./button"
 export type { ButtonProps } from "./button"
 export { Input } from "./input"
+export { Label } from "./label"
 export { Textarea } from "./textarea"
 
 /* ─── Layout ─── */
@@ -19,13 +20,14 @@ export { Separator } from "./separator"
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
 export {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
-  DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel
+  DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
+  DropdownMenuGroup, DropdownMenuShortcut
 } from "./dropdown-menu"
 
 /* ─── Overlay ─── */
 export {
   Dialog, DialogOverlay, DialogContent, DialogHeader, DialogFooter,
-  DialogTitle, DialogDescription, DialogClose
+  DialogTitle, DialogDescription, DialogClose, DialogTrigger, DialogPortal
 } from "./dialog"
 
 /* ─── Data display ─── */
@@ -40,7 +42,8 @@ export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./
 /* ─── Feedback ─── */
 export { Alert, AlertTitle, AlertDescription, alertVariants } from "./alert"
 export { Skeleton } from "./skeleton"
-export { Toaster, ToastProvider, useToast, type ToastType } from "./toast"
+export { Toaster } from "./sonner"
+export { useToast } from "~/hooks/use-toast"
 
 /* ─── Patterns (reusable across routes) ─── */
 export { PageHeader } from "./page-header"
@@ -57,3 +60,8 @@ export { QuickLinks } from "./quick-links"
 export { EditableField } from "./editable-field"
 export type { EditableFieldProps } from "./editable-field"
 export { TabsSection } from "./tabs-section"
+
+/* ─── New reusable patterns ─── */
+export { PrerequisiteChecklist } from "../PrerequisiteChecklist"
+export type { Prerequisite, PrerequisiteStatus } from "../PrerequisiteChecklist"
+export { MultiStepForm } from "../MultiStepForm"

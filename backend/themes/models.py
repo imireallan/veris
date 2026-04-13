@@ -5,7 +5,7 @@ from django.db import models
 
 class Theme(models.Model):
     """Stores all customization settings per organization.
-    
+
     Supports separate color schemes for light and dark modes.
     All color fields store HSL values without units (e.g., "217 89 51").
     """
@@ -25,7 +25,9 @@ class Theme(models.Model):
     primary_color_dark = models.CharField(max_length=20, default="160 84 39")
     primary_foreground_color_dark = models.CharField(max_length=20, default="0 0 100")
     secondary_color_dark = models.CharField(max_length=20, default="210 40 16")
-    secondary_foreground_color_dark = models.CharField(max_length=20, default="210 40 96")
+    secondary_foreground_color_dark = models.CharField(
+        max_length=20, default="210 40 96"
+    )
     accent_color_dark = models.CharField(max_length=20, default="38 92 50")
     accent_foreground_color_dark = models.CharField(max_length=20, default="0 0 0")
     # Surface colors - light mode
@@ -50,7 +52,9 @@ class Theme(models.Model):
     # State colors - dark mode
     border_color_dark = models.CharField(max_length=20, default="217 33 17")
     destructive_color_dark = models.CharField(max_length=20, default="0 63 31")
-    destructive_foreground_color_dark = models.CharField(max_length=20, default="0 0 100")
+    destructive_foreground_color_dark = models.CharField(
+        max_length=20, default="0 0 100"
+    )
     success_color_dark = models.CharField(max_length=20, default="142 76 36")
     # Branding
     logo_url = models.URLField(max_length=1000, blank=True, default="")

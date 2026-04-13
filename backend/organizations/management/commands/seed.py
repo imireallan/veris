@@ -27,9 +27,13 @@ class Command(BaseCommand):
 
         # Organization Creation Config (singleton)
         from organizations.models import OrganizationCreationConfig
-        
+
         config, created = OrganizationCreationConfig.objects.get_or_create(
-            id=OrganizationCreationConfig.objects.first().id if OrganizationCreationConfig.objects.exists() else None,
+            id=(
+                OrganizationCreationConfig.objects.first().id
+                if OrganizationCreationConfig.objects.exists()
+                else None
+            ),
             defaults={
                 "require_contract_upload": False,
                 "require_client_email": True,
@@ -41,12 +45,16 @@ class Command(BaseCommand):
                 "helper_title": "Create New Organization",
                 "helper_description": "Set up a new client organization on Veris. They will receive an invitation to join the platform.",
                 "prerequisite_warning": "Ensure you have client approval before creating their organization. This action cannot be undone.",
-            }
+            },
         )
         if created:
-            self.stdout.write(self.style.SUCCESS("Created organization creation config with defaults"))
+            self.stdout.write(
+                self.style.SUCCESS("Created organization creation config with defaults")
+            )
         else:
-            self.stdout.write(self.style.WARNING("Organization creation config already exists"))
+            self.stdout.write(
+                self.style.WARNING("Organization creation config already exists")
+            )
 
         # Organizations and Themes
         from organizations.models import Organization

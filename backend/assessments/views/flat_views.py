@@ -226,7 +226,9 @@ class FlatAssessmentResponseViewSet(viewsets.ModelViewSet):
             return AssessmentResponse.objects.none()
         return AssessmentResponse.objects.none()
 
-    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated])
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
     def validate(self, request, pk=None):
         """
         Trigger AI validation for a response.

@@ -278,11 +278,15 @@ class Invitation(models.Model):
         if self.status != self.Status.PENDING:
             return False
 
+        self.status = self.Status.DECLINED
+        self.save(update_fields=["status"])
+        return True
+
 
 class OrganizationCreationConfig(models.Model):
     """
     Admin-configurable settings for organization creation.
-    
+
     Allows platform admins to manage prerequisites without code changes.
     Single instance (singleton) — use OrganizationCreationConfig.get_solo() to access.
     """
@@ -292,52 +296,48 @@ class OrganizationCreationConfig(models.Model):
     # Prerequisite toggles
     require_contract_upload = models.BooleanField(
         default=False,
-        help_text="Require signed contract document before creating organizations"
+        help_text="Require signed contract document before creating organizations",
     )
     require_client_email = models.BooleanField(
-        default=True,
-        help_text="Require client admin email for automatic invitation"
+        default=True, help_text="Require client admin email for automatic invitation"
     )
     require_framework_selection = models.BooleanField(
-        default=True,
-        help_text="Require primary framework selection during creation"
+        default=True, help_text="Require primary framework selection during creation"
     )
     require_industry_sector = models.BooleanField(
-        default=True,
-        help_text="Require industry sector selection"
+        default=True, help_text="Require industry sector selection"
     )
 
     # Invitation settings
     auto_send_invitation = models.BooleanField(
         default=True,
-        help_text="Automatically send invitation email after organization creation"
+        help_text="Automatically send invitation email after organization creation",
     )
     invitation_expiry_days = models.PositiveIntegerField(
-        default=7,
-        help_text="Number of days before invitation links expire"
+        default=7, help_text="Number of days before invitation links expire"
     )
 
     # Permission settings
     allowed_creator_roles = models.JSONField(
         default=list,
-        help_text="List of roles allowed to create organizations, e.g., ['SUPERADMIN', 'CONSULTANCY_ADMIN']"
+        help_text="List of roles allowed to create organizations, e.g., ['SUPERADMIN', 'CONSULTANCY_ADMIN']",
     )
 
     # Helper content (configurable without code changes)
     helper_title = models.CharField(
         max_length=200,
         default="Create New Organization",
-        help_text="Title shown in the creation form"
+        help_text="Title shown in the creation form",
     )
     helper_description = models.TextField(
         blank=True,
         default="Set up a new client organization. They will receive an invitation to join Veris.",
-        help_text="Description/helper text shown to users"
+        help_text="Description/helper text shown to users",
     )
     prerequisite_warning = models.TextField(
         blank=True,
         default="Please ensure you have a signed contract before creating a new organization.",
-        help_text="Warning shown when prerequisites are not met"
+        help_text="Warning shown when prerequisites are not met",
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -362,7 +362,7 @@ class OrganizationCreationConfig(models.Model):
     def can_user_create_organization(self, user) -> tuple:
         """
         Check if user has permission to create organizations.
-        
+
         Returns:
             Tuple of (can_create: bool, missing_permissions: list)
         """
@@ -370,50 +370,58 @@ class OrganizationCreationConfig(models.Model):
             # Empty list means all authenticated users can create
             return True, []
 
-        user_role = getattr(user, 'role', None)
-        
+        user_role = getattr(user, "role", None)
+
         if user.is_superuser:
             return True, []
-        
+
         if user_role in self.allowed_creator_roles:
             return True, []
-        
-        return False, ['role_not_allowed']
+
+        return False, ["role_not_allowed"]
 
     def get_prerequisites(self) -> list:
         """Return list of enabled prerequisites for frontend."""
         prerequisites = []
-        
+
         if self.require_contract_upload:
-            prerequisites.append({
-                'key': 'contract_upload',
-                'label': 'Signed Contract',
-                'description': 'Upload the signed client contract',
-                'required': True
-            })
-        
+            prerequisites.append(
+                {
+                    "key": "contract_upload",
+                    "label": "Signed Contract",
+                    "description": "Upload the signed client contract",
+                    "required": True,
+                }
+            )
+
         if self.require_client_email:
-            prerequisites.append({
-                'key': 'client_email',
-                'label': 'Client Admin Email',
-                'description': 'Email address for the client administrator',
-                'required': True
-            })
-        
+            prerequisites.append(
+                {
+                    "key": "client_email",
+                    "label": "Client Admin Email",
+                    "description": "Email address for the client administrator",
+                    "required": True,
+                }
+            )
+
         if self.require_framework_selection:
-            prerequisites.append({
-                'key': 'framework_selection',
-                'label': 'Primary Framework',
-                'description': 'Select the primary compliance framework',
-                'required': True
-            })
-        
+            prerequisites.append(
+                {
+                    "key": "framework_selection",
+                    "label": "Primary Framework",
+                    "description": "Select the primary compliance framework",
+                    "required": True,
+                }
+            )
+
         if self.require_industry_sector:
-            prerequisites.append({
-                'key': 'industry_sector',
-                'label': 'Industry Sector',
-                'description': 'Select the client industry sector',
-                'required': True
-            })
-        
+            prerequisites.append(
+                {
+                    "key": "industry_sector",
+                    "label": "Industry Sector",
+                    "description": "Select the client industry sector",
+                    "required": True,
+                }
+            )
+
         return prerequisites

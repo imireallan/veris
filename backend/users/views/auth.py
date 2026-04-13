@@ -46,15 +46,17 @@ def login_view(request):
 def me_view(request):
     """Return the authenticated user's profile with organization and role details."""
     user = request.user
-    
+
     # Get all memberships for this user
-    memberships = OrganizationMembership.objects.filter(user=user).select_related('organization')
-    
+    memberships = OrganizationMembership.objects.filter(user=user).select_related(
+        "organization"
+    )
+
     # Get user's primary organization (first membership or none)
     primary_membership = memberships.first()
     org_id = str(primary_membership.organization_id) if primary_membership else None
     org_name = primary_membership.organization.name if primary_membership else None
-    
+
     # Get user's primary role (from first membership or superuser status)
     role = None
     fallback_role = None
@@ -67,7 +69,7 @@ def me_view(request):
     elif primary_membership:
         role = primary_membership.fallback_role
         fallback_role = primary_membership.fallback_role
-    
+
     # Build organization list for multi-org users
     orgs = [
         {
@@ -78,7 +80,7 @@ def me_view(request):
         }
         for m in memberships
     ]
-    
+
     return Response(
         {
             "id": str(user.id),

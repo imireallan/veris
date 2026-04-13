@@ -9,25 +9,23 @@ Usage:
 
 import os
 import sys
+
 import django
+from django.core.files.uploadedfile import SimpleUploadedFile
+from rest_framework.test import APIClient
 
 # Setup Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework.test import APIClient
-from users.models import User
-from organizations.models import Organization, OrganizationMembership
-from assessments.models import (
+from assessments.models import (  # noqa: E402
     Assessment,
-    AssessmentTemplate,
     AssessmentQuestion,
     AssessmentResponse,
-    ESGFocusArea,
+    AssessmentTemplate,
 )
-from knowledge.models import KnowledgeDocument
+from organizations.models import Organization, OrganizationMembership  # noqa: E402
+from users.models import User  # noqa: E402
 
 
 def test_phase2_pipeline():
@@ -81,7 +79,9 @@ def test_phase2_pipeline():
         return False
 
     upload_data = response.data
-    print(f"   ✓ Uploaded: {upload_data['file_name']} ({upload_data['file_size']} bytes)")
+    print(
+        f"   ✓ Uploaded: {upload_data['file_name']} ({upload_data['file_size']} bytes)"
+    )
     print(f"   ✓ URL: {upload_data['url']}")
 
     # Test 2: Create KnowledgeDocument
@@ -90,6 +90,7 @@ def test_phase2_pipeline():
     # In production (S3), this would already be a full URL
     file_url = f"http://localhost:8000{upload_data['url']}"
     import json
+
     doc_response = client.post(
         "/api/documents/",
         {
@@ -119,15 +120,20 @@ def test_phase2_pipeline():
 
     if process_response.status_code == 200:
         process_data = process_response.data
-        print(f"   ✓ Processed: {process_data['chunk_count']} chunks, {process_data['vector_count']} vectors")
+        print(
+            f"   ✓ Processed: {process_data['chunk_count']} chunks, {process_data['vector_count']} vectors"
+        )
     else:
-        print(f"   ⚠ Processing skipped (Pinecone may not be configured): {process_response.data.get('error', 'Unknown')}")
+        print(
+            f"   ⚠ Processing skipped (Pinecone may not be configured): {process_response.data.get('error', 'Unknown')}"
+        )
 
     # Test 4: Create assessment with questions
     print("\n5. Creating assessment and questions...")
     from datetime import timedelta
+
     from django.utils import timezone
-    
+
     template, _ = AssessmentTemplate.objects.get_or_create(
         name="Test Template",
         organization=org,
@@ -177,14 +183,19 @@ def test_phase2_pipeline():
         print(f"   ✓ Confidence: {val_data['confidence_score']:.2%}")
         print(f"   ✓ Feedback: {val_data['feedback']}")
     else:
-        print(f"   ⚠ Validation skipped (Pinecone may not be configured): {validate_response.data.get('error', 'Unknown')}")
+        print(
+            f"   ⚠ Validation skipped (Pinecone may not be configured): {validate_response.data.get('error', 'Unknown')}"
+        )
 
     # Refresh from DB
     response_obj.refresh_from_db()
-    print(f"\n   DB State:")
+    print("\n   DB State:")
     print(f"   - validation_status: {response_obj.validation_status}")
     print(f"   - confidence_score: {response_obj.confidence_score}")
-    print(f"   - ai_feedback: {response_obj.ai_feedback[:50]}..." if response_obj.ai_feedback else "   - ai_feedback: (empty)")
+    if response_obj.ai_feedback:
+        print(f"   - ai_feedback: {response_obj.ai_feedback[:50]}...")
+    else:
+        print("   - ai_feedback: (empty)")
 
     print("\n" + "=" * 60)
     print("E2E TEST COMPLETED")
@@ -199,5 +210,6 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n✗ Test failed with exception: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)

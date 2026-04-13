@@ -188,6 +188,11 @@ export default function OrganizationMembersRoute() {
   }, [showInviteModal, availableInviteRoles, inviteRole]);
 
   useEffect(() => {
+    // Track when form is submitted
+    if (fetcher.state === "submitting") {
+      lastActionType.current = "create_invitation";
+    }
+    
     if (fetcher.data && !hasShownToast.current) {
       // Only show toast for the last action type
       if (lastActionType.current === "create_invitation") {
@@ -213,12 +218,8 @@ export default function OrganizationMembersRoute() {
 
   const isProcessing = fetcher.state === "submitting";
 
-  const handleInviteSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    const formData = new FormData(e.currentTarget);
-    formData.set("actionType", "create_invitation");
-    lastActionType.current = "create_invitation";
-    fetcher.submit(formData, { method: "post" });
-  };
+  // Note: Form submission handled directly by fetcher.Form
+  // actionType is set via hidden input field
 
   return (
     <div className="space-y-6">
@@ -430,7 +431,8 @@ export default function OrganizationMembersRoute() {
             </DialogDescription>
           </DialogHeader>
 
-          <fetcher.Form method="post" onSubmit={handleInviteSubmit} className="space-y-4">
+          <fetcher.Form method="post" className="space-y-4">
+            <input type="hidden" name="actionType" value="create_invitation" />
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input

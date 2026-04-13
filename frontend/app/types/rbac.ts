@@ -37,19 +37,33 @@ export class RBAC {
    * Can manage templates and high-level assessment configuration.
    */
   static canManageTemplates(user: User, orgId: string): boolean {
-    return this.canManageOrg(user, orgId) || 
-           (user.fallbackRole === "COORDINATOR" && String(user.orgId) === String(orgId));
+    // SUPERADMIN can manage any org's templates
+    if (user.fallbackRole === "SUPERADMIN") return true;
+    
+    // Check if user belongs to this org
+    if (String(user.orgId) !== String(orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "OWNER" || 
+           user.fallbackRole === "COORDINATOR";
   }
 
   /**
    * Can create new assessments for the organization.
    */
   static canCreateAssessments(user: User, orgId: string): boolean {
-    // SUPERADMIN can always create assessments
-    if (user.fallbackRole === "SUPERADMIN") return true;
+    // SUPERADMIN cannot create assessments unless they're a member of the org
+    if (user.fallbackRole === "SUPERADMIN") {
+      return String(user.orgId) === String(orgId);
+    }
     
-    return this.canManageTemplates(user, orgId) || 
-           (user.fallbackRole === "OPERATOR" && String(user.orgId) === String(orgId));
+    // For regular users, check if they belong to this org and have the right role
+    if (String(user.orgId) !== String(orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "OWNER" || 
+           user.fallbackRole === "COORDINATOR" ||
+           user.fallbackRole === "OPERATOR";
   }
 
   /**

@@ -75,12 +75,28 @@ export default function OrganizationDetailRoute() {
           </Link>
           
           {RBAC.canManageTemplates(user, org.id) && (
-            <Link
-              to={`/organizations/${org.id}/templates`}
-              className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
-            >
-              Manage Templates →
-            </Link>
+            <>
+              <Link
+                to={`/organizations/${org.id}/templates`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+              >
+                Manage Templates →
+              </Link>
+              
+              <Link
+                to={`/organizations/${org.id}/members`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+              >
+                Members & Invites →
+              </Link>
+              
+              <Link
+                to={`/organizations/${org.id}/settings`}
+                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+              >
+                Settings →
+              </Link>
+            </>
           )}
         </div>
       </div>

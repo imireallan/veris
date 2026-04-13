@@ -3,7 +3,6 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data, redirect } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { RBAC } from "~/types/rbac";
 import type { User } from "~/types";
 import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select } from "~/components/ui";
 import { Save, Building2 } from "lucide-react";
@@ -15,8 +14,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId!;
 
-  // Only ADMIN and SUPERADMIN can manage org settings
-  if (!RBAC.canManageOrg(user, orgId)) {
+  // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
+  if (user.fallbackRole !== "SUPERADMIN") {
     throw redirect("/");
   }
 
@@ -30,8 +29,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const orgId = params.orgId!;
 
-  // Only ADMIN and SUPERADMIN can manage org settings
-  if (!RBAC.canManageOrg(user, orgId)) {
+  // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
+  if (user.fallbackRole !== "SUPERADMIN") {
     return data({ error: "Insufficient permissions" }, { status: 403 });
   }
 

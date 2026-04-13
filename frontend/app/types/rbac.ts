@@ -21,6 +21,8 @@ export class RBAC {
 
   /**
    * Can manage organization-level settings and user access.
+   * Note: Full org settings (name, slug, status, subscription) require SUPERADMIN.
+   * Org ADMIN can manage members and invitations only.
    */
   static canManageOrg(user: User, orgId: string): boolean {
     if (user.fallbackRole === "SUPERADMIN") return true;
@@ -31,6 +33,14 @@ export class RBAC {
     // Use fallback_role for durable permission checks
     // Custom role names are display-only; fallback_role is the stable enum
     return user.fallbackRole === "ADMIN" || user.fallbackRole === "OWNER";
+  }
+
+  /**
+   * Can manage org settings (name, slug, status, subscription tier) - SUPERADMIN only.
+   */
+  static canManageOrgSettings(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") return true;
+    return false;
   }
 
   /**

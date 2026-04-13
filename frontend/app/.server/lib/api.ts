@@ -1,6 +1,8 @@
 /** Centralized API request helpers — all server-side fetches go through here. */
 
+import { redirect } from "react-router";
 import { API_URL, AI_API_URL } from "../config";
+import { getSession, destroySessionCookie } from "../sessions";
 export { API_URL, AI_API_URL };
 
 /* ─────────────── error types ─────────────── */
@@ -23,7 +25,7 @@ interface RequestOptions extends RequestInit {
   token?: string | null;
 }
 
-async function request(path: string, options?: RequestOptions, baseUrl?: string) {
+async function apiRequest(path: string, options?: RequestOptions, baseUrl?: string, requestContext?: Request) {
   const { token, headers: extraHeaders, ...init } = options ?? {};
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -34,10 +36,22 @@ async function request(path: string, options?: RequestOptions, baseUrl?: string)
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const url = `${baseUrl ?? API_URL}${path}`;
+  // Ensure trailing slash for Django APPEND_SLASH compatibility
+  const normalizedPath = path.endsWith("/") ? path : `${path}/`;
+  const url = `${baseUrl ?? API_URL}${normalizedPath}`;
   const res = await fetch(url, { ...init, headers });
 
   if (!res.ok) {
+    // Handle 401 Unauthorized - destroy session and redirect to login
+    if (res.status === 401) {
+      // If we have the request object, destroy the session properly with redirect
+      if (requestContext) {
+        throw await destroySessionCookie(requestContext);
+      }
+      // Fallback: throw ApiError for client-side handling
+      throw new ApiError("Session expired. Please login again.", 401, { error: "Unauthorized" });
+    }
+    
     let body: unknown;
     try {
       body = await res.json();
@@ -57,33 +71,33 @@ async function request(path: string, options?: RequestOptions, baseUrl?: string)
 /* ─────────────── typed request methods ─────────────── */
 
 export const api = {
-  get<T>(path: string, token?: string | null) {
-    return request(path, { method: "GET", token }) as Promise<T>;
+  get<T>(path: string, token?: string | null, request?: Request) {
+    return apiRequest(path, { method: "GET", token }, undefined, request) as Promise<T>;
   },
 
-  post<T>(path: string, body: unknown, token?: string | null) {
-    return request(path, { method: "POST", body: JSON.stringify(body), token }) as Promise<T>;
+  post<T>(path: string, body: unknown, token?: string | null, request?: Request) {
+    return apiRequest(path, { method: "POST", body: JSON.stringify(body), token }, undefined, request) as Promise<T>;
   },
 
-  put<T>(path: string, body: unknown, token?: string | null) {
-    return request(path, { method: "PUT", body: JSON.stringify(body), token }) as Promise<T>;
+  put<T>(path: string, body: unknown, token?: string | null, request?: Request) {
+    return apiRequest(path, { method: "PUT", body: JSON.stringify(body), token }, undefined, request) as Promise<T>;
   },
 
-  patch<T>(path: string, body: unknown, token?: string | null) {
-    return request(path, { method: "PATCH", body: JSON.stringify(body), token }) as Promise<T>;
+  patch<T>(path: string, body: unknown, token?: string | null, request?: Request) {
+    return apiRequest(path, { method: "PATCH", body: JSON.stringify(body), token }, undefined, request) as Promise<T>;
   },
 
-  delete<T>(path: string, token?: string | null) {
-    return request(path, { method: "DELETE", token }) as Promise<T>;
+  delete<T>(path: string, token?: string | null, request?: Request) {
+    return apiRequest(path, { method: "DELETE", token }, undefined, request) as Promise<T>;
   },
 
   /** Request to the AI engine service. */
   ai: {
-    get<T>(path: string, token?: string | null) {
-      return request(path, { method: "GET", token }, AI_API_URL) as Promise<T>;
+    get<T>(path: string, token?: string | null, request?: Request) {
+      return apiRequest(path, { method: "GET", token }, AI_API_URL, request) as Promise<T>;
     },
-    post<T>(path: string, body: unknown, token?: string | null) {
-      return request(path, { method: "POST", body: JSON.stringify(body), token }, AI_API_URL) as Promise<T>;
+    post<T>(path: string, body: unknown, token?: string | null, request?: Request) {
+      return apiRequest(path, { method: "POST", body: JSON.stringify(body), token }, AI_API_URL, request) as Promise<T>;
     },
   },
 };

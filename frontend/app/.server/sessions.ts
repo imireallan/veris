@@ -62,9 +62,16 @@ export async function requireUser(request: Request): Promise<User> {
     fullName: data.full_name ?? data.email ?? "",
     firstName: data.first_name ?? data.full_name?.split(" ")[0] ?? data.email?.split("@")[0] ?? "",
     lastName: data.last_name ?? "",
-    orgId: data.org_id ?? "",
+    orgId: data.org_id ?? null,
+    orgName: data.org_name ?? undefined,
     role: (data.role ?? "VIEWER").toUpperCase() as User["role"],
+    fallbackRole: data.fallback_role ?? undefined,
     pictureUrl: data.picture_url ?? undefined,
+    organizations: data.organizations ?? [],
+    isSuperuser: data.is_superuser ?? false,
+    isStaff: data.is_staff ?? false,
+    timezone: data.timezone ?? undefined,
+    country: data.country ?? undefined,
   };
 }
 
@@ -129,4 +136,23 @@ export async function loginUser(
   } catch {
     return { error: "Network error — is the backend running?" };
   }
+}
+
+/** Delete the session cookie (for 401 handling). Call this in API client when auth fails. */
+export async function deleteSessionCookie() {
+  // Note: This only works in client-side context via document.cookie
+  // In server-side loaders/actions, use destroySession() with redirect instead
+  if (typeof document !== "undefined") {
+    document.cookie = "__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+  }
+}
+
+/** Destroy session cookie and return redirect to login. Use this in server-side loaders/actions for 401 handling. */
+export async function destroySessionCookie(request: Request) {
+  const session = await getSession(request);
+  return redirect("/login", {
+    headers: {
+      "Set-Cookie": await sessionStorage.destroySession(session),
+    },
+  });
 }

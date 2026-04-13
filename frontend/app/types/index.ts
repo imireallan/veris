@@ -1,23 +1,61 @@
 /**
  * Theme configuration shape returned by the theme API.
+ * All color values are HSL strings (e.g., "217 89 51") for CSS variables.
+ * Supports both light and dark mode color schemes.
  */
 export interface ThemeConfig {
+  // Primary colors - light mode
   primary: string;
-  primaryForeground: string;
+  primary_foreground: string;
   secondary: string;
-  secondaryForeground: string;
+  secondary_foreground: string;
   accent: string;
-  accentForeground: string;
+  accent_foreground: string;
+  
+  // Surface colors - light mode
   background: string;
   foreground: string;
   muted: string;
-  mutedForeground: string;
+  muted_foreground: string;
   card: string;
-  cardForeground: string;
+  card_foreground: string;
+  
+  // State colors - light mode
   border: string;
   destructive: string;
-  destructiveForeground: string;
+  destructive_foreground: string;
   success: string;
+  
+  // Primary colors - dark mode
+  primary_dark?: string;
+  primary_foreground_dark?: string;
+  secondary_dark?: string;
+  secondary_foreground_dark?: string;
+  accent_dark?: string;
+  accent_foreground_dark?: string;
+  
+  // Surface colors - dark mode
+  background_dark?: string;
+  foreground_dark?: string;
+  muted_dark?: string;
+  muted_foreground_dark?: string;
+  card_dark?: string;
+  card_foreground_dark?: string;
+  
+  // State colors - dark mode
+  border_dark?: string;
+  destructive_dark?: string;
+  destructive_foreground_dark?: string;
+  success_dark?: string;
+  
+  // Branding
+  logo_url?: string;
+  logo_url_dark?: string;
+  favicon_url?: string;
+  font_family?: string;
+  button_radius?: number;
+  custom_css?: string;
+  custom_css_dark?: string;
 }
 
 export type ThemeContextValue = {
@@ -30,6 +68,12 @@ export type ThemeContextValue = {
  */
 import { UserRole } from "~/types/rbac";
 
+export interface OrganizationMembership {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export interface User {
   id: string;
   email: string;
@@ -37,8 +81,15 @@ export interface User {
   firstName?: string;
   lastName?: string;
   orgId: string | null;
-  role: UserRole;
+  orgName?: string;
+  role: UserRole;  // Display role (custom role name or fallback)
+  fallbackRole?: string;  // Durable permission level (ADMIN, COORDINATOR, etc.)
   pictureUrl?: string;
+  organizations?: OrganizationMembership[];
+  isSuperuser?: boolean;
+  isStaff?: boolean;
+  timezone?: string;
+  country?: string;
 }
 
 

@@ -16,6 +16,7 @@ import { getUserToken, requireUser } from "~/.server/sessions";
 import type { User } from "~/types";
 
 import { ThemeProvider } from "~/providers/ThemeProvider";
+import { Toaster } from "~/components/ui/sonner";
 import { fetchThemeConfig } from "~/.server/themes";
 
 import "./app.css";
@@ -56,7 +57,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   }
 
-  const theme = await fetchThemeConfig(user?.orgId ?? "");
+  const theme = await fetchThemeConfig(user?.orgId ?? "", token);
 
   return data({ user, theme });
 }
@@ -84,13 +85,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+export function HydrateFallback() {
+  return (
+    <html lang="en">
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <Meta />
+        <Links />
+      </head>
+      <body className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <ScrollRestoration />
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
 export default function App() {
   const data = useLoaderData<typeof loader>();
   const user = data?.user || null;
+  const theme = data?.theme;
 
   return (
-    <ThemeProvider>
+    <ThemeProvider initialTheme={theme}>
+      {/* Inject favicon from theme */}
+      {theme?.favicon_url && (
+        <link rel="icon" href={theme.favicon_url} key="theme-favicon" />
+      )}
+      {/* Inject custom CSS from theme */}
+      {theme?.custom_css && (
+        <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: theme.custom_css }} />
+      )}
       <Outlet context={{ user }} />
+      <Toaster position="top-right" richColors closeButton />
     </ThemeProvider>
   );
 }

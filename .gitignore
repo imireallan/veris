@@ -43,3 +43,6 @@ temp/
 # Generated
 *.log
 *.sqlite3
+
+backend/media/
+frontend/build/

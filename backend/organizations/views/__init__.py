@@ -42,6 +42,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         # All other users (including org ADMIN): only their own org
         # Get user's organization from their first membership
         from organizations.models import OrganizationMembership
+
         membership = OrganizationMembership.objects.filter(user=user).first()
         if membership:
             return Organization.objects.filter(id=membership.organization_id)
@@ -223,7 +224,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
 
         if invitation.status != Invitation.Status.PENDING:
             return Response(
-                {"detail": "Cannot resend invitation. It has been accepted or declined."},
+                {
+                    "detail": "Cannot resend invitation. It has been accepted or declined."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -242,7 +245,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
 
         if not email_sent:
             return Response(
-                {"detail": "Failed to send invitation email. Please try again or contact support."},
+                {
+                    "detail": "Failed to send invitation email. Please try again or contact support."
+                },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -310,7 +315,10 @@ class InvitationAcceptView(APIView):
             )
 
         # Allow PENDING and ACCEPTED status (ACCEPTED means password was just set)
-        if invitation.status not in [Invitation.Status.PENDING, Invitation.Status.ACCEPTED]:
+        if invitation.status not in [
+            Invitation.Status.PENDING,
+            Invitation.Status.ACCEPTED,
+        ]:
             return Response(
                 {
                     "detail": f"This invitation has already been {invitation.status.lower()}."

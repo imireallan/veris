@@ -16,8 +16,7 @@ from config.settings.base import env
 
 # Default to SMTP for local dev with fake-smtp-server
 EMAIL_BACKEND = env.str(
-    "EMAIL_BACKEND",
-    default="django.core.mail.backends.smtp.EmailBackend"
+    "EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend"
 )
 
 # ── SMTP Configuration (for smtp.EmailBackend) ─────────────────
@@ -30,14 +29,8 @@ EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 
 # ── Default From Addresses ──────────────────────────────────────
 # Used for system-generated emails (invitations, notifications, etc.)
-SERVER_EMAIL = env.str(
-    "SERVER_EMAIL",
-    default="no-reply@veris.local"
-)
-DEFAULT_FROM_EMAIL = env.str(
-    "DEFAULT_FROM_EMAIL",
-    default=SERVER_EMAIL
-)
+SERVER_EMAIL = env.str("SERVER_EMAIL", default="no-reply@veris.local")
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default=SERVER_EMAIL)
 
 # ── Email Configuration Validation ─────────────────────────────
 # Only validate in production (not local dev with fake SMTP)

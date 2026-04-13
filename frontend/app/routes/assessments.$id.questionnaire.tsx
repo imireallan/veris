@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useLoaderData, Link, Form, redirect } from "react-router";
+import { useState, useEffect, useRef } from "react";
+import { useLoaderData, Link, Form, redirect, useNavigation } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
@@ -8,7 +8,9 @@ import {
   AlertCircle, 
   Sparkles, 
   Paperclip, 
-  Save 
+  Save,
+  ShieldCheck,
+  Loader2
 } from "lucide-react";
 import { 
   Card, 
@@ -17,12 +19,37 @@ import {
   Button 
 } from "~/components/ui";
 
-// Mock Upload button
-function UploadEvidenceButton({ responseId }: { responseId?: string }) {
+function UploadEvidenceButton({
+  responseId,
+}: {
+  responseId?: string;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const navigation = useNavigation();
+  const isUploading = navigation.state === "submitting";
+
   return (
-    <Button variant="outline" size="sm" className="h-7 px-2 text-xs">
-      Upload
-    </Button>
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.csv"
+      />
+      <Button
+        variant="outline"
+        size="sm"
+        className="h-7 px-2 text-xs"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isUploading || !responseId}
+      >
+        {isUploading ? (
+          <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Uploading...</>
+        ) : (
+          "Upload"
+        )}
+      </Button>
+    </>
   );
 }
 
@@ -34,7 +61,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   
   // First, fetch the assessment to get its organization_id
   // This allows superadmins (user.orgId === null) to still access the questionnaire
-  const assessment = await api.get<any>(`/api/assessments/${assessmentId}/`, token).catch(() => null);
+  const assessment = await api.get<any>(`/api/assessments/${assessmentId}/`, token, request);
   
   if (!assessment) {
     throw new Response("Assessment not found", { status: 404 });
@@ -47,8 +74,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   }
 
   const [questions, responses] = await Promise.all([
-    api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/questions/`, token).catch(() => []),
-    api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/responses/`, token).catch(() => []),
+    api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/questions/`, token, request),
+    api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/responses/`, token, request),
   ]);
   
   return {
@@ -63,27 +90,82 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const token = await getUserToken(request);
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
+  const assessmentId = params.id!;
 
   if (intent === "save-response") {
     const responseId = formData.get("response_id") as string;
     const questionId = formData.get("question_id") as string;
     const answer = formData.get("answer") as string;
-    const assessmentId = formData.get("assessment_id") as string;
     const orgId = formData.get("org_id") as string;
 
     try {
       if (responseId) {
-        await api.patch(`/api/responses/${responseId}/`, { answer }, token);
+        await api.patch(`/api/responses/${responseId}/`, { answer }, token, request);
       } else {
         await api.post("/api/responses/", {
           assessment: assessmentId,
           question: questionId,
           answer: answer,
-        }, token);
+        }, token, request);
       }
-      return redirect(`/assessments/${params.id}/questionnaire`);
+      return redirect(`/assessments/${assessmentId}/questionnaire`);
     } catch (err: any) {
+      if (err instanceof Response && err.status === 302) throw err;
       return { error: err.message ?? "Failed to save response" };
+    }
+  }
+
+  if (intent === "upload-evidence") {
+    const responseId = formData.get("response_id") as string;
+    const file = formData.get("file") as File;
+
+    try {
+      // Upload file
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", file);
+      const uploadResponse = await fetch("/api/upload-evidence/", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: uploadFormData,
+      });
+
+      if (!uploadResponse.ok) {
+        const error = await uploadResponse.json();
+        return { error: error.error ?? "Upload failed" };
+      }
+
+      const uploadData = await uploadResponse.json();
+
+      // Attach to response (update evidence_files array)
+      if (responseId) {
+        const response = await api.get<any>(`/api/responses/${responseId}/`, token, request);
+        const evidenceFiles = response.evidence_files || [];
+        evidenceFiles.push({
+          url: uploadData.url,
+          file_name: uploadData.file_name,
+          file_size: uploadData.file_size,
+        });
+        await api.patch(`/api/responses/${responseId}/`, { evidence_files: evidenceFiles }, token, request);
+      }
+
+      return redirect(`/assessments/${assessmentId}/questionnaire`);
+    } catch (err: any) {
+      return { error: err.message ?? "Upload failed" };
+    }
+  }
+
+  if (intent === "validate-response") {
+    const responseId = formData.get("response_id") as string;
+
+    try {
+      const result = await api.post<any>(`/api/responses/${responseId}/validate/`, {}, token, request);
+      // Return success message to be shown via loader
+      return { 
+        redirect: `/assessments/${assessmentId}/questionnaire`,
+        message: `Validation: ${result.validation_status.toUpperCase()} (${(result.confidence_score * 100).toFixed(0)}% confidence)`
+      };
+    } catch (err: any) {
+      return { error: err.message ?? "Validation failed" };
     }
   }
 
@@ -109,6 +191,9 @@ function QuestionCard({
 }) {
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
   const [localAnswer, setLocalAnswer] = useState(existingResponse?.answer_text || "");
+  const navigation = useNavigation();
+  const isUploading = navigation.state === "submitting" && navigation.formData?.get("intent") === "upload-evidence";
+  const isValidating = navigation.state === "submitting" && navigation.formData?.get("intent") === "validate-response";
 
   useEffect(() => {
     if (isEditing && !localAnswer && existingResponse?.answer_text) {
@@ -122,12 +207,26 @@ function QuestionCard({
     }
   };
 
+  const validationStatusColors: Record<string, string> = {
+    validated: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    flagged: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    insufficient_evidence: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    pending: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+  };
+
+  const validationStatusLabels: Record<string, string> = {
+    validated: "Validated",
+    flagged: "Needs Review",
+    insufficient_evidence: "No Evidence",
+    pending: "Not Validated",
+  };
+
   return (
-    <Card className={hasAI ? "border-blue-200" : ""}>
+    <Card className={hasAI || existingResponse?.validation_status ? "border-blue-200" : ""}>
       <CardContent className="p-5 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <span className="text-xs text-muted-foreground font-mono">Q{index}</span>
               {question.category && (
                 <Badge variant="secondary" className="text-[10px]">
@@ -137,21 +236,54 @@ function QuestionCard({
               {existingResponse && (
                 <CheckCircle className="w-4 h-4 text-green-500" />
               )}
+              {existingResponse?.validation_status && (
+                <Badge className={`text-[10px] ${validationStatusColors[existingResponse.validation_status]}`}>
+                  <ShieldCheck className="w-3 h-3 mr-1" />
+                  {validationStatusLabels[existingResponse.validation_status] || existingResponse.validation_status}
+                </Badge>
+              )}
+              {existingResponse?.confidence_score != null && (
+                <span className="text-[10px] text-muted-foreground">
+                  ({(existingResponse.confidence_score * 100).toFixed(0)}% confidence)
+                </span>
+              )}
             </div>
             <h4 className="font-medium">{question.text}</h4>
             {question.description && (
               <p className="text-sm text-muted-foreground mt-1">{question.description}</p>
             )}
           </div>
-          {existingResponse && !isEditing && (
-            <button
-              type="button"
-              onClick={onEdit}
-              className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-md"
-            >
-              Edit
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {existingResponse && existingResponse.validation_status !== "validated" && (
+              <Form method="post">
+                <input type="hidden" name="intent" value="validate-response" />
+                <input type="hidden" name="response_id" value={existingResponse.id || ""} />
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50"
+                  disabled={isValidating || !existingResponse.answer_text}
+                >
+                  {isValidating ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="w-3 h-3 mr-1" />
+                  )}
+                  {isValidating ? "Validating..." : "Validate"}
+                </Button>
+              </Form>
+            )}
+            {existingResponse && !isEditing && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-md"
+              >
+                Edit
+              </button>
+            )}
+          </div>
         </div>
 
         {question.scoring_criteria && (

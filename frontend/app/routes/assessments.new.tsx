@@ -86,7 +86,7 @@ export async function action({ request }: ActionFunctionArgs) {
   console.log(startDate, dueDate);
 
   try {
-    const result = await api.post<any>("/api/assessments/", data, token);
+    const result = await api.post<any>("/api/assessments/", data, token, request);
     return redirect(`/assessments/${result.id}`);
   } catch (err: any) {
     const msg =

@@ -24,7 +24,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   
   // We need to resolve the assessment first to get its organization context
   // since the route /assessments/:id doesn't explicitly have orgId in the URL
-  const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token).catch(() => null);
+  const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token, request).catch(() => null);
   
   if (!assessment) {
     return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null };
@@ -33,11 +33,11 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const orgId = assessment.organization;
 
   const [findings, cipCycles, plan, tasks, report] = await Promise.all([
-    api.get<any[]>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
-    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
-    api.get<any[]>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
-    api.get<any[]>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
-    api.get<any[]>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token).catch(() => []),
+    api.get<any[]>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
+    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
+    api.get<any[]>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
+    api.get<any[]>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
+    api.get<any[]>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
   ]);
 
   return {
@@ -73,7 +73,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         summary: "",
         severity: "MEDIUM",
         status: "OPEN",
-      }, token);
+      }, token), request;
       return redirect(`/assessments/${params.id}`);
     }
 
@@ -92,7 +92,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     if (intent === "delete-finding") {
       const id = formData.get("finding_id");
-      await api.delete(`/api/findings/${id}/`, token);
+      await api.delete(`/api/findings/${id}/`, token), request;
       return redirect(`/assessments/${params.id}`);
     }
   } catch (err: any) {
@@ -386,7 +386,7 @@ const riskBadgeVariant = (r: string) => {
     case "MEDIUM":
       return "secondary";
     case "LOW":
-      return "success";
+      return "default";
     default:
       return "secondary";
   }
@@ -580,7 +580,7 @@ const severityBadgeVariant = (s: string) => {
     case "MEDIUM":
       return "secondary";
     case "LOW":
-      return "success";
+      return "default";
     default:
       return "secondary";
   }

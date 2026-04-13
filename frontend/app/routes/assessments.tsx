@@ -15,7 +15,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   const fetchWithLog = async (path: string, label: string) => {
     try {
-      const result = await api.get<any>(path, token);
+      const result = await api.get<any>(path, token, request);
       return Array.isArray(result) ? result : (result?.results ?? []);
     } catch {
       return [];
@@ -24,7 +24,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // Non-admin users are server-side scoped to their own org by default.
   // For admins, optionally pass ?organization= to filter.
-  const isSuperAdmin = user.role === "SUPERADMIN";
+  const isSuperAdmin = user.fallbackRole === "SUPERADMIN";
 
   const assessmentsPath = isSuperAdmin && orgFilter
     ? `/api/assessments/?organization=${orgFilter}`
@@ -87,7 +87,7 @@ export default function AssessmentsListRoute() {
   const search = searchParams.get("q") || "";
   const activeOrg = searchParams.get("org") || "";
 
-  const isSuperAdmin = user.role === "SUPERADMIN";
+  const isSuperAdmin = user.fallbackRole === "SUPERADMIN";
 
   useEffect(() => {
     setCurrentPage(1);

@@ -3,12 +3,12 @@
 import type { ThemeConfig } from "~/types";
 import { api } from "./lib/api";
 
-export async function fetchThemeConfig(orgId: string): Promise<ThemeConfig> {
+export async function fetchThemeConfig(orgId: string, token?: string | null): Promise<ThemeConfig> {
   if (!orgId) return getDefaultTheme();
 
   try {
-    const data = await api.get<Partial<ThemeConfig>>(`/api/themes/${orgId}`);
-    return { ...getDefaultTheme(), ...data };
+    const data = await api.get<ThemeConfig>(`/api/themes/${orgId}`, token ?? undefined);
+    return data;
   } catch {
     return getDefaultTheme();
   }
@@ -26,21 +26,33 @@ export async function updateThemeConfig(
 
 export function getDefaultTheme(): ThemeConfig {
   return {
+    // Primary colors
     primary: "160 84% 39%",
-    primaryForeground: "0 0% 100%",
+    primary_foreground: "0 0% 100%",
     secondary: "210 40% 96.1%",
-    secondaryForeground: "222.2 47.4% 11.2%",
+    secondary_foreground: "222.2 47.4% 11.2%",
     accent: "38 92% 50%",
-    accentForeground: "0 0% 0%",
+    accent_foreground: "0 0% 0%",
+    
+    // Surface colors
     background: "0 0% 100%",
     foreground: "222.2 84% 4.9%",
     muted: "210 40% 96.1%",
-    mutedForeground: "215.4 16.3% 46.9%",
+    muted_foreground: "215.4 16.3% 46.9%",
     card: "0 0% 100%",
-    cardForeground: "222.2 84% 4.9%",
+    card_foreground: "222.2 84% 4.9%",
+    
+    // State colors
     border: "214.3 31.8% 91.4%",
     destructive: "0 84.2% 60.2%",
-    destructiveForeground: "0 0% 100%",
+    destructive_foreground: "0 0% 100%",
     success: "142 76% 36%",
+    
+    // Branding
+    logo_url: undefined,
+    favicon_url: undefined,
+    font_family: undefined,
+    button_radius: undefined,
+    custom_css: undefined,
   };
 }

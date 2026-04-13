@@ -5,7 +5,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { RBAC } from "~/types/rbac";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select } from "~/components/ui";
 import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
@@ -437,27 +437,21 @@ export default function OrganizationMembersRoute() {
             <div className="space-y-2">
               <Label htmlFor="fallback_role">Role</Label>
               <Select
-                value={inviteRole}
-                onValueChange={setInviteRole}
+                id="fallback_role"
                 name="fallback_role"
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value)}
                 required
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableInviteRoles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role === "ADMIN" && "Admin - Full org management"}
-                      {role === "COORDINATOR" && "Coordinator - Manage assessments"}
-                      {role === "ASSESSOR" && "Assessor - View and edit assessments"}
-                      {role === "CONSULTANT" && "Consultant - View and collaborate"}
-                      {role === "OPERATOR" && "Operator - Basic access"}
-                      {role === "EXECUTIVE" && "Executive - View only"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={availableInviteRoles.map((role) => ({
+                  value: role,
+                  label: role === "ADMIN" ? "Admin - Full org management" :
+                         role === "COORDINATOR" ? "Coordinator - Manage assessments" :
+                         role === "ASSESSOR" ? "Assessor - View and edit assessments" :
+                         role === "CONSULTANT" ? "Consultant - View and collaborate" :
+                         role === "OPERATOR" ? "Operator - Basic access" :
+                         "Executive - View only",
+                }))}
+              />
               <p className="text-xs text-muted-foreground">
                 You can only invite users with roles equal to or lower than your own ({userRole}).
               </p>

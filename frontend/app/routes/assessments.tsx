@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Filter, FileText, Plus } from "lucide-react"
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { PageHeader, SearchBar, EmptyState, Button } from "~/components/ui";
+import { PageHeader, SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -175,19 +175,33 @@ export default function AssessmentsListRoute() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Assessments"
-        subtitle="Create, track, and manage sustainability assessments."
-        action={
-          !isSuperAdmin && (
-            <Link to="/assessments/new">
-              <Button>
-                <Plus className="w-4 h-4" /> New Assessment
-              </Button>
-            </Link>
-          )
-        }
-      />
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/">Dashboard</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Assessments</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Assessments</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create, track, and manage sustainability assessments.
+          </p>
+        </div>
+        {!isSuperAdmin && (
+          <Link to="/assessments/new">
+            <Button>
+              <Plus className="w-4 h-4" /> New Assessment
+            </Button>
+          </Link>
+        )}
+      </div>
 
       {isSuperAdmin && (
         <div className="flex gap-3 items-center">

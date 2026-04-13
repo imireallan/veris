@@ -4,6 +4,14 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import type { User } from "~/types";
 import { RBAC } from "~/types/rbac";
 import { api } from "~/.server/lib/api";
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "~/components/ui";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -35,6 +43,18 @@ export default function OrganizationDetailRoute() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href="/organizations">Organizations</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{org.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <h1 className="text-2xl font-semibold tracking-tight">{org.name}</h1>
@@ -42,9 +62,6 @@ export default function OrganizationDetailRoute() {
             {org.status} · {org.subscription_tier}
           </p>
         </div>
-        <Link to="/organizations" className="text-sm text-primary hover:underline">
-          ← All Organizations
-        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

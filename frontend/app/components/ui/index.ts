@@ -43,7 +43,16 @@ export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./
 /* ─── Feedback ─── */
 export { Alert, AlertTitle, AlertDescription, alertVariants } from "./alert"
 export { Skeleton } from "./skeleton"
-export { Toaster } from "./sonner"
+export { Toaster } from "./sonner";
+export {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  BreadcrumbEllipsis,
+} from "./breadcrumb";
 export { useToast } from "~/hooks/use-toast"
 
 /* ─── Patterns (reusable across routes) ─── */

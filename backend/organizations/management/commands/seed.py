@@ -25,6 +25,37 @@ class Command(BaseCommand):
         else:
             self.stdout.write(self.style.WARNING("Superuser already exists"))
 
+        # Organization Creation Config (singleton)
+        from organizations.models import OrganizationCreationConfig
+
+        config, created = OrganizationCreationConfig.objects.get_or_create(
+            id=(
+                OrganizationCreationConfig.objects.first().id
+                if OrganizationCreationConfig.objects.exists()
+                else None
+            ),
+            defaults={
+                "require_contract_upload": False,
+                "require_client_email": True,
+                "require_framework_selection": True,
+                "require_industry_sector": True,
+                "auto_send_invitation": True,
+                "invitation_expiry_days": 7,
+                "allowed_creator_roles": ["SUPERADMIN"],
+                "helper_title": "Create New Organization",
+                "helper_description": "Set up a new client organization on Veris. They will receive an invitation to join the platform.",
+                "prerequisite_warning": "Ensure you have client approval before creating their organization. This action cannot be undone.",
+            },
+        )
+        if created:
+            self.stdout.write(
+                self.style.SUCCESS("Created organization creation config with defaults")
+            )
+        else:
+            self.stdout.write(
+                self.style.WARNING("Organization creation config already exists")
+            )
+
         # Organizations and Themes
         from organizations.models import Organization
         from themes.models import Theme

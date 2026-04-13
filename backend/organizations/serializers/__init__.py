@@ -4,6 +4,7 @@ from organizations.models import (
     CustomRole,
     Invitation,
     Organization,
+    OrganizationCreationConfig,
     OrganizationMembership,
 )
 
@@ -207,6 +208,29 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "status",
             "subscription_tier",
             "custom_domain",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class OrganizationCreationConfigSerializer(serializers.ModelSerializer):
+    """Serializer for organization creation configuration."""
+
+    class Meta:
+        model = OrganizationCreationConfig
+        fields = [
+            "id",
+            "require_contract_upload",
+            "require_client_email",
+            "require_framework_selection",
+            "require_industry_sector",
+            "auto_send_invitation",
+            "invitation_expiry_days",
+            "allowed_creator_roles",
+            "helper_title",
+            "helper_description",
+            "prerequisite_warning",
             "created_at",
             "updated_at",
         ]

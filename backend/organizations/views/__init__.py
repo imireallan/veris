@@ -7,11 +7,13 @@ from organizations.models import (
     CustomRole,
     Invitation,
     Organization,
+    OrganizationCreationConfig,
     OrganizationMembership,
 )
 from organizations.serializers import (
     CustomRoleSerializer,
     InvitationSerializer,
+    OrganizationCreationConfigSerializer,
     OrganizationMembershipSerializer,
     OrganizationSerializer,
 )
@@ -43,6 +45,36 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             return Organization.objects.filter(id=user_org)
 
         return Organization.objects.none()
+
+    def perform_create(self, serializer):
+        """
+        Create organization and optionally send invitation to client admin.
+
+        Expects additional context from request data:
+        - client_email: Email for sending invitation
+        - framework: Primary framework selection
+        - sector: Industry sector
+        """
+        organization = serializer.save()
+
+        # Handle invitation if client_email provided
+        client_email = self.request.data.get("client_email")
+        if client_email:
+            from organizations.email_service import send_invitation_email
+            from organizations.models import Invitation
+
+            # Create invitation with ADMIN role
+            invitation = Invitation.objects.create(
+                organization=organization,
+                email=client_email,
+                fallback_role="ADMIN",
+                invited_by=self.request.user,
+            )
+
+            # Send invitation email
+            config = OrganizationCreationConfig.get_solo()
+            if config.auto_send_invitation:
+                send_invitation_email(invitation)
 
 
 class CustomRoleViewSet(viewsets.ModelViewSet):
@@ -373,3 +405,42 @@ class InvitationAcceptView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class OrganizationCreationConfigViewSet(viewsets.ModelViewSet):
+    """
+    Organization creation configuration — admin-configurable prerequisites.
+
+    GET /api/creation-config/ — Get current configuration
+    PATCH /api/creation-config/{id}/ — Update configuration (SUPERADMIN only)
+    """
+
+    serializer_class = OrganizationCreationConfigSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "pk"
+
+    def get_queryset(self):
+        # Only one config exists (singleton)
+        return OrganizationCreationConfig.objects.all()
+
+    def get_permissions(self):
+        """Only SUPERADMIN can modify config."""
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.IsAuthenticated()]
+        return [permissions.IsAuthenticated(), IsOrganizationOwnerOrAdmin()]
+
+    @action(detail=False, methods=["get"])
+    def prerequisites(self, request):
+        """Get enabled prerequisites for frontend."""
+        config = OrganizationCreationConfig.get_solo()
+        return Response(
+            {
+                "prerequisites": config.get_prerequisites(),
+                "can_create": config.can_user_create_organization(request.user)[0],
+                "helper_text": {
+                    "title": config.helper_title,
+                    "description": config.helper_description,
+                    "warning": config.prerequisite_warning,
+                },
+            }
+        )

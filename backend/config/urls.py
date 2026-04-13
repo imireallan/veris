@@ -37,6 +37,7 @@ from organizations.views import (
     CustomRoleViewSet,
     InvitationAcceptView,
     InvitationViewSet,
+    OrganizationCreationConfigViewSet,
     OrganizationMembershipViewSet,
     OrganizationViewSet,
 )
@@ -50,6 +51,11 @@ router.register(r"api/organizations", OrganizationViewSet, basename="organizatio
 router.register(r"api/users", UserViewSet, basename="user")
 router.register(r"api/themes", ThemeViewSet, basename="theme")
 router.register(r"api/frameworks", FrameworkViewSet, basename="framework")
+router.register(
+    r"api/creation-config",
+    OrganizationCreationConfigViewSet,
+    basename="creation-config",
+)
 
 # Nested routes with org_pk
 router.register(

@@ -8,7 +8,7 @@ import { Clock, Building2 } from "lucide-react";
 
 const statusVariant = (
   s: string,
-): "default" | "secondary" | "success" | "destructive" | "outline" => {
+): "default" | "secondary" | "outline" | "destructive" => {
   switch (s) {
     case "COMPLETED":
       return "default";
@@ -25,7 +25,7 @@ const statusVariant = (
 
 const riskVariant = (
   r: string,
-): "default" | "destructive" | "secondary" | "success" => {
+): "default" | "destructive" | "secondary" => {
   switch (r) {
     case "CRITICAL":
     case "HIGH":
@@ -33,7 +33,7 @@ const riskVariant = (
     case "MEDIUM":
       return "secondary";
     case "LOW":
-      return "success";
+      return "default";
     default:
       return "secondary";
   }

@@ -27,8 +27,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Access denied", { status: 403 });
   }
 
-  const template = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/`, token);
-  const questions = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/questions/`, token)
+  const template = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/`, token, request);
+  const questions = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/questions/`, token, request)
     .then(res => Array.isArray(res) ? res : (res?.results || []))
     .catch(() => []);
 
@@ -52,9 +52,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
         category: category,
         type: type,
         template: templateId
-      }, token);
+      }, token, request);
       return redirect(`/organizations/${orgId}/templates/${templateId}`);
     } catch (err: any) {
+      if (err instanceof Response && err.status === 302) throw err;
       return { error: err.message ?? "Failed to add question" };
     }
   }
@@ -62,9 +63,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (intent === "delete-question") {
     const questionId = formData.get("question_id") as string;
     try {
-      await api.delete(`/api/organizations/${orgId}/templates/${templateId}/questions/${questionId}/`, token);
+      await api.delete(`/api/organizations/${orgId}/templates/${templateId}/questions/${questionId}/`, token, request);
       return redirect(`/organizations/${orgId}/templates/${templateId}`);
     } catch (err: any) {
+      if (err instanceof Response && err.status === 302) throw err;
       return { error: err.message ?? "Failed to delete question" };
     }
   }
@@ -122,7 +124,7 @@ export default function TemplateEditor() {
                 </Button>
               </div>
             ) : (
-              <Accordion type="multiple" className="space-y-4">
+              <Accordion className="space-y-4">
                 {Object.entries(groupedQuestions).map(([category, qs]) => {
                   const typedQs = qs as any[];
                   return (

@@ -1,105 +1,134 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  /* shadcn-compatible CSS variables using HSL format */
-  --color-background: hsl(var(--background-hsl));
-  --color-foreground: hsl(var(--foreground-hsl));
-  --color-card: hsl(var(--card-hsl));
-  --color-card-foreground: hsl(var(--card-foreground-hsl));
-  --color-popover: hsl(var(--popover-hsl));
-  --color-popover-foreground: hsl(var(--popover-foreground-hsl));
-  --color-primary: hsl(var(--primary-hsl));
-  --color-primary-foreground: hsl(var(--primary-foreground-hsl));
-  --color-secondary: hsl(var(--secondary-hsl));
-  --color-secondary-foreground: hsl(var(--secondary-foreground-hsl));
-  --color-muted: hsl(var(--muted-hsl));
-  --color-muted-foreground: hsl(var(--muted-foreground-hsl));
-  --color-accent: hsl(var(--accent-hsl));
-  --color-accent-foreground: hsl(var(--accent-foreground-hsl));
-  --color-destructive: hsl(var(--destructive-hsl));
-  --color-destructive-foreground: hsl(var(--destructive-foreground-hsl));
-  --color-success: hsl(var(--success-hsl));
-  --color-border: hsl(var(--border-hsl));
-  --color-input: hsl(var(--input-hsl));
-  --color-ring: hsl(var(--ring-hsl));
+  /* shadcn-compatible CSS variables - these reference the HSL values we set dynamically */
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-success: hsl(var(--success));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
   --radius: 0.75rem;
+}
+
+/* Override shadcn/tailwind.css defaults with our dynamic variables */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 38 92% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 160 84% 39%;
 }
 
 /* ───────── Light mode (default) ───────── */
 html {
-  --background-hsl: 0 0% 100%;
-  --foreground-hsl: 222.2 84% 4.9%;
-  --card-hsl: 0 0% 100%;
-  --card-foreground-hsl: 222.2 84% 4.9%;
-  --popover-hsl: 0 0% 100%;
-  --popover-foreground-hsl: 222.2 84% 4.9%;
-  --primary-hsl: 160 84% 39%;
-  --primary-foreground-hsl: 0 0% 100%;
-  --secondary-hsl: 210 40% 96.1%;
-  --secondary-foreground-hsl: 222.2 47.4% 11.2%;
-  --muted-hsl: 210 40% 96.1%;
-  --muted-foreground-hsl: 215.4 16.3% 46.9%;
-  --accent-hsl: 38 92% 50%;
-  --accent-foreground-hsl: 0 0% 0%;
-  --destructive-hsl: 0 84.2% 60.2%;
-  --destructive-foreground-hsl: 0 0% 100%;
-  --success-hsl: 142 76% 36%;
-  --border-hsl: 214.3 31.8% 91.4%;
-  --input-hsl: 214.3 31.8% 91.4%;
-  --ring-hsl: 160 84% 39%;
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 38 92% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 100%;
+  --success: 142 76% 36%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 160 84% 39%;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background-hsl: 222.2 84% 4.9%;
-    --foreground-hsl: 210 40% 98%;
-    --card-hsl: 222.2 84% 4.9%;
-    --card-foreground-hsl: 210 40% 98%;
-    --popover-hsl: 222.2 84% 4.9%;
-    --popover-foreground-hsl: 210 40% 98%;
-    --primary-hsl: 160 84% 39%;
-    --primary-foreground-hsl: 0 0% 100%;
-    --secondary-hsl: 217.2 32.6% 17.5%;
-    --secondary-foreground-hsl: 210 40% 98%;
-    --muted-hsl: 217.2 32.6% 17.5%;
-    --muted-foreground-hsl: 215 20.2% 65.1%;
-    --accent-hsl: 38 92% 50%;
-    --accent-foreground-hsl: 0 0% 0%;
-    --destructive-hsl: 0 62.8% 30.6%;
-    --destructive-foreground-hsl: 210 40% 98%;
-    --success-hsl: 142 70% 45%;
-    --border-hsl: 217.2 32.6% 17.5%;
-    --input-hsl: 217.2 32.6% 17.5%;
-    --ring-hsl: 160 84% 39%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 160 84% 39%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 38 92% 50%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --success: 142 70% 45%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 160 84% 39%;
   }
 }
 
 /* ───────── Dark mode (manual toggle) ───────── */
 /* Using !important to override Tailwind layer cascade */
 html.dark {
-  --background-hsl: 222.2 84% 4.9% !important;
-  --foreground-hsl: 210 40% 98% !important;
-  --card-hsl: 222.2 84% 4.9% !important;
-  --card-foreground-hsl: 210 40% 98% !important;
-  --popover-hsl: 222.2 84% 4.9% !important;
-  --popover-foreground-hsl: 210 40% 98% !important;
-  --primary-hsl: 160 84% 39% !important;
-  --primary-foreground-hsl: 0 0% 100% !important;
-  --secondary-hsl: 217.2 32.6% 17.5% !important;
-  --secondary-foreground-hsl: 210 40% 98% !important;
-  --muted-hsl: 217.2 32.6% 17.5% !important;
-  --muted-foreground-hsl: 215 20.2% 65.1% !important;
-  --accent-hsl: 38 92% 50% !important;
-  --accent-foreground-hsl: 0 0% 0% !important;
-  --destructive-hsl: 0 62.8% 30.6% !important;
-  --destructive-foreground-hsl: 210 40% 98% !important;
-  --success-hsl: 142 70% 45% !important;
-  --border-hsl: 217.2 32.6% 17.5% !important;
-  --input-hsl: 217.2 32.6% 17.5% !important;
-  --ring-hsl: 160 84% 39% !important;
+  --background: 222.2 84% 4.9% !important;
+  --foreground: 210 40% 98% !important;
+  --card: 222.2 84% 4.9% !important;
+  --card-foreground: 210 40% 98% !important;
+  --popover: 222.2 84% 4.9% !important;
+  --popover-foreground: 210 40% 98% !important;
+  --primary: 160 84% 39% !important;
+  --primary-foreground: 0 0% 100% !important;
+  --secondary: 217.2 32.6% 17.5% !important;
+  --secondary-foreground: 210 40% 98% !important;
+  --muted: 217.2 32.6% 17.5% !important;
+  --muted-foreground: 215 20.2% 65.1% !important;
+  --accent: 38 92% 50% !important;
+  --accent-foreground: 0 0% 0% !important;
+  --destructive: 0 62.8% 30.6% !important;
+  --destructive-foreground: 210 40% 98% !important;
+  --success: 142 70% 45% !important;
+  --border: 217.2 32.6% 17.5% !important;
+  --input: 217.2 32.6% 17.5% !important;
+  --ring: 160 84% 39% !important;
 }
 
 /* ───────── Global resets ───────── */
@@ -137,7 +166,7 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 }
 
 /* ───────── Focus ring utility ───────── */
-* {
+*:not(button) {
   @apply border-border;
 }
 
@@ -164,4 +193,59 @@ input[type="date"]::-webkit-datetime-edit-year-field {
 
 .animate-in.slide-in-from-right {
   animation: slide-in-from-right 0.3s ease-out;
+}
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', sans-serif;
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar: hsl(var(--sidebar));
+  --color-chart-5: hsl(var(--chart-5));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-1: hsl(var(--chart-1));
+  --color-ring: hsl(var(--ring));
+  --color-input: hsl(var(--input));
+  --color-border: hsl(var(--border));
+  --color-destructive: hsl(var(--destructive));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card: hsl(var(--card));
+  --color-foreground: hsl(var(--foreground));
+  --color-background: hsl(var(--background));
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
 }

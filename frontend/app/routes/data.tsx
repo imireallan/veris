@@ -9,15 +9,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const [findings, sites, reports, cipCycles, plans, frameworks, orgs] =
     await Promise.all([
-      api.get("/api/findings/", token).catch(() => ({ count: 0, results: [] })),
-      api.get("/api/sites/", token).catch(() => ({ count: 0, results: [] })),
-      api.get("/api/reports/", token).catch(() => ({ count: 0, results: [] })),
-      api.get("/api/cip-cycles/", token).catch(() => ({ count: 0, results: [] })),
-      api.get("/api/plans/", token).catch(() => ({ count: 0, results: [] })),
-      api.get("/api/frameworks/", token).catch(() => ({ count: 0, results: [] })),
-      api.get("/api/organizations/", token).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/findings/", token, request).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/sites/", token, request).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/reports/", token, request).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/cip-cycles/", token, request).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/plans/", token, request).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/frameworks/", token, request).catch(() => ({ count: 0, results: [] })),
+      api.get("/api/organizations/", token, request).catch(() => ({ count: 0, results: [] })),
     ]);
-
+  
   return { findings, sites, reports, cipCycles, plans, frameworks, orgs };
 }
 

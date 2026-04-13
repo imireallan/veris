@@ -3,7 +3,9 @@ Flat API routes for assessment resources — used by assessment detail page.
 These are org-scoped via permission checks and query params, not URL kwargs.
 """
 
-from rest_framework import permissions, viewsets
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 
 from assessments.models import (
     Assessment,
@@ -223,6 +225,61 @@ class FlatAssessmentResponseViewSet(viewsets.ModelViewSet):
                     )
             return AssessmentResponse.objects.none()
         return AssessmentResponse.objects.none()
+
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def validate(self, request, pk=None):
+        """
+        Trigger AI validation for a response.
+        Compares response text against evidence documents in Pinecone.
+        Updates validation_status, confidence_score, and citations.
+        """
+        from assessments.services.validation import validate_response
+
+        response_obj = self.get_object()
+
+        if not response_obj.answer_text:
+            return Response(
+                {"error": "No answer text to validate"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get organization from assessment
+        org_id = str(response_obj.assessment.organization_id)
+
+        # Run validation pipeline
+        result = validate_response(
+            response_text=response_obj.answer_text,
+            organization_id=org_id,
+            existing_evidence_ids=response_obj.evidence_files,
+        )
+
+        # Update response with validation results
+        response_obj.validation_status = result.validation_status
+        response_obj.confidence_score = result.confidence_score
+        response_obj.citations = result.citations
+        response_obj.ai_feedback = result.feedback
+        response_obj.ai_validated = True
+        response_obj.save(
+            update_fields=[
+                "validation_status",
+                "confidence_score",
+                "citations",
+                "ai_feedback",
+                "ai_validated",
+            ]
+        )
+
+        return Response(
+            {
+                "validation_status": result.validation_status,
+                "confidence_score": result.confidence_score,
+                "citations": result.citations,
+                "feedback": result.feedback,
+                "matching_chunks": len(result.similar_chunks),
+            }
+        )
 
 
 class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):

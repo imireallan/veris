@@ -21,7 +21,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Access denied", { status: 403 });
   }
 
-  const response = await api.get<any>(`/api/organizations/${orgId}/templates/`, token).catch(() => []);
+  const response = await api.get<any>(`/api/organizations/${orgId}/templates/`, token, request).catch(() => []);
   const templates = Array.isArray(response) ? response : (response?.results || []);
 
   return { templates, orgId, user };
@@ -42,9 +42,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
         name, 
         description,
         organization: orgId 
-      }, token);
+      }, token, request);
       return redirect(`/organizations/${orgId}/templates`);
     } catch (err: any) {
+      if (err instanceof Response && err.status === 302) throw err;
       return { error: err.message ?? "Failed to create template" };
     }
   }
@@ -52,9 +53,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (intent === "delete-template") {
     const templateId = formData.get("template_id") as string;
     try {
-      await api.delete(`/api/organizations/${orgId}/templates/${templateId}/`, token);
+      await api.delete(`/api/organizations/${orgId}/templates/${templateId}/`, token, request);
       return redirect(`/organizations/${orgId}/templates`);
     } catch (err: any) {
+      if (err instanceof Response && err.status === 302) throw err;
       return { error: err.message ?? "Failed to delete template" };
     }
   }

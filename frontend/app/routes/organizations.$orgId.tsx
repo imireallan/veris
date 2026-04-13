@@ -10,9 +10,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId!;
 
-  const org = await api.get<any>(`/api/organizations/${orgId}/`, token);
+  const org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
 
-  const allAssessments = await api.get<any>(`/api/assessments/`, token).catch(() => []);
+  const allAssessments = await api.get<any>(`/api/assessments/`, token, request).catch(() => []);
   const assessmentList = Array.isArray(allAssessments) 
     ? allAssessments 
     : (allAssessments?.results || []);

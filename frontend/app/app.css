@@ -139,6 +139,49 @@ body {
   color-scheme: light dark;
 }
 
+/* ───────── Sonner Toast Styles ───────── */
+/* Custom styling for Sonner toasts to match our design system */
+:root {
+  --toast-bg: var(--background);
+  --toast-text: var(--foreground);
+  --toast-border: var(--border);
+  --toast-success-bg: hsl(var(--success));
+  --toast-error-bg: hsl(var(--destructive));
+  --toast-warning-bg: hsl(var(--accent));
+  --toast-info-bg: hsl(var(--primary));
+}
+
+.toaster {
+  --normal-bg: var(--toast-bg);
+  --normal-text: var(--toast-text);
+  --normal-border: var(--toast-border);
+}
+
+.cn-toast {
+  @apply border-border shadow-lg backdrop-blur-sm;
+  font-size: 0.875rem;
+}
+
+.cn-toast[data-type="success"] {
+  @apply border-l-4;
+  border-left-color: var(--toast-success-bg);
+}
+
+.cn-toast[data-type="error"] {
+  @apply border-l-4;
+  border-left-color: var(--toast-error-bg);
+}
+
+.cn-toast[data-type="warning"] {
+  @apply border-l-4;
+  border-left-color: var(--toast-warning-bg);
+}
+
+.cn-toast[data-type="info"] {
+  @apply border-l-4;
+  border-left-color: var(--toast-info-bg);
+}
+
 /* Fix native date picker inheriting HSL colors and showing blank cells */
 input[type="date"]::-webkit-calendar-picker-indicator {
   color-scheme: light;

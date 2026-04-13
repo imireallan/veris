@@ -16,7 +16,13 @@ import {
   Card, 
   CardContent, 
   Badge, 
-  Button 
+  Button,
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "~/components/ui";
 
 function UploadEvidenceButton({
@@ -386,6 +392,18 @@ export default function QuestionnaireRoute() {
 
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/assessments/${assessmentId}`}>Assessment</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Questionnaire</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Questionnaire</h2>
         <Link 

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, FileText, Plus } from "lucide-react";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { Button, PageHeader, SearchBar, EmptyState } from "~/components/ui";
+import { Button, SearchBar, EmptyState, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
 import type { User } from "~/types";
 import { RBAC } from "~/types/rbac";
@@ -20,16 +20,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const assessmentsResponse = await api.get<any>(`/api/organizations/${orgId}/assessments/`, token, request);
   
   const data = assessmentsResponse?.results || (Array.isArray(assessmentsResponse) ? assessmentsResponse : []);
+  
+  // Also fetch org name for breadcrumb
+  const org = await api.get<any>(`/api/organizations/${orgId}/`, token, request).catch(() => null);
 
   return { 
     assessments: data, 
     orgId, 
     user,
+    orgName: org?.name || "Organization",
   };
 }
 
 export default function OrganizationAssessments() {
-  const { assessments, orgId, user } = useLoaderData<typeof loader>();
+  const { assessments, orgId, user, orgName } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const search = searchParams.get("q") || "";
@@ -99,6 +103,18 @@ export default function OrganizationAssessments() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink href={`/organizations/${orgId}`}>{orgName}</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Assessments</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-semibold text-foreground flex items-center gap-2">

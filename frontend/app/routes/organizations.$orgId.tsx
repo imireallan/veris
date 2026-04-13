@@ -90,12 +90,14 @@ export default function OrganizationDetailRoute() {
                 Members & Invites →
               </Link>
               
-              <Link
-                to={`/organizations/${org.id}/settings`}
-                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
-              >
-                Settings →
-              </Link>
+              {user.fallbackRole === "SUPERADMIN" && (
+                <Link
+                  to={`/organizations/${org.id}/settings`}
+                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                >
+                  Settings →
+                </Link>
+              )}
             </>
           )}
         </div>

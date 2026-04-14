@@ -45,6 +45,7 @@ from users.permissions import (
 
 class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     """Global framework reference data - not org-scoped."""
+
     queryset = Framework.objects.all()
     serializer_class = FrameworkSerializer
     permission_classes = [IsAuthenticated]
@@ -123,9 +124,7 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
         # Filter assessments by user's organizations
         return Assessment.objects.filter(
             organization_id__in=memberships
-        ).select_related(
-            "site", "focus_area", "framework", "created_by", "assigned_to"
-        )
+        ).select_related("site", "focus_area", "framework", "created_by", "assigned_to")
 
     @action(detail=True, methods=["get"])
     def full_detail(self, request, pk=None):

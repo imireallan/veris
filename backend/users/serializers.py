@@ -1,14 +1,19 @@
 from rest_framework import serializers
 
 from organizations.models import OrganizationMembership
+
 from .models import User
 
 
 class OrganizationMembershipSerializer(serializers.ModelSerializer):
     """Nested serializer for organization membership info."""
 
-    organization_name = serializers.CharField(source="organization.name", read_only=True)
-    organization_slug = serializers.CharField(source="organization.slug", read_only=True)
+    organization_name = serializers.CharField(
+        source="organization.name", read_only=True
+    )
+    organization_slug = serializers.CharField(
+        source="organization.slug", read_only=True
+    )
     role_name = serializers.SerializerMethodField()
 
     class Meta:

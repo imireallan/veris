@@ -6,16 +6,16 @@ Ensures users can only see data from organizations they belong to.
 import pytest
 from rest_framework import status
 
-from organizations.models import Organization, OrganizationMembership
 from assessments.models import Assessment
-from users.models import User
 
 
 @pytest.mark.django_db
 class TestUserViewSetMultiTenant:
     """Test UserViewSet organization scoping."""
 
-    def test_superuser_sees_all_users(self, api_factory, make_user, make_org, make_membership, superuser):
+    def test_superuser_sees_all_users(
+        self, api_factory, make_user, make_org, make_membership, superuser
+    ):
         """Superusers can see all users across all organizations."""
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
@@ -32,7 +32,9 @@ class TestUserViewSetMultiTenant:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data["results"]) == 3  # superuser + user1 + user2
 
-    def test_user_sees_only_org_members(self, api_factory, make_user, make_org, make_membership):
+    def test_user_sees_only_org_members(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """Regular users only see members of their organization."""
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
@@ -56,7 +58,9 @@ class TestUserViewSetMultiTenant:
         assert user2.email in emails
         assert user3.email not in emails
 
-    def test_user_sees_users_from_specific_org(self, api_factory, make_user, make_org, make_membership):
+    def test_user_sees_users_from_specific_org(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """Users can filter by specific organization they belong to."""
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
@@ -82,7 +86,9 @@ class TestUserViewSetMultiTenant:
         assert user2.email in emails
         assert user3.email not in emails
 
-    def test_user_cannot_access_other_org(self, api_factory, make_user, make_org, make_membership):
+    def test_user_cannot_access_other_org(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """Users cannot access users from organizations they don't belong to."""
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
@@ -101,7 +107,9 @@ class TestUserViewSetMultiTenant:
         assert len(response.data["results"]) == 0  # Empty list, not 403
         assert response.data["count"] == 0
 
-    def test_me_endpoint_returns_memberships(self, api_factory, make_user, make_org, make_membership):
+    def test_me_endpoint_returns_memberships(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """The /me endpoint returns all user memberships with role info."""
         user = make_user(email="test@user.com", name="Test User")
         org1 = make_org(name="Org 1", slug="org1")
@@ -128,10 +136,14 @@ class TestUserViewSetMultiTenant:
 class TestAssessmentViewSetMultiTenant:
     """Test AssessmentViewSet organization scoping."""
 
-    def test_user_sees_only_org_assessments(self, api_factory, make_user, make_org, make_membership):
+    def test_user_sees_only_org_assessments(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """Users only see assessments from their organization."""
-        from datetime import datetime, timedelta
+        from datetime import timedelta
+
         from django.utils import timezone
+
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
         user1 = make_user(email="user1@org1.com")
@@ -148,13 +160,6 @@ class TestAssessmentViewSetMultiTenant:
             start_date=now,
             due_date=now + timedelta(days=30),
         )
-        a2 = Assessment.objects.create(
-            organization=org2,
-            created_by=user2,
-            framework_id=None,
-            start_date=now,
-            due_date=now + timedelta(days=30),
-        )
 
         client = api_factory
         client.force_authenticate(user=user1)
@@ -165,10 +170,11 @@ class TestAssessmentViewSetMultiTenant:
         assert len(response.data["results"]) == 1
         assert response.data["results"][0]["id"] == str(a1.id)
 
-    def test_user_cannot_see_other_org_assessments(self, api_factory, make_user, make_org, make_membership):
+    def test_user_cannot_see_other_org_assessments(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """Users cannot see assessments from other organizations."""
-        from datetime import datetime, timedelta
-        from django.utils import timezone
+
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
         user1 = make_user(email="user1@org1.com")
@@ -177,14 +183,6 @@ class TestAssessmentViewSetMultiTenant:
         # Create assessment in org2
         user2 = make_user(email="user2@org2.com")
         make_membership(user=user2, organization=org2, fallback_role="ADMIN")
-        now = timezone.now()
-        a2 = Assessment.objects.create(
-            organization=org2,
-            created_by=user2,
-            framework_id=None,
-            start_date=now,
-            due_date=now + timedelta(days=30),
-        )
 
         client = api_factory
         client.force_authenticate(user=user1)
@@ -201,10 +199,14 @@ class TestAssessmentViewSetMultiTenant:
 class TestFlatAssessmentViewSetMultiTenant:
     """Test FlatAssessmentViewSet organization scoping."""
 
-    def test_flat_assessments_scoped_to_user_orgs(self, api_factory, make_user, make_org, make_membership):
+    def test_flat_assessments_scoped_to_user_orgs(
+        self, api_factory, make_user, make_org, make_membership
+    ):
         """Flat assessment endpoint returns only org-scoped assessments."""
-        from datetime import datetime, timedelta
+        from datetime import timedelta
+
         from django.utils import timezone
+
         org1 = make_org(name="Org 1")
         org2 = make_org(name="Org 2")
         user1 = make_user(email="user1@org1.com")
@@ -217,13 +219,6 @@ class TestFlatAssessmentViewSetMultiTenant:
         a1 = Assessment.objects.create(
             organization=org1,
             created_by=user1,
-            framework_id=None,
-            start_date=now,
-            due_date=now + timedelta(days=30),
-        )
-        a2 = Assessment.objects.create(
-            organization=org2,
-            created_by=user2,
             framework_id=None,
             start_date=now,
             due_date=now + timedelta(days=30),

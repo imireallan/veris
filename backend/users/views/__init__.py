@@ -65,9 +65,7 @@ class UserViewSet(viewsets.ModelViewSet):
             # Determine role display
             if membership.role:
                 org_data["role"] = membership.role.name  # Custom role name
-                org_data["fallback_role"] = (
-                    membership.fallback_role
-                )  # Permission role
+                org_data["fallback_role"] = membership.fallback_role  # Permission role
             else:
                 org_data["role"] = membership.fallback_role
                 org_data["fallback_role"] = membership.fallback_role

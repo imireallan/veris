@@ -5,7 +5,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { RBAC } from "~/types/rbac";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select } from "~/components/ui";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
@@ -178,12 +178,24 @@ export default function OrganizationMembersRoute() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("");
+  const [inviteRoleLabel, setInviteRoleLabel] = useState("");
   const lastActionType = useRef<string | null>(null);
+
+  // Role label helper
+  const getRoleLabel = (role: string) => {
+    return role === "ADMIN" ? "Admin - Full org management" :
+           role === "COORDINATOR" ? "Coordinator - Manage assessments" :
+           role === "ASSESSOR" ? "Assessor - View and edit assessments" :
+           role === "CONSULTANT" ? "Consultant - View and collaborate" :
+           role === "OPERATOR" ? "Operator - Basic access" :
+           "Executive - View only";
+  };
 
   // Initialize role to first available option when modal opens
   useEffect(() => {
     if (showInviteModal && availableInviteRoles.length > 0 && !inviteRole) {
       setInviteRole(availableInviteRoles[0]);
+      setInviteRoleLabel(getRoleLabel(availableInviteRoles[0]));
     }
   }, [showInviteModal, availableInviteRoles, inviteRole]);
 
@@ -449,22 +461,23 @@ export default function OrganizationMembersRoute() {
 
             <div className="space-y-2">
               <Label htmlFor="fallback_role">Role</Label>
-              <Select
-                id="fallback_role"
-                name="fallback_role"
-                value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value)}
-                required
-                options={availableInviteRoles.map((role) => ({
-                  value: role,
-                  label: role === "ADMIN" ? "Admin - Full org management" :
-                         role === "COORDINATOR" ? "Coordinator - Manage assessments" :
-                         role === "ASSESSOR" ? "Assessor - View and edit assessments" :
-                         role === "CONSULTANT" ? "Consultant - View and collaborate" :
-                         role === "OPERATOR" ? "Operator - Basic access" :
-                         "Executive - View only",
-                }))}
-              />
+              <Select value={inviteRole} onValueChange={(v) => {
+                setInviteRole(v);
+              }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>{inviteRole ? getRoleLabel(inviteRole) : "Select a role"}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {availableInviteRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {getRoleLabel(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="fallback_role" value={inviteRole} />
               <p className="text-xs text-muted-foreground">
                 You can only invite users with roles equal to or lower than your own ({userRole}).
               </p>

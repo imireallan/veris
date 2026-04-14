@@ -1,17 +1,17 @@
 import { useLoaderData, Link, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Filter, FileText, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, FileText, Plus, X } from "lucide-react";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { PageHeader, SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "~/components/ui";
+import { PageHeader, SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const url = new URL(request.url);
-  const orgFilter = url.searchParams.get("org");
+  const orgFilter = (url.searchParams.get("org") || url.searchParams.get("organization") || "").replace(/\/$/, "");
 
   const fetchWithLog = async (path: string, label: string) => {
     try {
@@ -23,15 +23,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
   };
 
   // Non-admin users are server-side scoped to their own org by default.
-  // For admins, optionally pass ?organization= to filter.
+  // For admins, optionally pass ?org= to filter.
   const isSuperAdmin = user.fallbackRole === "SUPERADMIN";
 
   const assessmentsPath = isSuperAdmin && orgFilter
-    ? `/api/assessments/?organization=${orgFilter}`
+    ? `/api/assessments?organization=${orgFilter}`
     : "/api/assessments/";
 
   const orgPath = orgFilter
-    ? `/api/organizations/?organization=${orgFilter}`
+    ? `/api/organizations?organization=${orgFilter}`
     : `/api/organizations/`;
 
   const [assessments, sites, frameworks, focusAreas, organizations] =
@@ -85,7 +85,7 @@ export default function AssessmentsListRoute() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
-  const activeOrg = searchParams.get("org") || "";
+  const activeOrg = (searchParams.get("org") || searchParams.get("organization") || "").replace(/\/$/, "");
 
   const isSuperAdmin = user.fallbackRole === "SUPERADMIN";
 
@@ -124,6 +124,9 @@ export default function AssessmentsListRoute() {
       f.name,
     ]),
   );
+
+  const activeOrgName = activeOrg ? orgMap.get(activeOrg) : null;
+  const displayValue = activeOrg ? (activeOrgName || activeOrg) : "all";
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -205,27 +208,37 @@ export default function AssessmentsListRoute() {
 
       {isSuperAdmin && (
         <div className="flex gap-3 items-center">
-          <div className="relative">
-            <select
-              value={activeOrg}
-              onChange={(e) => {
-                const v = e.target.value;
+          <div className="relative min-w-[200px]">
+            <Select
+              value={displayValue}
+              onValueChange={(v) => {
                 const next = new URLSearchParams(searchParams);
-                if (v) next.set("org", v);
-                else next.delete("org");
+                if (v && v !== "all") {
+                  next.set("org", v);
+                } else {
+                  next.delete("org");
+                }
                 next.delete("q");
                 setSearchParams(next);
               }}
-              className="appearance-none bg-background border rounded-lg pl-9 pr-8 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             >
-              <option value="">All Organizations</option>
-              {Array.isArray(organizations) &&
-                organizations.map((o: any) => (
-                  <option key={o.id} value={o.id}>
-                    {o.name}
-                  </option>
-                ))}
-            </select>
+              <SelectTrigger className="w-full pl-9">
+                <SelectValue>
+                  {activeOrgName || "All Organizations"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">All Organizations</SelectItem>
+                  {Array.isArray(organizations) &&
+                    organizations.map((o: any) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}
+                      </SelectItem>
+                    ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <Filter className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
           </div>
           {activeOrg && (
@@ -239,6 +252,7 @@ export default function AssessmentsListRoute() {
               }}
               className="text-xs h-8"
             >
+              <X className="w-3 h-3 mr-1" />
               Clear
             </Button>
           )}

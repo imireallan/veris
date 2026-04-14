@@ -12,6 +12,7 @@ export default [
     route("assessments/:id/questionnaire", "routes/assessments.$id.questionnaire.tsx"),
     route("data", "routes/data.tsx"),
     route("settings/theme", "routes/settings/theme.tsx"),
+    route("settings/profile", "routes/settings.profile.tsx"),
     route("knowledge", "routes/knowledge/index.tsx"),
     route("knowledge/chat", "routes/knowledge/chat.tsx"),
     // Organization routes
@@ -27,6 +28,6 @@ export default [
   // Public routes (no auth/layout required)
   route("invitations/:token", "routes/invitations.$token.tsx"),
   route("onboarding/set-password/:token", "routes/onboarding.set-password.$token.tsx"),
-  route("reset-password", "routes/reset-password.request.tsx"),
+  route("reset-password/request", "routes/reset-password.request.tsx"),
   route("reset-password/:uid/:token", "routes/reset-password.$uid.$token.tsx"),
 ] satisfies RouteConfig;

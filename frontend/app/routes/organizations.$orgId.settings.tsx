@@ -1,10 +1,10 @@
 import { useFetcher, useLoaderData, useNavigate, useParams } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { data, redirect } from "react-router";
+import { data, Link } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select } from "~/components/ui";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, SelectWithOptions as Select } from "~/components/ui";
 import { Save, Building2 } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef } from "react";
@@ -16,7 +16,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
   if (user.fallbackRole !== "SUPERADMIN") {
-    throw redirect("/");
+    throw new Response("Access denied. Organization settings require SUPERADMIN privileges.", { 
+      status: 403 
+    });
   }
 
   const org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
@@ -31,7 +33,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
   if (user.fallbackRole !== "SUPERADMIN") {
-    return data({ error: "Insufficient permissions" }, { status: 403 });
+    throw new Response("Access denied. Organization settings require SUPERADMIN privileges.", { 
+      status: 403 
+    });
   }
 
   const formData = await request.formData();
@@ -218,6 +222,41 @@ export default function OrganizationSettingsRoute() {
           </Button>
         </div>
       </fetcher.Form>
+    </div>
+  );
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  const errorWithStatus = error as Error & { status?: number };
+  const status = errorWithStatus.status;
+  const isForbidden = status === 403;
+
+  return (
+    <div className="min-h-[400px] flex items-center justify-center p-8">
+      <div className="text-center space-y-4 max-w-md">
+        {isForbidden ? (
+          <>
+            <div className="text-6xl">🔒</div>
+            <h2 className="text-2xl font-semibold">Access Denied</h2>
+            <p className="text-muted-foreground">
+              Organization settings require SUPERADMIN privileges.
+              Contact your administrator if you need access.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="text-6xl">⚠️</div>
+            <h2 className="text-2xl font-semibold">Something went wrong</h2>
+            <p className="text-muted-foreground">{error.message}</p>
+          </>
+        )}
+        <Link
+          to="/organizations"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
+          ← Back to Organizations
+        </Link>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from organizations.models import OrganizationMembership
@@ -10,13 +11,19 @@ from users.serializers import UserSerializer
 class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     lookup_field = "pk"
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         """
         Filter users by organization membership for multi-tenant isolation.
         Superusers can see all users; regular users only see members of their org.
+        Users can always access their own profile.
         """
         user = self.request.user
+
+        # Allow users to access their own profile
+        if self.action == "retrieve" and self.kwargs.get("pk") == str(user.id):
+            return User.objects.filter(id=user.id)
 
         # Superusers can see all users
         if user.is_superuser:
@@ -44,6 +51,15 @@ class UserViewSet(viewsets.ModelViewSet):
 
         # Return only users who are members of this organization
         return User.objects.filter(memberships__organization_id=org_pk).distinct()
+
+    def get_permissions(self):
+        """
+        Allow users to update their own profile without org membership checks.
+        """
+        if self.action == "partial_update" and self.kwargs.get("pk") == str(self.request.user.id):
+            # User updating their own profile - just need to be authenticated
+            return [IsAuthenticated()]
+        return super().get_permissions()
 
     @action(detail=False, methods=["get"])
     def me(self, request):

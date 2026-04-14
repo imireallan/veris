@@ -47,10 +47,11 @@ class UserSerializer(serializers.ModelSerializer):
             "name",
             "status",
             "timezone",
+            "country",
             "is_staff",
             "is_active",
             "created_at",
             "updated_at",
             "memberships",
         )
-        read_only_fields = ("id", "created_at", "updated_at")
+        read_only_fields = ("id", "email", "created_at", "updated_at")

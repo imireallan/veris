@@ -10,6 +10,17 @@ import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef } from "react";
 import { RBAC } from "~/types/rbac";
 
+interface Membership {
+  id: string;
+  organization_id: string;
+  organization_name: string;
+  organization_slug: string;
+  role_name: string;
+  fallback_role: string;
+  is_lead_assessor: boolean;
+  joined_at: string;
+}
+
 interface ProfileData {
   id: string;
   email: string;
@@ -22,6 +33,7 @@ interface ProfileData {
     role: string;
     fallback_role: string;
   }>;
+  memberships: Membership[];
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {

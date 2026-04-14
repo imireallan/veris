@@ -228,6 +228,36 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         membership.save()
         return Response(self.get_serializer(membership).data)
 
+    @action(detail=True, methods=["post"])
+    def remove(self, request, pk=None, org_pk=None):
+        """Remove a member from the organization."""
+        membership = self.get_object()
+
+        # Check if requesting user has permission to remove members
+        requesting_membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+        
+        if not requesting_membership or not requesting_membership.has_permission("user:remove"):
+            return Response(
+                {"detail": "You do not have permission to remove members."},
+                status=403,
+            )
+
+        # Prevent self-removal
+        if membership.user == request.user:
+            return Response(
+                {"detail": "Cannot remove yourself. Transfer ownership first if needed."},
+                status=400,
+            )
+
+        # Delete the membership
+        membership.delete()
+        return Response(
+            {"detail": "Member removed successfully."},
+            status=status.HTTP_200_OK,
+        )
+
 
 class InvitationViewSet(viewsets.ModelViewSet):
     """Organization invitation routes — /api/organizations/:org_pk/invitations/.

@@ -125,9 +125,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     if (actionType === "remove_member") {
       const membershipId = formData.get("membershipId") as string;
-      // Note: Backend doesn't have delete endpoint for members yet
-      // This would need to be added to the backend
-      return { success: false, error: "Remove member not implemented on backend" };
+      await api.post(
+        `/api/organizations/${orgId}/members/${membershipId}/remove/`,
+        {},
+        token,
+        request
+      );
+      return { success: true, message: "Member removed successfully" };
     }
 
     if (actionType === "resend_invitation") {
@@ -179,6 +183,8 @@ export default function OrganizationMembersRoute() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("");
   const [inviteRoleLabel, setInviteRoleLabel] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [invitationSearch, setInvitationSearch] = useState("");
   const lastActionType = useRef<string | null>(null);
 
   // Role label helper
@@ -221,6 +227,46 @@ export default function OrganizationMembersRoute() {
           hasShownToast.current = true;
           lastActionType.current = null;
         }
+      } else if (lastActionType.current === "update_role") {
+        if ("success" in fetcher.data && fetcher.data.success) {
+          toastSuccess("Role Updated", fetcher.data.message as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        } else if ("error" in fetcher.data && fetcher.data.error) {
+          toastError("Update Failed", fetcher.data.error as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        }
+      } else if (lastActionType.current === "remove_member") {
+        if ("success" in fetcher.data && fetcher.data.success) {
+          toastSuccess("Member Removed", fetcher.data.message as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        } else if ("error" in fetcher.data && fetcher.data.error) {
+          toastError("Remove Failed", fetcher.data.error as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        }
+      } else if (lastActionType.current === "resend_invitation") {
+        if ("success" in fetcher.data && fetcher.data.success) {
+          toastSuccess("Invitation Resent", fetcher.data.message as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        } else if ("error" in fetcher.data && fetcher.data.error) {
+          toastError("Resend Failed", fetcher.data.error as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        }
+      } else if (lastActionType.current === "revoke_invitation") {
+        if ("success" in fetcher.data && fetcher.data.success) {
+          toastSuccess("Invitation Revoked", fetcher.data.message as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        } else if ("error" in fetcher.data && fetcher.data.error) {
+          toastError("Revoke Failed", fetcher.data.error as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        }
       }
     }
     if (fetcher.state === "idle" && fetcher.data === null) {
@@ -229,6 +275,27 @@ export default function OrganizationMembersRoute() {
   }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
 
   const isProcessing = fetcher.state === "submitting";
+
+  // Filter members and invitations by search
+  const filteredMembers = members.filter((m: any) => {
+    if (!memberSearch) return true;
+    const searchLower = memberSearch.toLowerCase();
+    return (
+      (m.user_name || "").toLowerCase().includes(searchLower) ||
+      (m.user_email || "").toLowerCase().includes(searchLower) ||
+      (m.role_name || m.fallback_role || "").toLowerCase().includes(searchLower)
+    );
+  });
+
+  const filteredInvitations = invitations.filter((i: any) => {
+    if (!invitationSearch) return true;
+    const searchLower = invitationSearch.toLowerCase();
+    return (
+      (i.email || "").toLowerCase().includes(searchLower) ||
+      (i.role_name || i.fallback_role || "").toLowerCase().includes(searchLower) ||
+      (i.status || "").toLowerCase().includes(searchLower)
+    );
+  });
 
   // Note: Form submission handled directly by fetcher.Form
   // actionType is set via hidden input field
@@ -272,21 +339,29 @@ export default function OrganizationMembersRoute() {
       {/* Members Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold">Members</h3>
               <CardDescription>
                 Current members of your organization
               </CardDescription>
             </div>
-            <Badge variant="secondary">{members.length} members</Badge>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search members..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="w-[200px]"
+              />
+              <Badge variant="secondary">{filteredMembers.length} members</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {members.length === 0 ? (
+          {filteredMembers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No members yet</p>
+              <p>{memberSearch ? `No members found matching "${memberSearch}"` : "No members yet"}</p>
             </div>
           ) : (
             <Table>
@@ -300,7 +375,7 @@ export default function OrganizationMembersRoute() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.map((member: any) => (
+                {filteredMembers.map((member: any) => (
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">
                       {member.user_name || "Unknown"}
@@ -325,11 +400,44 @@ export default function OrganizationMembersRoute() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem disabled>
-                            Change role
+                          <DropdownMenuItem>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const role = prompt(
+                                  `Enter new role for ${member.user_name || member.user_email}:\\n\\nADMIN, COORDINATOR, OPERATOR, EXECUTIVE, ASSESSOR, CONSULTANT`,
+                                  member.fallback_role || member.role_name
+                                );
+                                if (role && role.toUpperCase() !== (member.fallback_role || member.role_name)?.toUpperCase()) {
+                                  const formData = new FormData();
+                                  formData.append("actionType", "update_role");
+                                  formData.append("membershipId", member.id);
+                                  formData.append("fallback_role", role.toUpperCase());
+                                  fetcher.submit(formData, { method: "post" });
+                                }
+                              }}
+                              className="flex items-center w-full"
+                            >
+                              <Shield className="w-3 h-3 mr-2" />
+                              Change role
+                            </button>
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled>
-                            Remove member
+                          <DropdownMenuItem>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Remove ${member.user_name || member.user_email} from this organization?`)) {
+                                  const formData = new FormData();
+                                  formData.append("actionType", "remove_member");
+                                  formData.append("membershipId", member.id);
+                                  fetcher.submit(formData, { method: "post" });
+                                }
+                              }}
+                              className="flex items-center w-full text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3 mr-2" />
+                              Remove member
+                            </button>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -345,21 +453,29 @@ export default function OrganizationMembersRoute() {
       {/* Invitations Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold">Invitations</h3>
               <CardDescription>
                 Pending and processed invitations
               </CardDescription>
             </div>
-            <Badge variant="secondary">{invitations.length} invitations</Badge>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search invitations..."
+                value={invitationSearch}
+                onChange={(e) => setInvitationSearch(e.target.value)}
+                className="w-[200px]"
+              />
+              <Badge variant="secondary">{filteredInvitations.length} invitations</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {invitations.length === 0 ? (
+          {filteredInvitations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Mail className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No invitations sent</p>
+              <p>{invitationSearch ? `No invitations found matching "${invitationSearch}"` : "No invitations sent"}</p>
             </div>
           ) : (
             <Table>
@@ -373,7 +489,7 @@ export default function OrganizationMembersRoute() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invitations.map((invitation: any) => (
+                {filteredInvitations.map((invitation: any) => (
                   <TableRow key={invitation.id}>
                     <TableCell className="font-medium">
                       {invitation.email}

@@ -76,8 +76,10 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Assessment.objects.all()
-        org_id = self.kwargs.get("org_pk") or self.request.query_params.get(
-            "organization"
+        org_id = (
+            self.kwargs.get("org_pk")
+            or self.request.query_params.get("org")
+            or self.request.query_params.get("organization")
         )
         if org_id:
             qs = qs.filter(organization_id=org_id)
@@ -265,8 +267,10 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        org_id = self.kwargs.get("org_pk") or self.request.query_params.get(
-            "organization"
+        org_id = (
+            self.kwargs.get("org_pk")
+            or self.request.query_params.get("org")
+            or self.request.query_params.get("organization")
         )
         qs = Site.objects.all()
         if org_id:

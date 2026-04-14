@@ -45,7 +45,12 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        org_id = self.request.query_params.get("organization")
+        org_id = self.request.query_params.get("org") or self.request.query_params.get(
+            "organization"
+        )
+        # Strip trailing slashes from org_id if present
+        if org_id:
+            org_id = org_id.rstrip("/")
 
         # Explicit org filter requested — scope to that org
         if org_id:
@@ -73,7 +78,9 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        org_id = self.request.query_params.get("organization")
+        org_id = self.request.query_params.get("org") or self.request.query_params.get(
+            "organization"
+        )
         if not org_id:
             # Non-platform-admins default to their first membership
             if not (user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"):
@@ -290,7 +297,9 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         template_id = self.request.query_params.get("template")
-        organization_id = self.request.query_params.get("organization")
+        organization_id = self.request.query_params.get(
+            "org"
+        ) or self.request.query_params.get("organization")
         queryset = AssessmentQuestion.objects.select_related("assessment_template")
         if template_id:
             queryset = queryset.filter(assessment_template_id=template_id)
@@ -309,7 +318,9 @@ class FlatSiteViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        org_id = self.request.query_params.get("organization")
+        org_id = self.request.query_params.get("org") or self.request.query_params.get(
+            "organization"
+        )
 
         if org_id:
             if (

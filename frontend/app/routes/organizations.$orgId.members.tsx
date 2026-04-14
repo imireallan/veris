@@ -5,10 +5,38 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { RBAC } from "~/types/rbac";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel } from "~/components/ui";
-import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical } from "lucide-react";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
+import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef, useState } from "react";
+
+// Role hierarchy - higher number = more permissions
+const ROLE_HIERARCHY: Record<string, number> = {
+  SUPERADMIN: 100,
+  ADMIN: 80,
+  COORDINATOR: 60,
+  CONSULTANT: 50,
+  EXECUTIVE: 40,
+  ASSESSOR: 30,
+  OPERATOR: 20,
+};
+
+/**
+ * Get roles that this user can invite (equal or lower in hierarchy).
+ * Superusers can invite any role.
+ */
+function getAvailableRolesForInviter(userRole: string): string[] {
+  if (userRole === "SUPERADMIN") {
+    return ["ADMIN", "COORDINATOR", "ASSESSOR", "CONSULTANT", "OPERATOR", "EXECUTIVE"];
+  }
+  
+  const inviterPriority = ROLE_HIERARCHY[userRole] || 0;
+  
+  return Object.entries(ROLE_HIERARCHY)
+    .filter(([_, priority]) => priority <= inviterPriority)
+    .map(([role, _]) => role)
+    .filter(role => role !== "SUPERADMIN"); // Never allow inviting SUPERADMIN
+}
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -28,7 +56,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const members = Array.isArray(membersResponse) ? membersResponse : (membersResponse?.results || []);
   const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : (invitationsResponse?.results || []);
 
-  return { members, invitations, orgId };
+  // Get roles this user can invite based on their role
+  const availableInviteRoles = getAvailableRolesForInviter(user.fallbackRole);
+
+  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -45,6 +76,35 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const actionType = formData.get("actionType") as string;
 
   try {
+    if (actionType === "create_invitation") {
+      const email = formData.get("email") as string;
+      const fallbackRole = formData.get("fallback_role") as string;
+
+      if (!email || !fallbackRole) {
+        return data(
+          { error: "Email and role are required" },
+          { status: 400 }
+        );
+      }
+
+      // Validate user can invite this role (can't invite higher roles)
+      const availableRoles = getAvailableRolesForInviter(user.fallbackRole);
+      if (!availableRoles.includes(fallbackRole)) {
+        return data(
+          { error: `You cannot invite users with ${fallbackRole} role. Your role allows inviting: ${availableRoles.join(", ")}` },
+          { status: 403 }
+        );
+      }
+
+      const result = await api.post(
+        `/api/organizations/${orgId}/invitations/`,
+        { email, fallback_role: fallbackRole },
+        token,
+        request
+      );
+      return { success: true, message: `Invitation sent to ${email}` };
+    }
+
     if (actionType === "update_role") {
       const membershipId = formData.get("membershipId") as string;
       const role = formData.get("role") as string;
@@ -97,10 +157,12 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (error.status === 401) {
       throw error;
     }
+    // Log full error for debugging
+    console.error("Invitation error:", error);
     return data(
       {
         success: false,
-        error: error.body?.detail || error.message || "Action failed",
+        error: error.body?.detail || error.body?.email?.[0] || error.message || "Action failed",
       },
       { status: error.status || 500 }
     );
@@ -108,20 +170,57 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function OrganizationMembersRoute() {
-  const { members, invitations, orgId } = useLoaderData<typeof loader>();
+  const { members, invitations, orgId, availableInviteRoles, userRole } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
   const hasShownToast = useRef(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("");
+  const [inviteRoleLabel, setInviteRoleLabel] = useState("");
+  const lastActionType = useRef<string | null>(null);
+
+  // Role label helper
+  const getRoleLabel = (role: string) => {
+    return role === "ADMIN" ? "Admin - Full org management" :
+           role === "COORDINATOR" ? "Coordinator - Manage assessments" :
+           role === "ASSESSOR" ? "Assessor - View and edit assessments" :
+           role === "CONSULTANT" ? "Consultant - View and collaborate" :
+           role === "OPERATOR" ? "Operator - Basic access" :
+           "Executive - View only";
+  };
+
+  // Initialize role to first available option when modal opens
+  useEffect(() => {
+    if (showInviteModal && availableInviteRoles.length > 0 && !inviteRole) {
+      setInviteRole(availableInviteRoles[0]);
+      setInviteRoleLabel(getRoleLabel(availableInviteRoles[0]));
+    }
+  }, [showInviteModal, availableInviteRoles, inviteRole]);
 
   useEffect(() => {
+    // Track when form is submitted
+    if (fetcher.state === "submitting") {
+      lastActionType.current = "create_invitation";
+    }
+    
     if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
-        toastSuccess("Success", fetcher.data.message as string);
-        hasShownToast.current = true;
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Action failed", fetcher.data.error);
-        hasShownToast.current = true;
+      // Only show toast for the last action type
+      if (lastActionType.current === "create_invitation") {
+        if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
+          toastSuccess("Success", fetcher.data.message as string);
+          hasShownToast.current = true;
+          // Close modal and reset form on successful invitation
+          setShowInviteModal(false);
+          setInviteEmail("");
+          setInviteRole("");
+          lastActionType.current = null;
+        } else if ("error" in fetcher.data && fetcher.data.error) {
+          toastError("Invitation Failed", fetcher.data.error as string);
+          hasShownToast.current = true;
+          lastActionType.current = null;
+        }
       }
     }
     if (fetcher.state === "idle" && fetcher.data === null) {
@@ -130,6 +229,9 @@ export default function OrganizationMembersRoute() {
   }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
 
   const isProcessing = fetcher.state === "submitting";
+
+  // Note: Form submission handled directly by fetcher.Form
+  // actionType is set via hidden input field
 
   return (
     <div className="space-y-6">
@@ -143,13 +245,22 @@ export default function OrganizationMembersRoute() {
             Manage team members and pending invitations
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => navigate(`/organizations/${orgId}`)}
-        >
-          ← Back
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/organizations/${orgId}`)}
+          >
+            ← Back
+          </Button>
+          <Button
+            type="button"
+            onClick={() => setShowInviteModal(true)}
+          >
+            <UserPlus className="w-4 h-4 mr-2" />
+            Invite Member
+          </Button>
+        </div>
       </div>
 
       {fetcher.data?.error && (
@@ -321,6 +432,79 @@ export default function OrganizationMembersRoute() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Member Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invite Team Member</DialogTitle>
+            <DialogDescription>
+              Send an invitation to join your organization. The recipient will receive an email with a link to set up their account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <fetcher.Form method="post" className="space-y-4">
+            <input type="hidden" name="actionType" value="create_invitation" />
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="colleague@company.com"
+                required
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="fallback_role">Role</Label>
+              <Select value={inviteRole} onValueChange={(v) => {
+                setInviteRole(v);
+              }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue>{inviteRole ? getRoleLabel(inviteRole) : "Select a role"}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {availableInviteRoles.map((role) => (
+                      <SelectItem key={role} value={role}>
+                        {getRoleLabel(role)}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <input type="hidden" name="fallback_role" value={inviteRole} />
+              <p className="text-xs text-muted-foreground">
+                You can only invite users with roles equal to or lower than your own ({userRole}).
+              </p>
+            </div>
+
+            {fetcher.data?.error && (
+              <Alert variant="destructive">
+                <AlertDescription>{fetcher.data.error}</AlertDescription>
+              </Alert>
+            )}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowInviteModal(false)}
+                disabled={isProcessing}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isProcessing || !inviteEmail || !inviteRole}>
+                {isProcessing ? "Sending..." : "Send Invitation"}
+              </Button>
+            </DialogFooter>
+          </fetcher.Form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

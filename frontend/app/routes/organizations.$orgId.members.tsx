@@ -185,6 +185,9 @@ export default function OrganizationMembersRoute() {
   const [inviteRoleLabel, setInviteRoleLabel] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
   const [invitationSearch, setInvitationSearch] = useState("");
+  const [memberToRemove, setMemberToRemove] = useState<any | null>(null);
+  const [memberToEditRole, setMemberToEditRole] = useState<any | null>(null);
+  const [newRole, setNewRole] = useState("");
   const lastActionType = useRef<string | null>(null);
 
   // Role label helper
@@ -404,17 +407,8 @@ export default function OrganizationMembersRoute() {
                             <button
                               type="button"
                               onClick={() => {
-                                const role = prompt(
-                                  `Enter new role for ${member.user_name || member.user_email}:\\n\\nADMIN, COORDINATOR, OPERATOR, EXECUTIVE, ASSESSOR, CONSULTANT`,
-                                  member.fallback_role || member.role_name
-                                );
-                                if (role && role.toUpperCase() !== (member.fallback_role || member.role_name)?.toUpperCase()) {
-                                  const formData = new FormData();
-                                  formData.append("actionType", "update_role");
-                                  formData.append("membershipId", member.id);
-                                  formData.append("fallback_role", role.toUpperCase());
-                                  fetcher.submit(formData, { method: "post" });
-                                }
+                                setMemberToEditRole(member);
+                                setNewRole(member.fallback_role || member.role_name || "");
                               }}
                               className="flex items-center w-full"
                             >
@@ -425,14 +419,7 @@ export default function OrganizationMembersRoute() {
                           <DropdownMenuItem>
                             <button
                               type="button"
-                              onClick={() => {
-                                if (confirm(`Remove ${member.user_name || member.user_email} from this organization?`)) {
-                                  const formData = new FormData();
-                                  formData.append("actionType", "remove_member");
-                                  formData.append("membershipId", member.id);
-                                  fetcher.submit(formData, { method: "post" });
-                                }
-                              }}
+                              onClick={() => setMemberToRemove(member)}
                               className="flex items-center w-full text-destructive"
                             >
                               <Trash2 className="w-3 h-3 mr-2" />
@@ -619,6 +606,98 @@ export default function OrganizationMembersRoute() {
               </Button>
             </DialogFooter>
           </fetcher.Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <Dialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {memberToRemove?.user_name || memberToRemove?.user_email} from this organization? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMemberToRemove(null)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                const formData = new FormData();
+                formData.append("actionType", "remove_member");
+                formData.append("membershipId", memberToRemove.id);
+                fetcher.submit(formData, { method: "post" });
+                setMemberToRemove(null);
+              }}
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Removing..." : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={!!memberToEditRole} onOpenChange={(open) => !open && setMemberToEditRole(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+            <DialogDescription>
+              Update role for {memberToEditRole?.user_name || memberToEditRole?.user_email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-role">New Role</Label>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="COORDINATOR">Coordinator</SelectItem>
+                    <SelectItem value="OPERATOR">Operator</SelectItem>
+                    <SelectItem value="EXECUTIVE">Executive</SelectItem>
+                    <SelectItem value="ASSESSOR">Assessor</SelectItem>
+                    <SelectItem value="CONSULTANT">Consultant</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMemberToEditRole(null)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const formData = new FormData();
+                formData.append("actionType", "update_role");
+                formData.append("membershipId", memberToEditRole.id);
+                formData.append("fallback_role", newRole);
+                fetcher.submit(formData, { method: "post" });
+                setMemberToEditRole(null);
+              }}
+              disabled={isProcessing || !newRole}
+            >
+              {isProcessing ? "Updating..." : "Update Role"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

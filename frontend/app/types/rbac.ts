@@ -16,7 +16,16 @@ export class RBAC {
    */
   static isOrgMember(user: User, orgId: string): boolean {
     if (user.fallbackRole === "SUPERADMIN") return true;
-    return String(user.orgId) === String(orgId);
+    
+    // Check if this is the user's primary org
+    if (String(user.orgId) === String(orgId)) return true;
+    
+    // For multi-org users, check the organizations array
+    if (user.organizations) {
+      return user.organizations.some((org) => org.id === orgId);
+    }
+    
+    return false;
   }
 
   /**

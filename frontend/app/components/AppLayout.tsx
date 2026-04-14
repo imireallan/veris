@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { Menu, X, Sun, Moon } from "lucide-react"
 import Sidebar from "~/components/Sidebar"
 import { UserDropdown } from "~/components/UserDropdown"
+import { OrganizationSwitcher } from "~/components/OrganizationSwitcher"
 import type { User } from "~/types"
 
 interface AppLayoutProps {
@@ -87,6 +88,11 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
           </button>
 
           <div className="flex-1" />
+
+          {/* Organization Switcher - only for multi-org users */}
+          {user.organizations && user.organizations.length > 1 && (
+            <OrganizationSwitcher user={user} className="mr-4" />
+          )}
 
           {/* Theme toggle */}
           <button

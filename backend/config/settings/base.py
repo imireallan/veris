@@ -132,7 +132,13 @@ REST_FRAMEWORK = {
 }
 
 # CORS
-CORS_ALLOWED_ORIGINS = ["http://localhost:3000", "http://127.0.0.1:3000"]
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all origins in development
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
 
 # File Storage Configuration
 # Local (development) vs S3 (production)

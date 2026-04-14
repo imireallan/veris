@@ -12,20 +12,28 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
+  // SUPERADMIN: fetch all orgs from API
   if (user.fallbackRole === "SUPERADMIN") {
     const response = await api.get<any>("/api/organizations/", token, request).catch(() => []);
     const orgsList = Array.isArray(response) ? response : (response?.results || []);
     return { orgs: orgsList, token };
   }
 
-  if (user.orgId) {
-    try {
-      const org = await api.get<any>(`/api/organizations/${user.orgId}/`, token, request);
-      return { orgs: [org], token };
-    } catch (error) {
-      console.error(`Error fetching org ${user.orgId}:`, error);
-      return { orgs: [], token };
-    }
+  // Regular users: show all orgs they belong to (from user.organizations)
+  if (user.organizations && user.organizations.length > 0) {
+    // Fetch details for each org the user belongs to
+    const orgDetails = await Promise.all(
+      user.organizations.map(async (org) => {
+        try {
+          const detail = await api.get<any>(`/api/organizations/${org.id}/`, token, request);
+          return detail;
+        } catch (error) {
+          console.error(`Error fetching org ${org.id}:`, error);
+          return null;
+        }
+      })
+    );
+    return { orgs: orgDetails.filter(Boolean), token };
   }
 
   return { orgs: [], token };

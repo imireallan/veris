@@ -1,52 +1,54 @@
-# Veris - Product Roadmap (Our Consultancy Client-First Strategy)
+# Veris - Product Roadmap (Generic Platform, TDi-First)
 
 ## Overview
 
-We're building a white-label AI sustainability platform to sell to Target Consultancy as a reseller. Our Consultancy Client will re-brand and deploy the platform for their own clients (ESG Certification Standard/ARC, Coal Industry Program, mining companies, etc.).
+We're building a **generic, white-label AI sustainability platform**. **TDi Sustainability is the primary target customer**, but the platform is designed so any sustainability consultancy can use it with minimal customization.
 
-**Key insight**: Our Consultancy Client doesn't need the full feature set — they need to be impressed by AI capabilities they can't build internally while seeing familiar functionality they already serve clients with.
+**Key insight**: Consultancies don't need the full feature set initially — they need to be impressed by AI capabilities they can't build internally while seeing familiar functionality they already serve clients with.
 
-**Build priority**: Demo-first. We build what impresses Our Consultancy Client first, not what's technically optimal.
+**Build priority**: Demo-first, generic foundation. We build what impresses TDi first, but keep everything configurable for competitors.
+
+**AI Status**: Framework-agnostic RAG — works for any uploaded standards document (Bettercoal, OECD, EO100, etc.)
 
 ---
 
 ## Phase 1: Core Platform (Weeks 1-3)
 
-### Focus: "Our Consultancy Client can see their future platform"
+### Focus: "Generic platform with TDi demo ready"
 
 ### Deliverables
 - [ ] **Monorepo setup**: FastAPI AI + React Router v7 + Django Core
-- [ ] **Multi-tenant architecture**: Organizations, users, roles
+- [ ] **Multi-tenant architecture**: Organizations, users, roles (generic)
 - [ ] **Auth system**: JWT with role-based access
 - [ ] **White-label theme engine**: CSS variables with UI builder
-- [ ] **3 sample tenant configs**: Our Consultancy Client, Major Energy Operator, Coal Industry Program (demo ready)
-- [ ] **Basic dashboard**: Role-based views
-- [ ] **Our Consultancy Client-branded demo site ready to show**
+- [ ] **3 sample tenant configs**: TDi, Bettercoal, EO100 (demo ready)
+- [ ] **Basic dashboard**: Role-based views with org switcher
+- [ ] **Generic demo site**: Configurable branding (TDi-branded for pitch)
 
 ### Why This Matters
-- Shows Our Consultancy Client their platform's future
-- Multi-tenant architecture proves scalability
-- Theme engine = white-label capability for their clients
-- 3 demo configs = immediate conversation with their actual clients
+- Shows TDi their platform's future
+- Multi-tenant architecture proves scalability for ANY consultancy
+- Theme engine = white-label capability for TDi AND competitors
+- 3 demo configs = immediate conversation with TDi's actual clients
 
 ---
 
 ## Phase 2: AI Knowledge Base (Weeks 4-6)
 
-### Focus: "This replaces 3 of your tools at once"
+### Focus: "Framework-agnostic AI that works for any standards"
 
 ### Deliverables
-- [ ] **Document upload pipeline**: PDF, DOCX extraction
+- [ ] **Document upload pipeline**: PDF, DOCX extraction (any framework)
 - [ ] **Vector embedding pipeline**: Chunking, OpenAI embeddings, Pinecone
 - [ ] **Knowledge base UI**: Document browser, search, categories
 - [ ] **AI Chat assistant**: Context-aware responses with source citations
-- [ ] **Pre-loaded knowledge**: ESG Certification Standard Standard, MSCI methodology
-- [ ] **RAG pipeline working end-to-end**
+- [ ] **Pre-loaded knowledge**: Bettercoal Code, EO100 Standard, OECD Guidelines
+- [ ] **RAG pipeline working end-to-end** (framework-agnostic)
 
 ### Why This Matters
-- Replaces Customer's ICAT (standards tool) + Search360 (news monitor) + tedd (due diligence tool search)
-- AI chatbot = something Our Consultancy Client can't build in-house
-- Pre-loaded knowledge = immediate value demonstration
+- Replaces TDi's ICAT + Search360 + tedd (and competitor equivalents)
+- AI chatbot = something NO consultancy can build in-house
+- Works for ANY uploaded standards document (competitive advantage)
 
 ---
 

@@ -37,7 +37,9 @@ async function apiRequest(path: string, options?: RequestOptions, baseUrl?: stri
   }
 
   // Ensure trailing slash for Django APPEND_SLASH compatibility
-  const normalizedPath = path.endsWith("/") ? path : `${path}/`;
+  // Handle query params correctly: /path?query -> /path/?query
+  const [pathOnly, queryString] = path.split('?');
+  const normalizedPath = pathOnly.endsWith("/") ? path : `${pathOnly}/${queryString ? `?${queryString}` : ''}`;
   const url = `${baseUrl ?? API_URL}${normalizedPath}`;
   const res = await fetch(url, { ...init, headers });
 

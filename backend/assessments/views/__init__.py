@@ -35,6 +35,7 @@ from assessments.serializers import (
     SiteSerializer,
     TaskSerializer,
 )
+from organizations.models import OrganizationMembership
 from users.permissions import (
     IsAssessmentOwner,
     IsOrganizationMember,
@@ -43,6 +44,7 @@ from users.permissions import (
 
 
 class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
+    """Global framework reference data - not org-scoped."""
     queryset = Framework.objects.all()
     serializer_class = FrameworkSerializer
     permission_classes = [IsAuthenticated]
@@ -95,14 +97,33 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Read-only detail endpoint that bundles assessment + report + findings + plan + cip cycles.
-    No org_pk needed — looks up by assessment pk directly.
+    No org_pk needed — looks up by assessment pk directly, but validates org membership.
     """
 
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated, IsAssessmentOwner]
 
     def get_queryset(self):
-        return Assessment.objects.select_related(
+        user = self.request.user
+
+        # Superusers can see all assessments
+        if user.is_superuser:
+            return Assessment.objects.select_related(
+                "site", "focus_area", "framework", "created_by", "assigned_to"
+            )
+
+        # Get all organizations the user belongs to
+        memberships = OrganizationMembership.objects.filter(user=user).values_list(
+            "organization_id", flat=True
+        )
+
+        if not memberships:
+            return Assessment.objects.none()
+
+        # Filter assessments by user's organizations
+        return Assessment.objects.filter(
+            organization_id__in=memberships
+        ).select_related(
             "site", "focus_area", "framework", "created_by", "assigned_to"
         )
 
@@ -280,31 +301,55 @@ class SiteViewSet(viewsets.ModelViewSet):
 
 class AssessmentReportViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentReportSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return AssessmentReport.objects.select_related("assessment", "organization")
+        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
+            "organization"
+        )
+        qs = AssessmentReport.objects.select_related("assessment", "organization")
+        if org_pk:
+            qs = qs.filter(organization_id=org_pk)
+        return qs
 
 
 class FindingViewSet(viewsets.ModelViewSet):
     serializer_class = FindingSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return Finding.objects.select_related("assessment", "site", "provision")
+        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
+            "organization"
+        )
+        qs = Finding.objects.select_related("assessment", "site", "provision")
+        if org_pk:
+            qs = qs.filter(assessment__organization_id=org_pk)
+        return qs
 
 
 class CIPCycleViewSet(viewsets.ModelViewSet):
     serializer_class = CIPCycleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return CIPCycle.objects.select_related("assessment")
+        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
+            "organization"
+        )
+        qs = CIPCycle.objects.select_related("assessment")
+        if org_pk:
+            qs = qs.filter(assessment__organization_id=org_pk)
+        return qs
 
 
 class AssessmentPlanViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentPlanSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return AssessmentPlan.objects.select_related("assessment")
+        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
+            "organization"
+        )
+        qs = AssessmentPlan.objects.select_related("assessment")
+        if org_pk:
+            qs = qs.filter(assessment__organization_id=org_pk)
+        return qs

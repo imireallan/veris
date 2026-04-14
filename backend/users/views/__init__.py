@@ -56,7 +56,9 @@ class UserViewSet(viewsets.ModelViewSet):
         """
         Allow users to update their own profile without org membership checks.
         """
-        if self.action == "partial_update" and self.kwargs.get("pk") == str(self.request.user.id):
+        if self.action == "partial_update" and self.kwargs.get("pk") == str(
+            self.request.user.id
+        ):
             # User updating their own profile - just need to be authenticated
             return [IsAuthenticated()]
         return super().get_permissions()

@@ -15,9 +15,15 @@ export {
   SelectGroup,
   SelectItem,
   SelectLabel,
+  SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "./select"
+
+/* ─── Select with options array ─── */
+export { Select as SelectWithOptions } from "./select-simple"
 
 /* ─── Layout ─── */
 export {

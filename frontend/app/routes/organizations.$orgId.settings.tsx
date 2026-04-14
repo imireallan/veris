@@ -4,7 +4,7 @@ import { data, Link } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select } from "~/components/ui";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, SelectWithOptions as Select } from "~/components/ui";
 import { Save, Building2 } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef } from "react";

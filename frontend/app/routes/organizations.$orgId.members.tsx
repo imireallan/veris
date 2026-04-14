@@ -57,9 +57,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : (invitationsResponse?.results || []);
 
   // Get roles this user can invite based on their role
-  const availableInviteRoles = getAvailableRolesForInviter(user.fallbackRole);
+  const availableInviteRoles = getAvailableRolesForInviter(user.fallbackRole || "OPERATOR");
 
-  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole };
+  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole || "OPERATOR" };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -88,7 +88,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       }
 
       // Validate user can invite this role (can't invite higher roles)
-      const availableRoles = getAvailableRolesForInviter(user.fallbackRole);
+      const availableRoles = getAvailableRolesForInviter(user.fallbackRole || "OPERATOR");
       if (!availableRoles.includes(fallbackRole)) {
         return data(
           { error: `You cannot invite users with ${fallbackRole} role. Your role allows inviting: ${availableRoles.join(", ")}` },

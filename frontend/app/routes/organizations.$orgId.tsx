@@ -18,7 +18,21 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId!;
 
-  const org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
+  // Fetch organization with error handling
+  let org;
+  try {
+    org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
+  } catch (error: any) {
+    // Create a proper Error object with status for ErrorBoundary
+    const status = error.status || 500;
+    const message = error.message || "An error occurred";
+    
+    // Create error with proper status that ErrorBoundary can read
+    const errorObj = new Error(message);
+    (errorObj as any).status = status;
+    (errorObj as any).statusCode = status;
+    throw errorObj;
+  }
 
   const allAssessments = await api.get<any>(`/api/assessments/`, token, request).catch(() => []);
   const assessmentList = Array.isArray(allAssessments) 
@@ -123,6 +137,62 @@ export default function OrganizationDetailRoute() {
       </div>
 
       <Outlet />
+    </div>
+  );
+}
+
+export function ErrorBoundary({ error }: { error: Error }) {
+  // Check if error has status property (from loader)
+  const errorWithStatus = error as Error & { status?: number; statusCode?: number };
+  const status = errorWithStatus.status || errorWithStatus.statusCode;
+  const isNotFound = status === 404;
+  const isForbidden = status === 403;
+  
+  // Try to get error message
+  const errorMessage = error.message || "An unexpected error occurred.";
+  const isInvalidOrg = errorMessage.toLowerCase().includes("organization") || 
+                       errorMessage.toLowerCase().includes("access") ||
+                       errorMessage.toLowerCase().includes("uuid") ||
+                       errorMessage.toLowerCase().includes("invalid");
+
+  return (
+    <div className="min-h-[400px] flex items-center justify-center p-8">
+      <div className="text-center space-y-4 max-w-md">
+        {isNotFound || isInvalidOrg ? (
+          <>
+            <div className="text-6xl">🔍</div>
+            <h2 className="text-2xl font-semibold">Organization Not Found</h2>
+            <p className="text-muted-foreground">
+              {errorMessage.toLowerCase().includes("uuid") || errorMessage.toLowerCase().includes("format")
+                ? "The organization ID format is invalid."
+                : "This organization doesn't exist or you don't have access to it. The organization ID may be invalid or your access may have been removed."}
+            </p>
+          </>
+        ) : isForbidden ? (
+          <>
+            <div className="text-6xl">🔒</div>
+            <h2 className="text-2xl font-semibold">Access Denied</h2>
+            <p className="text-muted-foreground">
+              You don't have permission to view this organization.
+              Contact your administrator if you believe this is an error.
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="text-6xl">⚠️</div>
+            <h2 className="text-2xl font-semibold">Something went wrong</h2>
+            <p className="text-muted-foreground">
+              {errorMessage}
+            </p>
+          </>
+        )}
+        <Link
+          to="/organizations"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+        >
+          ← Back to Organizations
+        </Link>
+      </div>
     </div>
   );
 }

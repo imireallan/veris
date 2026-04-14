@@ -39,15 +39,64 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         if user.is_superuser:
             return Organization.objects.all()
 
-        # All other users (including org ADMIN): only their own org
-        # Get user's organization from their first membership
+        # All other users: return ALL organizations they have memberships in
         from organizations.models import OrganizationMembership
 
-        membership = OrganizationMembership.objects.filter(user=user).first()
-        if membership:
-            return Organization.objects.filter(id=membership.organization_id)
+        # Get all organization IDs from user's memberships
+        membership_org_ids = OrganizationMembership.objects.filter(
+            user=user
+        ).values_list("organization_id", flat=True)
+
+        if membership_org_ids.exists():
+            return Organization.objects.filter(id__in=membership_org_ids)
 
         return Organization.objects.none()
+
+    def get_object(self):
+        """Override to provide better error handling for 404s."""
+        from uuid import UUID
+
+        from rest_framework.exceptions import NotFound
+
+        queryset = self.get_queryset()
+
+        # Get the lookup value
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+
+        # Validate UUID format first
+        try:
+            UUID(lookup_value)
+        except (ValueError, AttributeError):
+            raise NotFound(detail="Invalid organization ID format.")
+
+        filter_kwargs = {self.lookup_field: lookup_value}
+
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except queryset.model.DoesNotExist:
+            # Check if user has any memberships
+            membership_exists = OrganizationMembership.objects.filter(
+                user=self.request.user
+            ).exists()
+
+            if not membership_exists:
+                # User has no org memberships at all
+                raise NotFound(
+                    detail="You don't have access to any organizations. Please contact your administrator."
+                )
+
+            # User has memberships but not this specific org
+            raise NotFound(detail="You don't have access to this organization.")
+        except Exception as e:
+            # Handle UUID validation errors and other exceptions
+            if "UUID" in str(e):
+                raise NotFound(detail="Invalid organization ID format.")
+            raise
+
+        # May raise a permission denied
+        self.check_object_permissions(self.request, obj)
+        return obj
 
     def perform_create(self, serializer):
         """

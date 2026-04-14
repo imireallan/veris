@@ -25,6 +25,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { User as UserType } from "~/types";
 import { UserRole, RBAC } from "~/types/rbac";
+import { getSelectedOrganization } from "~/components/OrganizationSwitcher";
 
 function getRoleBadgeVariant(role: UserRole | string): "destructive" | "default" | "secondary" | "outline" {
   const priority = RBAC.getRolePriority(role);
@@ -58,13 +59,17 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
     : user.email.slice(0, 2).toUpperCase();
 
   const RoleIcon = getRoleIconComponent(user.role);
+  const selectedOrg = getSelectedOrganization(user);
+
+  // Validate that selectedOrg is actually in user's organizations
+  const isValidSelectedOrg = selectedOrg && user.organizations?.some((org) => org.id === selectedOrg.id);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
         <div
           className={cn(
-            "flex items-center gap-2 rounded-full hover:bg-accent p-1 pr-3 transition-colors cursor-pointer",
+            "flex items-center gap-2 rounded-full hover:bg-primary/10 p-1 pr-3 transition-colors cursor-pointer",
             className
           )}
           role="button"
@@ -77,8 +82,8 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
           </Avatar>
           <div className="text-left hidden sm:block">
             <p className="text-sm font-medium leading-none">{user.fullName || "User"}</p>
-            {user.orgName && (
-              <p className="text-xs text-muted-foreground mt-0.5">{user.orgName}</p>
+            {isValidSelectedOrg && (
+              <p className="text-xs text-muted-foreground mt-0.5">{selectedOrg.name}</p>
             )}
           </div>
           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
@@ -103,7 +108,7 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
               </Badge>
             )}
             {user.isSuperuser && (
-              <Badge variant="outline" className="gap-1 h-5 text-xs border-amber-500 text-amber-700 dark:text-amber-400">
+              <Badge variant="default" className="gap-1 h-5 text-xs">
                 <Crown className="w-3 h-3" />
                 Superuser
               </Badge>
@@ -111,46 +116,48 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
           </div>
         </div>
 
-        {/* Primary Organization */}
-        {user.orgName && (
+        {/* Selected Organization */}
+        {isValidSelectedOrg && (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5">
               <div className="flex items-center gap-2 text-xs">
                 <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-muted-foreground">Primary:</span>
-                <span className="font-medium text-foreground">{user.orgName}</span>
+                <span className="text-muted-foreground">Current:</span>
+                <span className="font-medium text-foreground">{selectedOrg.name}</span>
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground">
+                <Shield className="w-2.5 h-2.5" />
+                <span>{RBAC.getRoleLabel(selectedOrg.role)}</span>
               </div>
             </div>
           </>
         )}
 
-        {/* Multiple Organizations */}
+        {/* All Organizations (compact list) */}
         {user.organizations && user.organizations.length > 1 && (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1">
               <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                Organizations ({user.organizations.length})
+                All Organizations
               </p>
               <div className="space-y-1 max-h-32 overflow-y-auto">
                 {user.organizations.map((org) => {
-                  const OrgRoleIcon = getRoleIconComponent(org.role);
+                  const isSelected = isValidSelectedOrg && selectedOrg.id === org.id;
                   return (
-                    <Link
+                    <div
                       key={org.id}
-                      to={`/organizations/${org.id}`}
-                      className="flex items-center justify-between p-1.5 rounded-md text-xs hover:bg-accent transition-colors group"
+                      className={cn(
+                        "flex items-center justify-between p-1.5 rounded-md text-xs transition-colors",
+                        isSelected ? "bg-primary/10 text-primary" : "hover:bg-primary/10"
+                      )}
                     >
-                      <div className="flex items-center gap-1.5">
-                        <Building2 className="w-3 h-3 text-muted-foreground group-hover:text-foreground" />
-                        <span className="text-foreground">{org.name}</span>
-                      </div>
-                      <Badge variant={getRoleBadgeVariant(org.role)} className="h-4 text-[10px]">
-                        <OrgRoleIcon className="w-2.5 h-2.5" />
+                      <span className="text-foreground truncate">{org.name}</span>
+                      <Badge variant={isSelected ? "default" : "outline"} className="h-4 text-[10px]">
                         {RBAC.getRoleLabel(org.role)}
                       </Badge>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>

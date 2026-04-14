@@ -36,8 +36,8 @@ export class RBAC {
   static canManageOrg(user: User, orgId: string): boolean {
     if (user.fallbackRole === "SUPERADMIN") return true;
     
-    // Check if user belongs to this org
-    if (String(user.orgId) !== String(orgId)) return false;
+    // Check if user belongs to this org (supports multi-org users)
+    if (!RBAC.isOrgMember(user, orgId)) return false;
     
     // Use fallback_role for durable permission checks
     // Custom role names are display-only; fallback_role is the stable enum
@@ -59,8 +59,8 @@ export class RBAC {
     // SUPERADMIN can manage any org's templates
     if (user.fallbackRole === "SUPERADMIN") return true;
     
-    // Check if user belongs to this org
-    if (String(user.orgId) !== String(orgId)) return false;
+    // Check if user belongs to this org (supports multi-org users)
+    if (!RBAC.isOrgMember(user, orgId)) return false;
     
     return user.fallbackRole === "ADMIN" || 
            user.fallbackRole === "OWNER" || 
@@ -73,11 +73,11 @@ export class RBAC {
   static canCreateAssessments(user: User, orgId: string): boolean {
     // SUPERADMIN cannot create assessments unless they're a member of the org
     if (user.fallbackRole === "SUPERADMIN") {
-      return String(user.orgId) === String(orgId);
+      return RBAC.isOrgMember(user, orgId);
     }
     
     // For regular users, check if they belong to this org and have the right role
-    if (String(user.orgId) !== String(orgId)) return false;
+    if (!RBAC.isOrgMember(user, orgId)) return false;
     
     return user.fallbackRole === "ADMIN" || 
            user.fallbackRole === "OWNER" || 
@@ -91,7 +91,10 @@ export class RBAC {
   static canEditAssessment(user: User, orgId: string): boolean {
     if (user.fallbackRole === "SUPERADMIN") return true;
     if (user.fallbackRole === "ADMIN") return true;
-    return user.fallbackRole === "COORDINATOR" && String(user.orgId) === String(orgId);
+    if (user.fallbackRole === "COORDINATOR") {
+      return RBAC.isOrgMember(user, orgId);
+    }
+    return false;
   }
 
   /**
@@ -106,7 +109,10 @@ export class RBAC {
    */
   static canDeleteFindings(user: User, orgId: string): boolean {
     if (user.fallbackRole === "SUPERADMIN") return true;
-    return user.fallbackRole === "ADMIN" && String(user.orgId) === String(orgId);
+    if (user.fallbackRole === "ADMIN") {
+      return RBAC.isOrgMember(user, orgId);
+    }
+    return false;
   }
 
   /**

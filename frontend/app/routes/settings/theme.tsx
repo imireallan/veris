@@ -12,37 +12,45 @@ import { useToast } from "~/hooks/use-toast";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { requireUser } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
+  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
   
   const user = await requireUser(request);
-  if (!user.orgId) {
+  
+  // Get selected organization from user's organizations array
+  const selectedOrg = getSelectedOrganization(user);
+  if (!selectedOrg) {
     throw redirect("/organizations");
   }
   
   // Only ADMIN and SUPERADMIN can manage theme settings
-  if (!RBAC.canManageOrg(user, user.orgId)) {
+  if (!RBAC.canManageOrg(user, selectedOrg.id)) {
     throw redirect("/");
   }
   
   try {
-    const theme = await api.get<ThemeConfig>(`/api/themes/${user.orgId}`);
-    return data({ theme, orgId: user.orgId });
+    const theme = await api.get<ThemeConfig>(`/api/themes/${selectedOrg.id}`);
+    return data({ theme, orgId: selectedOrg.id, orgName: selectedOrg.name });
   } catch {
-    return data({ theme: null, orgId: user.orgId });
+    return data({ theme: null, orgId: selectedOrg.id, orgName: selectedOrg.name });
   }
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   const { requireUser, getUserToken } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
+  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
   
   const token = await getUserToken(request);
   const user = await requireUser(request);
-  if (!user.orgId) {
+  
+  // Get selected organization from user's organizations array
+  const selectedOrg = getSelectedOrganization(user);
+  if (!selectedOrg) {
     return data({ error: "Organization required" }, { status: 400 });
   }
   
   // Only ADMIN and SUPERADMIN can manage theme settings
-  if (!RBAC.canManageOrg(user, user.orgId)) {
+  if (!RBAC.canManageOrg(user, selectedOrg.id)) {
     return data({ error: "Insufficient permissions" }, { status: 403 });
   }
   
@@ -127,7 +135,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
   
   try {
-    await api.put(`/api/themes/${user.orgId}`, themeData, token, request);
+    await api.put(`/api/themes/${selectedOrg.id}`, themeData, token, request);
     // Return success data instead of redirect - fetcher will handle it
     return { success: true };
   } catch (error: any) {

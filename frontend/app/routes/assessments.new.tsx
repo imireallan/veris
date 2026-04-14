@@ -43,11 +43,18 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const formData = await request.formData();
-
+  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
+  
+  // Get selected organization from user's organizations array
+  const selectedOrg = getSelectedOrganization(user);
+  if (!selectedOrg) {
+    return { error: "Organization required. Please select an organization first." };
+  }
+  
   // Handle site creation inline (hidden field with JSON payload)
   const siteJson = formData.get("__new_site");
   let siteId = formData.get("site") as string;
-
+  
   if (siteJson) {
     try {
       const { name, type, country_code } = JSON.parse(siteJson as string);
@@ -57,7 +64,7 @@ export async function action({ request }: ActionFunctionArgs) {
           name,
           type,
           country_code,
-          organization: user.orgId,
+          organization: selectedOrg.id,
           operational_status: "ACTIVE",
           risk_profile: "MEDIUM",
           coordinates: {},

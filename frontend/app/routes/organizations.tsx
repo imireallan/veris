@@ -5,7 +5,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import type { User } from "~/types";
 import { api } from "~/.server/lib/api";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button, SearchBar } from "~/components/ui";
+import { Button, SearchBar, Skeleton } from "~/components/ui";
 import { useOrganizationCreationConfig } from "~/hooks/useOrganizationCreationConfig";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -86,12 +86,19 @@ export default function OrganizationsRoute() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
+  const [isLoading, setIsLoading] = useState(true);
 
   const { config, loading: configLoading } = useOrganizationCreationConfig(token ?? undefined);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [search]);
+
+  // Simulate loading state for skeleton display
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, [orgs]);
 
   const PAGE_SIZE = 5;
   const allItems = Array.isArray(orgs) ? orgs : [];
@@ -177,7 +184,16 @@ export default function OrganizationsRoute() {
         placeholder="Search organizations..."
       />
 
-      {items.length === 0 ? (
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="p-4 border rounded-lg space-y-3">
+              <Skeleton className="h-5 w-3/4" />
+              <Skeleton className="h-4 w-1/2" />
+            </div>
+          ))}
+        </div>
+      ) : items.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-muted-foreground">
             {search ? `No organizations found matching "${search}"` : "No organizations found."}

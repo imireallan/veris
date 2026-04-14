@@ -15,6 +15,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!token) throw redirect("/login");
 
   const user = await requireUser(request);
+  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
+  
+  // Get selected organization from user's organizations array
+  const selectedOrg = getSelectedOrganization(user);
 
   // Build nav links dynamically based on user permissions
   const navLinks: { to: string; label: string; icon: string }[] = [
@@ -27,13 +31,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   ];
 
   // Only show Theme settings to users who can manage org (ADMIN or SUPERADMIN)
-  if (user.orgId && RBAC.canManageOrg(user, user.orgId)) {
+  if (selectedOrg && RBAC.canManageOrg(user, selectedOrg.id)) {
     navLinks.push({ to: "/settings/theme", label: "Theme", icon: "Paintbrush" });
   }
 
   return {
     navLinks,
     user,
+    selectedOrg,
   };
 }
 

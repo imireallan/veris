@@ -5,7 +5,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import type { User } from "~/types";
 import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select } from "~/components/ui";
-import { User as UserIcon, Save, Key, Building2, Shield } from "lucide-react";
+import { User as UserIcon, Save, Key, Building2, Shield, Bell, Mail, Laptop, Image as ImageIcon, Clock } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef } from "react";
 import { RBAC } from "~/types/rbac";
@@ -250,6 +250,133 @@ export default function ProfileRoute() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Coming Soon Features */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          Coming Soon
+        </h3>
+
+        {/* Email change */}
+        <Card className="opacity-60">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Mail className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Change Email Address</p>
+                <p className="text-xs text-muted-foreground">
+                  Update your login email with verification
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              Planned
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* In-place password change */}
+        <Card className="opacity-60">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Key className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Change Password</p>
+                <p className="text-xs text-muted-foreground">
+                  Update password without email reset flow
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              Planned
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* Notification preferences */}
+        <Card className="opacity-60">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Bell className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Notification Preferences</p>
+                <p className="text-xs text-muted-foreground">
+                  Email and in-app notification settings
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              Planned
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* Profile picture */}
+        <Card className="opacity-60">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <ImageIcon className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Profile Picture</p>
+                <p className="text-xs text-muted-foreground">
+                  Upload a custom avatar
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              Planned
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* Session management */}
+        <Card className="opacity-60">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Laptop className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Active Sessions</p>
+                <p className="text-xs text-muted-foreground">
+                  View and manage logged-in devices
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              Planned
+            </span>
+          </CardContent>
+        </Card>
+
+        {/* Login history */}
+        <Card className="opacity-60">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Login History</p>
+                <p className="text-xs text-muted-foreground">
+                  Audit trail of account access
+                </p>
+              </div>
+            </div>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              Planned
+            </span>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Role reference */}
       <Alert>

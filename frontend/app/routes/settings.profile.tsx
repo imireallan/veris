@@ -10,34 +10,43 @@ import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef } from "react";
 import { RBAC } from "~/types/rbac";
 
-interface Membership {
-  id: string;
-  organization_id: string;
-  organization_name: string;
-  organization_slug: string;
-  role_name: string;
-  fallback_role: string;
-  is_lead_assessor: boolean;
-  joined_at: string;
-}
-
 interface ProfileData {
   id: string;
   email: string;
-  name: string;
+  full_name: string;
   timezone: string | null;
   country: string | null;
-  memberships: Membership[];
+  organizations: Array<{
+    id: string;
+    name: string;
+    role: string;
+    fallback_role: string;
+  }>;
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  // Fetch user profile from backend
-  const profile = await api.get<ProfileData>("/api/users/me/", token, request);
+  // Fetch user profile from backend - use /api/auth/me/ which returns organizations[]
+  const profile = await api.get<ProfileData>("/api/auth/me/", token, request);
 
-  return { profile };
+  // Map organizations[] to memberships[] for consistent frontend usage
+  const profileWithMemberships = {
+    ...profile,
+    memberships: profile.organizations?.map((org) => ({
+      id: org.id,
+      organization_id: org.id,
+      organization_name: org.name,
+      organization_slug: org.slug || "",
+      role_name: org.role,
+      fallback_role: org.fallback_role,
+      is_lead_assessor: false,
+      joined_at: "",
+    })) || [],
+  };
+
+  return { profile: profileWithMemberships };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -176,7 +185,7 @@ export default function ProfileRoute() {
               <Input
                 id="name"
                 name="name"
-                defaultValue={profile.name}
+                defaultValue={profile.full_name}
                 placeholder="Your name"
               />
             </div>

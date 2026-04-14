@@ -4,7 +4,7 @@ import { data } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, SelectWithOptions as Select } from "~/components/ui";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { User as UserIcon, Save, Key, Building2, Shield, Bell, Mail, Laptop, Image as ImageIcon, Clock } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useEffect, useRef } from "react";
@@ -118,23 +118,6 @@ export default function ProfileRoute() {
 
   const isSaving = fetcher.state === "submitting";
 
-  // Common timezones
-  const timezoneOptions = [
-    { value: "", label: "Auto (Browser Default)" },
-    { value: "UTC", label: "UTC" },
-    { value: "Africa/Accra", label: "West Africa Time (GMT)" },
-    { value: "Africa/Lagos", label: "West Africa Time (GMT+1)" },
-    { value: "Africa/Johannesburg", label: "South Africa Time (GMT+2)" },
-    { value: "Europe/London", label: "London (GMT/BST)" },
-    { value: "Europe/Paris", label: "Paris (CET)" },
-    { value: "Europe/Berlin", label: "Berlin (CET)" },
-    { value: "Asia/Dubai", label: "Dubai (GST)" },
-    { value: "Asia/Singapore", label: "Singapore (SGT)" },
-    { value: "Asia/Kolkata", label: "India (IST)" },
-    { value: "America/New_York", label: "New York (EST/EDT)" },
-    { value: "America/Los_Angeles", label: "Los Angeles (PST/PDT)" },
-  ];
-
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -207,9 +190,29 @@ export default function ProfileRoute() {
               <Select
                 id="timezone"
                 name="timezone"
-                defaultValue={profile.timezone || ""}
-                options={timezoneOptions}
-              />
+                defaultValue={profile.timezone || "UTC"}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a timezone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="">Auto (Browser Default)</SelectItem>
+                    <SelectItem value="UTC">UTC</SelectItem>
+                    <SelectItem value="Africa/Accra">West Africa Time (GMT)</SelectItem>
+                    <SelectItem value="Africa/Lagos">West Africa Time (GMT+1)</SelectItem>
+                    <SelectItem value="Africa/Johannesburg">South Africa Time (GMT+2)</SelectItem>
+                    <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
+                    <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
+                    <SelectItem value="Europe/Berlin">Berlin (CET)</SelectItem>
+                    <SelectItem value="Asia/Dubai">Dubai (GST)</SelectItem>
+                    <SelectItem value="Asia/Singapore">Singapore (SGT)</SelectItem>
+                    <SelectItem value="Asia/Kolkata">India (IST)</SelectItem>
+                    <SelectItem value="America/New_York">New York (EST/EDT)</SelectItem>
+                    <SelectItem value="America/Los_Angeles">Los Angeles (PST/PDT)</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
               <p className="text-xs text-muted-foreground">
                 Used for timestamps and scheduled notifications
               </p>

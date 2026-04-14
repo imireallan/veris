@@ -28,6 +28,6 @@ export default [
   // Public routes (no auth/layout required)
   route("invitations/:token", "routes/invitations.$token.tsx"),
   route("onboarding/set-password/:token", "routes/onboarding.set-password.$token.tsx"),
-  route("reset-password", "routes/reset-password.request.tsx"),
+  route("reset-password/request", "routes/reset-password.request.tsx"),
   route("reset-password/:uid/:token", "routes/reset-password.$uid.$token.tsx"),
 ] satisfies RouteConfig;

@@ -2,23 +2,44 @@
 
 ## Project Overview
 
-**Veris** is an AI-first, multi-tenant sustainability assessment and intelligence platform. It helps organizations navigate sustainability compliance, generate reports, implement continuous improvement workflows, and build knowledge bases through AI-guided assistance.
+**Veris** is a generic, white-label, AI-first, multi-tenant sustainability assessment and intelligence platform. It enables sustainability consultancies to navigate sustainability compliance, generate reports, implement continuous improvement workflows, and build knowledge bases through AI-guided assistance.
+
+**Primary Target Customer**: TDi Sustainability  
+**Also Suitable For**: Any ESG/sustainability consultancy
+
+**Key Design Principle**: TDi-First, Not TDi-Specific — The platform is generic and configurable. TDi is the primary target, but any consultancy can use it with minimal customization.
 
 ### Core Problem
 
-Organizations struggle with:
-- Complex sustainability frameworks and changing regulations
+**For Consultancies **(e.g., TDi)
+- Fragmented digital tools (5+ separate platforms)
 - Manual report generation and data collection
-- Lack of AI-guided decision support
-- Inability to customize platforms to brand standards
+- Lack of AI capabilities to scale consulting services
+- Inability to white-label for multiple clients
+
+**For Their Clients **(e.g., Bettercoal, EO100, mining companies)
+- Complex sustainability frameworks and changing regulations
+- Duplicate data entry across multiple frameworks
 - Siloed knowledge that isn't easily searchable or actionable
+- No AI-guided decision support
 
 ### Target Users
 
-1. **Sustainability Coordinators** - Manage assessments, generate reports, track compliance
-2. **Operations Teams** - Complete questionnaires, upload evidence, track tasks
-3. **Management/Executives** - View dashboards, risk scores, compliance status
-4. **Consultants/Assessors** - Review assessments, provide guidance, conduct audits
+1. **Consultancy Admin** — Manage multiple client organizations, switch between clients
+2. **Sustainability Coordinators** (client-side) — Manage assessments, generate reports, track compliance
+3. **Operations Teams** — Complete questionnaires, upload evidence, track tasks
+4. **Management/Executives** — View dashboards, risk scores, compliance status
+5. **Consultants/Assessors** — Review assessments, provide guidance, conduct audits
+
+### Generic Platform Requirements
+
+| Requirement | TDi Use Case | Competitor Use Case |
+|-------------|--------------|---------------------|
+| White-label | TDi branding for Bettercoal | Competitor branding for their clients |
+| Frameworks | Bettercoal, OECD, RBA | Any framework (configurable) |
+| Sectors | Mining, Energy, Automotive | Any of 11 sectors |
+| Roles | ADMIN, COORDINATOR, ASSESSOR | Generic roles (not TDi-specific) |
+| AI Features | RAG, validation, reports | Same features, different content |
 
 ---
 

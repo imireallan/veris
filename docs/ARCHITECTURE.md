@@ -2,11 +2,14 @@
 
 ## 1. System Overview
 
+**Design Principle**: Generic Multi-Tenant Platform — Any sustainability consultancy can use it.
+
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
 │                            USERS                                     │
 │                                                                      │
 │   Superadmin (Global)    Org Admin (Tenant)    End User (Operator)    │
+│   (Platform Owner)       (Consultancy Admin)   (Client Staff)         │
 └──────────────────────────────────────────────────────────────────────┘
                                  │
                                  ▼
@@ -59,6 +62,12 @@
 │  └──────────┘  └──────────┘  └──────────┘  └────────────────────┘  │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+
+**Generic Platform Notes**:
+- Multi-tenant isolation: Any consultancy's data is completely separated
+- White-label theming: Each consultancy can rebrand for their clients
+- Framework-agnostic AI: RAG pipeline works for any uploaded standards document
+- Configurable roles: Not hardcoded to TDi-specific role names
 
 ## 2. Access Control Matrix (RBAC)
 

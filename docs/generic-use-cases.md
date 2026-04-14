@@ -1,8 +1,13 @@
-# Veris Platform: Complete Use Case Documentation
+# Veris Platform: Generic Use Case Documentation
 
 ## Overview
 
-**Veris** is a B2B SaaS platform for sustainability assessments and compliance management. It enables consultancies (like TDi) to manage client assessments against multiple frameworks (Bettercoal, OECD, RBA, etc.) with AI-powered evidence validation.
+**Veris** is a generic, white-label B2B SaaS platform for sustainability assessments and compliance management. It enables sustainability consultancies to manage client assessments against multiple frameworks (Bettercoal, OECD, RBA, etc.) with AI-powered evidence validation.
+
+**Primary Target Customer**: TDi Sustainability (and similar consultancies)  
+**Also Suitable For**: Any ESG/sustainability consultancy serving clients across multiple industries
+
+**Key Design Principle**: TDi-First, Not TDi-Specific — The platform is generic and configurable. TDi is the primary target, but any consultancy can use it with minimal customization.
 
 ---
 
@@ -10,10 +15,10 @@
 
 | Role | Description | Primary Goals |
 |------|-------------|---------------|
-| **Platform Admin** | Veris/TDi internal team | Manage platform, onboard consultancies, monitor usage |
-| **Consultancy Admin** | TDi consultant managing multiple clients | Oversee all client engagements, assign team members |
-| **Consultant** | TDi staff working on client assessments | Complete assessments, validate evidence, generate reports |
-| **Client Admin** | Client organization (e.g., Bettercoal producer) | Manage their organization, invite team members |
+| **Platform Admin** | Veris platform owner / TDi internal team | Manage platform, onboard consultancies, monitor usage |
+| **Consultancy Admin** | Consultancy (e.g., TDi) managing multiple client organizations | Oversee all client engagements, assign team members, switch between clients |
+| **Consultant** | Consultancy staff working on client assessments | Complete assessments, validate evidence, generate reports |
+| **Client Admin** | Client organization admin (e.g., Bettercoal producer, energy operator) | Manage their organization, invite team members |
 | **Client Contributor** | Client staff submitting assessment data | Complete questionnaires, upload evidence |
 | **Auditor/Reviewer** | Third-party verifier (future role) | Review submissions, verify claims, approve certifications |
 
@@ -70,16 +75,16 @@ Veris Platform
 **Goal**: Set up a new client organization in Veris
 
 **Preconditions**:
-- Consultancy has Veris account
+- Consultancy has Veris account (any sustainability consultancy)
 - Client has signed contract with consultancy
 
 **Main Flow**:
 1. Consultancy Admin logs into Veris
 2. Navigates to Organizations → Create New
 3. Enters client details:
-   - Organization name (e.g., "Bettercoal Producer ABC")
-   - Industry sector
-   - Primary framework (e.g., Bettercoal)
+   - Organization name (e.g., "Bettercoal Producer ABC", "Energy Operator XYZ")
+   - Industry sector (Mining, Energy, Automotive, etc.)
+   - Primary framework (e.g., Bettercoal, OECD, EO100, RBA)
    - Contact information
 4. System creates organization with default settings
 5. System generates invitation link for Client Admin
@@ -87,9 +92,11 @@ Veris Platform
 **Postconditions**:
 - Client organization exists in system
 - Invitation sent to Client Admin
-- Consultancy linked as managing consultancy
+- Consultancy linked as managing consultancy (configurable field)
 
-**Business Value**: Enables multi-tenant architecture where consultancy can manage multiple clients from single dashboard
+**Business Value**: Enables multi-tenant architecture where any consultancy can manage multiple clients from single dashboard
+
+**Generic Platform Note**: This use case works for TDi onboarding Bettercoal, or any competitor consultancy onboarding their clients. The framework and sector selections are configurable.
 
 ---
 

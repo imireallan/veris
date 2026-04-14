@@ -3,7 +3,7 @@
 ## Business Model
 
 ```
-You (freelancer) ──► AI Sustainability Platform ──► Consultancy ──► Their clients
+You (freelancer) ──► Veris Platform ──► Consultancy (TDi or competitor) ──► Their clients
                                                      │
                                       ┌──────────────┼──────────────┐
                                       ▼              ▼              ▼
@@ -11,31 +11,42 @@ You (freelancer) ──► AI Sustainability Platform ──► Consultancy ─�
                                Operator        Program        Company
 ```
 
+**Primary Target**: TDi Sustainability  
+**Also Suitable For**: Any ESG/sustainability consultancy
+
 We sell to a sustainability consultancy. They white-label and deploy the platform for their client portfolio across 11 sectors.
+
+**Key Principle**: Generic platform, TDi-first sales — Build once, sell to TDi or any competitor.
 
 ---
 
 ## Why This Works
 
-### The Consultancy's Current Situation
-- 4 separate digital tools (news monitor, standards hub, country risk, commodity risk)
+### The Consultancy's Current Situation (TDi + Competitors)
+- 4+ separate digital tools (news monitor, standards hub, country risk, commodity risk)
 - No AI capabilities in any tool — all manual or basic algorithmic
 - Clients interact with fragmented experience (separate logins per tool)
 - Consulting services (risk management, strategy, impact) delivered manually
 - Growing demand across 11 sectors (automotive, aerospace, mining, energy, etc.)
 
-### What We Offer
+### What We Offer (Universal Value)
 1. **4 tools → 1 unified platform** — single intelligent interface for clients
 2. **AI capabilities they can't build internally** — chat, automated reports, smart analysis
 3. **White-label from day one** — one platform, rebranded per client
 4. **Sector-specific configurations** — mining, energy, automotive all supported
 5. **Consulting workflow digitization** — risk identification → management → strategy → impact
 
-### Why They'll Buy
+### Why TDi Will Buy (Primary Target)
 - You've built their systems before — you know their data models, architecture, pain points
 - They serve clients across industries that all need different frameworks (OECD, EO standards, RBA, GRI)
 - Their current platform doesn't have AI — and they don't have AI engineers to build it
 - You already know the domain intimately
+
+### Why Competitors Would Buy (Secondary Market)
+- Same pain points as TDi (fragmented tools, no AI)
+- Platform is generic — no TDi-specific hardcoded logic
+- Can differentiate with their own domain expertise + our AI
+- Faster to market than building in-house
 
 ---
 
@@ -48,11 +59,16 @@ We sell to a sustainability consultancy. They white-label and deploy the platfor
 
 Clean, predictable. They know their cost and margins.
 
+**Competitive Pricing Strategy**:
+- TDi: Potential partnership discount (first customer, domain expertise)
+- Competitors: Standard pricing (market rate)
+- Moat: Implementation speed + AI capabilities, not price
+
 ---
 
-## The 3 Demo Moments
+## The 3 Demo Moments (Universal Value)
 
-We don't need a full product to sell. We need 3 moments that prove value:
+We don't need a full product to sell. We need 3 moments that prove value for ANY consultancy:
 
 ### 1. AI Knowledge Base + Chat
 Upload a standards document → chatbot answers questions with source citations

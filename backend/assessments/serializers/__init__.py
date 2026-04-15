@@ -112,6 +112,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
     site_name = serializers.CharField(source="site.name", read_only=True)
     framework_name = serializers.CharField(source="framework.name", read_only=True)
     focus_area_name = serializers.CharField(source="focus_area.name", read_only=True)
+    display_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Assessment
@@ -136,13 +137,41 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "assigned_to",
             "created_at",
             "updated_at",
+            "display_name",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "created_at", "updated_at", "display_name"]
         extra_kwargs = {
             "start_date": {"required": False, "allow_null": True},
             "due_date": {"required": False, "allow_null": True},
             "organization": {"required": False},
         }
+
+    def get_display_name(self, obj) -> str:
+        """Generate a human-readable name for the assessment."""
+        parts = []
+        
+        # Add framework name if available
+        if obj.framework:
+            parts.append(obj.framework.name)
+        
+        # Add site name if available
+        if obj.site:
+            parts.append(obj.site.name)
+        
+        # Add focus area if available
+        if obj.focus_area:
+            parts.append(obj.focus_area.name)
+        
+        # If we have meaningful parts, join them
+        if parts:
+            return " - ".join(parts)
+        
+        # Fallback to date-based name
+        if obj.created_at:
+            return f"Assessment {obj.created_at.strftime('%b %Y')}"
+        
+        # Last resort: use ID
+        return f"Assessment {str(obj.id)[:8]}"
 
     def create(self, validated_data):
         # If no org provided, use the first org

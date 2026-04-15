@@ -3,6 +3,15 @@
 # ─────────────────────────────────────────────
 FROM python:3.11-slim AS base
 
+# Install system dependencies for WeasyPrint (PDF generation)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-xlib-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # 1. Force UV to use system python

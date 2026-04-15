@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{report_title}} - {{organization_name}}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm;
+            
+            @top-center {
+                content: "{{organization_name}}";
+                font-size: 9pt;
+                color: #666;
+            }
+            
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "Helvetica Neue", Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        /* Cover Page */
+        .cover-page {
+            page-break-after: always;
+            text-align: center;
+            padding: 4cm 2cm;
+        }
+        
+        .cover-title {
+            font-size: 28pt;
+            font-weight: bold;
+            color: #1a1a1a;
+            margin-bottom: 1cm;
+        }
+        
+        .cover-subtitle {
+            font-size: 14pt;
+            color: #666;
+            margin-bottom: 2cm;
+        }
+        
+        .cover-meta {
+            font-size: 11pt;
+            color: #444;
+            line-height: 2;
+        }
+        
+        .cover-org {
+            margin-top: 2cm;
+            font-size: 13pt;
+            font-weight: bold;
+            color: #2c5530;
+        }
+        
+        /* Section Styles */
+        .section {
+            margin-bottom: 1.5cm;
+        }
+        
+        .section-title {
+            font-size: 16pt;
+            font-weight: bold;
+            color: #2c5530;
+            border-bottom: 2px solid #2c5530;
+            padding-bottom: 0.3cm;
+            margin-bottom: 0.5cm;
+            page-break-after: avoid;
+        }
+        
+        .subsection-title {
+            font-size: 13pt;
+            font-weight: bold;
+            color: #444;
+            margin-top: 0.5cm;
+            margin-bottom: 0.3cm;
+            page-break-after: avoid;
+        }
+        
+        p {
+            margin-bottom: 0.3cm;
+            text-align: justify;
+        }
+        
+        ul, ol {
+            margin-left: 0.5cm;
+            margin-bottom: 0.3cm;
+        }
+        
+        li {
+            margin-bottom: 0.15cm;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0.5cm;
+            page-break-inside: avoid;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 0.2cm 0.3cm;
+            text-align: left;
+            font-size: 10pt;
+        }
+        
+        th {
+            background-color: #2c5530;
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        
+        /* Findings */
+        .finding {
+            border: 1px solid #ddd;
+            border-left: 4px solid #2c5530;
+            padding: 0.3cm;
+            margin-bottom: 0.3cm;
+            page-break-inside: avoid;
+        }
+        
+        .finding.critical {
+            border-left-color: #dc3545;
+        }
+        
+        .finding.high {
+            border-left-color: #fd7e14;
+        }
+        
+        .finding.medium {
+            border-left-color: #ffc107;
+        }
+        
+        .finding.low {
+            border-left-color: #28a745;
+        }
+        
+        .finding-header {
+            font-weight: bold;
+            margin-bottom: 0.2cm;
+        }
+        
+        .severity-badge {
+            display: inline-block;
+            padding: 0.1cm 0.2cm;
+            border-radius: 0.2cm;
+            font-size: 8pt;
+            font-weight: bold;
+            color: white;
+            margin-left: 0.2cm;
+        }
+        
+        .severity-critical { background-color: #dc3545; }
+        .severity-high { background-color: #fd7e14; }
+        .severity-medium { background-color: #ffc107; color: #333; }
+        .severity-low { background-color: #28a745; }
+        
+        /* Disclaimer box */
+        .disclaimer-box {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 0.3cm;
+            font-size: 9pt;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* Page breaks */
+        h1, h2, h3 {
+            page-break-after: avoid;
+        }
+        
+        /* Utility */
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .text-muted { color: #666; }
+        .mt-1 { margin-top: 0.3cm; }
+        .mb-1 { margin-bottom: 0.3cm; }
+        
+    </style>
+</head>
+<body>
+    <!-- Cover Page -->
+    <div class="cover-page">
+        <div class="cover-title">{{report_title}}</div>
+        <div class="cover-subtitle">ESG Assessment Report</div>
+        
+        <div class="cover-meta">
+            <div><strong>Assessment:</strong> {{assessment_name}}</div>
+            <div><strong>Organization:</strong> {{organization_name}}</div>
+            <div><strong>Status:</strong> {{report_status}}</div>
+            <div><strong>Generated:</strong> {{generated_at}}</div>
+        </div>
+        
+        <div class="cover-org">{{organization_name}}</div>
+    </div>
+    
+    <!-- Executive Summary -->
+    <div class="section">
+        <h1 class="section-title">Executive Summary</h1>
+        <p>{{executive_summary}}</p>
+        
+        <div class="subsection-title">Key Metrics</div>
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Overall Score</td>
+                <td>{{assessment_score}}</td>
+            </tr>
+            <tr>
+                <td>Risk Level</td>
+                <td>{{assessment_risk}}</td>
+            </tr>
+            <tr>
+                <td>Assessment Period</td>
+                <td>{{assessment_start_date}} to {{assessment_due_date}}</td>
+            </tr>
+            <tr>
+                <td>Findings Identified</td>
+                <td>{{findings_count}}</td>
+            </tr>
+            <tr>
+                <td>CIP Cycles</td>
+                <td>{{cip_cycles_count}}</td>
+            </tr>
+        </table>
+    </div>
+    
+    <!-- Methodology -->
+    <div class="section">
+        <h1 class="section-title">Methodology</h1>
+        <p>{{methodology}}</p>
+        <p><strong>Scope:</strong> {{scope}}</p>
+    </div>
+    
+    <!-- Context -->
+    <div class="section">
+        <h1 class="section-title">Country &amp; Sector Context</h1>
+        <p>{{country_context}}</p>
+    </div>
+    
+    <!-- Key Findings -->
+    <div class="section">
+        <h1 class="section-title">Key Findings</h1>
+        
+        {% if critical_findings %}
+        <div class="subsection-title">Critical Findings</div>
+        {% for finding in critical_findings %}
+        <div class="finding critical">
+            <div class="finding-header">
+                Finding #{{forloop.counter}}
+                <span class="severity-badge severity-critical">CRITICAL</span>
+            </div>
+            <p>{{finding.description}}</p>
+            <p><strong>Severity:</strong> {{finding.get_severity_display}} | <strong>Status:</strong> {{finding.get_status_display}}</p>
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        {% if high_findings %}
+        <div class="subsection-title">High Priority Findings</div>
+        {% for finding in high_findings %}
+        <div class="finding high">
+            <div class="finding-header">
+                Finding #{{forloop.counter}}
+                <span class="severity-badge severity-high">HIGH</span>
+            </div>
+            <p>{{finding.description}}</p>
+            <p><strong>Severity:</strong> {{finding.get_severity_display}} | <strong>Status:</strong> {{finding.get_status_display}}</p>
+        </div>
+        {% endfor %}
+        {% endif %}
+        
+        {% if not critical_findings and not high_findings %}
+        <p>No critical or high priority findings identified.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Continuous Improvement Plan -->
+    <div class="section">
+        <h1 class="section-title">Continuous Improvement Plan</h1>
+        {% if cip_cycles %}
+        <table>
+            <tr>
+                <th>Cycle</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Status</th>
+            </tr>
+            {% for cycle in cip_cycles %}
+            <tr>
+                <td>Cycle {{cycle.cycle_number|default:forloop.counter}}</td>
+                <td>{{cycle.start_date|default:"N/A"}}</td>
+                <td>{{cycle.end_date|default:"N/A"}}</td>
+                <td>{{cycle.get_status_display}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>No CIP cycles defined for this assessment.</p>
+        {% endif %}
+    </div>
+    
+    <!-- Conclusion -->
+    <div class="section">
+        <h1 class="section-title">Conclusion</h1>
+        <p>{{conclusion}}</p>
+    </div>
+    
+    <!-- Disclaimer -->
+    <div class="section">
+        <div class="disclaimer-box">
+            <strong>Disclaimer:</strong><br>
+            {{disclaimer}}
+        </div>
+    </div>
+    
+    <!-- Footer Info -->
+    <div class="section text-center text-muted" style="margin-top: 1cm; font-size: 9pt;">
+        <p>Report generated by Veris ESG Platform</p>
+        <p>{{generated_at}}</p>
+    </div>
+</body>
+</html>

@@ -1,9 +1,9 @@
-import { useLoaderData, Link, Form, redirect } from "react-router";
+import { useLoaderData, Link, Form, redirect, useFetcher } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { useState, useRef } from "react";
-import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Badge,
   Button,
@@ -21,6 +21,9 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
 } from "~/components/ui";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -44,21 +47,28 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const orgId = assessment.organization;
 
-  const [findings, cipCycles, plan, tasks, report] = await Promise.all([
-    api.get<any[]>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
-    api.get<any[]>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
-    api.get<any[]>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
-    api.get<any[]>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
-    api.get<any[]>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => []),
+  const [findingsRes, cipCyclesRes, planRes, tasksRes, reportRes] = await Promise.all([
+    api.get<any>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
+    api.get<any>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
+    api.get<any>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
+    api.get<any>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
+    api.get<any>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
   ]);
+
+  // Handle paginated responses (results array) or direct arrays
+  const findings = findingsRes.results || (Array.isArray(findingsRes) ? findingsRes : []);
+  const cipCycles = cipCyclesRes.results || (Array.isArray(cipCyclesRes) ? cipCyclesRes : []);
+  const plan = planRes.results?.[0] ?? (Array.isArray(planRes) ? planRes[0] : null);
+  const tasks = tasksRes.results || (Array.isArray(tasksRes) ? tasksRes : []);
+  const report = reportRes.results?.[0] ?? (Array.isArray(reportRes) ? reportRes[0] : null);
 
   return {
     assessment: assessment,
-    findings: Array.isArray(findings) ? findings : [],
-    cipCycles: Array.isArray(cipCycles) ? cipCycles : [],
-    plan: Array.isArray(plan) ? (plan[0] ?? null) : null,
-    tasks: Array.isArray(tasks) ? tasks : [],
-    report: Array.isArray(report) ? (report[0] ?? null) : null,
+    findings: findings,
+    cipCycles: cipCycles,
+    plan: plan,
+    tasks: tasks,
+    report: report,
   };
 }
 
@@ -118,6 +128,7 @@ export default function AssessmentDetailRoute() {
   const data = useLoaderData<typeof loader>();
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("overview");
+  const [generatingReport, setGeneratingReport] = useState(false);
   const [formData, setFormData] = useState({
     status: data.assessment?.status ?? "DRAFT",
     risk_level: data.assessment?.risk_level ?? "MEDIUM",
@@ -158,7 +169,18 @@ export default function AssessmentDetailRoute() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Assessment {a.id.slice(0, 8)}</BreadcrumbPage>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="inline-block">
+                  <BreadcrumbPage>
+                    {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
+                  </BreadcrumbPage>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center" sideOffset={8}>
+                {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
+              </TooltipContent>
+            </Tooltip>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -168,13 +190,68 @@ export default function AssessmentDetailRoute() {
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </Link>
         <div className="flex-1">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Assessment {a.id.slice(0, 8)}
-          </h2>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="inline-block">
+                <h2 className="text-2xl font-semibold tracking-tight">
+                  {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
+                </h2>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" align="center" sideOffset={8}>
+              {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
+            </TooltipContent>
+          </Tooltip>
           <p className="text-muted-foreground text-sm mt-0.5">
             Created {new Date(a.created_at).toLocaleDateString()}
           </p>
         </div>
+        {/* Download Report Button */}
+        {data.report ? (
+          <Button
+            variant="default"
+            size="sm"
+            disabled={generatingReport}
+            className="gap-2"
+            title={generatingReport ? "Generating PDF report..." : "Download PDF report"}
+            onClick={async (e) => {
+              e.preventDefault();
+              setGeneratingReport(true);
+              try {
+                // Open PDF in new window - browser handles download
+                window.open(`/resources/reports/${data.report.id}/pdf`, "_blank");
+                // Reset loading state after a short delay (can't detect download completion)
+                setTimeout(() => setGeneratingReport(false), 2000);
+              } catch (error) {
+                console.error("PDF download failed:", error);
+                setGeneratingReport(false);
+              }
+            }}
+          >
+            {generatingReport ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Generating...
+              </span>
+            ) : (
+              <>
+                <Download className="w-4 h-4" />
+                Download Report
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled
+            className="gap-2"
+            title="No report generated yet. Complete the assessment and create a report first."
+          >
+            <Download className="w-4 h-4" />
+            Download Report
+          </Button>
+        )}
         <EditModeToolbar
           editMode={editMode}
           onEdit={() => setEditMode(true)}
@@ -447,6 +524,62 @@ function FindingsTab({
   editingFinding: string | null;
   setEditingFinding: (id: string | null) => void;
 }) {
+  const PAGE_SIZE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  const totalPages = Math.ceil(findings.length / PAGE_SIZE);
+  const paginatedFindings = findings.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  );
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const PaginationControls = () => (
+    <div className="flex items-center justify-between mt-6">
+      <div className="text-sm text-muted-foreground">
+        Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, findings.length)} to{" "}
+        {Math.min(currentPage * PAGE_SIZE, findings.length)} of {findings.length} findings
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => goToPage(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="h-8 w-8 p-0 hover:scale-105 active:scale-95 hover:ring-primary/30 transition-all duration-200"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </Button>
+        {Array.from({ length: totalPages }, (_, i) => i + 1)
+          .slice(-5)
+          .map((page) => (
+            <Button
+              key={page}
+              variant={currentPage === page ? "default" : "outline"}
+              size="sm"
+              onClick={() => goToPage(page)}
+              className="h-8 w-8 p-0 hover:scale-105 active:scale-95 hover:ring-primary/30 transition-all duration-200"
+            >
+              {page}
+            </Button>
+          ))}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => goToPage(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="h-8 w-8 p-0 hover:scale-105 active:scale-95 hover:ring-primary/30 transition-all duration-200"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -466,59 +599,64 @@ function FindingsTab({
           description="Add your first finding to begin tracking issues."
         />
       ) : (
-        findings.map((f: any) =>
-          editingFinding === f.id ? (
-            <EditFindingForm key={f.id} finding={f} onCancel={() => setEditingFinding(null)} />
-          ) : (
-            <Card key={f.id} className="hover:shadow-sm transition-shadow">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
-                      <h4 className="font-medium">{f.topic || "Untitled"}</h4>
-                      <Badge variant={severityBadgeVariant(f.severity)}>{f.severity}</Badge>
-                      <Badge variant={findingStatusVariant(f.status)}>{f.status}</Badge>
-                    </div>
-                    {f.summary && (
-                      <p className="text-sm text-muted-foreground">{f.summary}</p>
-                    )}
-                    {f.recommended_actions && (
-                      <p className="text-xs text-muted-foreground">
-                        <b>Actions:</b> {f.recommended_actions}
-                      </p>
-                    )}
-                    {f.responsible_party && (
-                      <p className="text-xs text-muted-foreground">
-                        <b>Responsible:</b> {f.responsible_party}
-                      </p>
-                    )}
-                  </div>
+        <>
+          <div className="space-y-3">
+            {paginatedFindings.map((f: any) =>
+              editingFinding === f.id ? (
+                <EditFindingForm key={f.id} finding={f} onCancel={() => setEditingFinding(null)} />
+              ) : (
+                <Card key={f.id} className="hover:shadow-sm transition-shadow">
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <AlertTriangle className="w-4 h-4 text-orange-500 shrink-0" />
+                          <h4 className="font-medium">{f.topic || "Untitled"}</h4>
+                          <Badge variant={severityBadgeVariant(f.severity)}>{f.severity}</Badge>
+                          <Badge variant={findingStatusVariant(f.status)}>{f.status}</Badge>
+                        </div>
+                        {f.summary && (
+                          <p className="text-sm text-muted-foreground">{f.summary}</p>
+                        )}
+                        {f.recommended_actions && (
+                          <p className="text-xs text-muted-foreground">
+                            <b>Actions:</b> {f.recommended_actions}
+                          </p>
+                        )}
+                        {f.responsible_party && (
+                          <p className="text-xs text-muted-foreground">
+                            <b>Responsible:</b> {f.responsible_party}
+                          </p>
+                        )}
+                      </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setEditingFinding(f.id)}
-                      className="p-1.5 hover:bg-muted rounded-md"
-                    >
-                      <Edit3 className="w-4 h-4 text-muted-foreground" />
-                    </button>
-                    <Form method="post">
-                      <input type="hidden" name="intent" value="delete-finding" />
-                      <input type="hidden" name="finding_id" value={f.id} />
-                      <button
-                        type="submit"
-                        className="p-1.5 hover:bg-red-50 rounded-md"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </Form>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ),
-        )
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditingFinding(f.id)}
+                          className="p-1.5 hover:bg-muted rounded-md"
+                        >
+                          <Edit3 className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                        <Form method="post">
+                          <input type="hidden" name="intent" value="delete-finding" />
+                          <input type="hidden" name="finding_id" value={f.id} />
+                          <button
+                            type="submit"
+                            className="p-1.5 hover:bg-red-50 rounded-md"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </button>
+                        </Form>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ),
+            )}
+          </div>
+          {totalPages > 1 && <PaginationControls />}
+        </>
       )}
     </div>
   );

@@ -45,6 +45,14 @@ export {
   DialogTitle, DialogDescription, DialogClose, DialogTrigger, DialogPortal
 } from "./dialog"
 
+/* ─── Tooltip ─── */
+export {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "./tooltip"
+
 /* ─── Data display ─── */
 export { Badge, badgeVariants } from "./badge"
 export type { BadgeProps } from "./badge"

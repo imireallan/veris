@@ -2,6 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.http import HttpResponse
 
 from assessments.models import (
     AIInsight,
@@ -322,7 +323,7 @@ class SiteViewSet(viewsets.ModelViewSet):
 
 class AssessmentReportViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentReportSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanManageTemplates]
 
     def get_queryset(self):
         org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
@@ -332,6 +333,55 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
         if org_pk:
             qs = qs.filter(organization_id=org_pk)
         return qs
+
+    @action(detail=True, methods=["get"], url_path="export/pdf")
+    def export_pdf(self, request, pk=None):
+        """
+        Generate and download PDF report for an assessment.
+        
+        GET /api/reports/<id>/export/pdf/
+        
+        Returns:
+            PDF file download
+        """
+        from reports.services import ReportGenerator, ReportGenerationError
+        from django.http import HttpResponse
+        
+        report = self.get_object()
+        
+        # Check permissions - user must have access to the organization
+        org_id = str(report.organization_id)
+        if not request.user.is_superuser:
+            from organizations.models import OrganizationMembership
+            has_access = OrganizationMembership.objects.filter(
+                user=request.user, organization_id=org_id
+            ).exists()
+            if not has_access:
+                return Response(
+                    {"error": "Access denied"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        try:
+            generator = ReportGenerator(report)
+            pdf_bytes = generator.generate_pdf()
+            filename = generator.generate_filename()
+            
+            # Use HttpResponse for binary content, not DRF Response
+            response = HttpResponse(pdf_bytes, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+            
+        except ReportGenerationError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Report generation failed: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class FindingViewSet(viewsets.ModelViewSet):

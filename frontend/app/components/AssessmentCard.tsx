@@ -2,7 +2,10 @@ import {
   Badge, 
   Card, 
   CardContent, 
-  ProgressBar 
+  ProgressBar,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent
 } from "~/components/ui";
 import { Clock, Building2 } from "lucide-react";
 
@@ -52,8 +55,12 @@ export function AssessmentCard({
   siteName?: string;
   orgName?: string;
 }) {
+  // Use display_name from API if available, otherwise build from available data
   const name =
-    focusAreaName || frameworkName || `Assessment ${assessment.id.slice(0, 8)}`;
+    assessment.display_name ||
+    focusAreaName ||
+    frameworkName ||
+    `Assessment ${assessment.id.slice(0, 8)}`;
 
   return (
     <Card className="hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 hover:shadow-primary/10 transition-all duration-300 group">
@@ -79,9 +86,18 @@ export function AssessmentCard({
           )}
         </div>
 
-        <h3 className="font-medium group-hover:text-primary transition-colors">
-          {name}
-        </h3>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="inline-block">
+              <h3 className="font-medium group-hover:text-primary transition-colors">
+                {name}
+              </h3>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center" sideOffset={8}>
+            {name}
+          </TooltipContent>
+        </Tooltip>
 
         <p className="text-xs text-muted-foreground">
           Due:{" "}

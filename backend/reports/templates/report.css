@@ -1,0 +1,12 @@
+/* Report PDF Styling */
+
+/* Already embedded in HTML for WeasyPrint compatibility */
+/* This file kept for future reference if external CSS needed */
+
+:root {
+    --primary-color: #2c5530;
+    --text-color: #333;
+    --muted-color: #666;
+    --border-color: #ddd;
+    --bg-light: #f9f9f9;
+}

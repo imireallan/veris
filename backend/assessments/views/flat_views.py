@@ -6,6 +6,7 @@ These are org-scoped via permission checks and query params, not URL kwargs.
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.http import HttpResponse
 
 from assessments.models import (
     Assessment,
@@ -207,6 +208,48 @@ class FlatAssessmentReportViewSet(viewsets.ModelViewSet):
                     return qs.filter(assessment_id=assessment_id)
             return qs.none()
         return qs
+
+    @action(detail=True, methods=["get"], url_path="export/pdf")
+    def export_pdf(self, request, pk=None):
+        """
+        Generate and download PDF report for an assessment.
+        
+        GET /api/reports/<id>/export/pdf/
+        
+        Returns:
+            PDF file download
+        """
+        from reports.services import ReportGenerator, ReportGenerationError
+        
+        report = self.get_object()
+        
+        # Check permissions - user must have access to the organization
+        org_id = str(report.organization_id)
+        if not request.user.is_superuser:
+            has_access = OrganizationMembership.objects.filter(
+                user=request.user, organization_id=org_id
+            ).exists()
+            if not has_access:
+                return Response(
+                    {"error": "Access denied"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        try:
+            generator = ReportGenerator(report)
+            pdf_bytes = generator.generate_pdf()
+            filename = generator.generate_filename()
+            
+            # Use HttpResponse for binary content, not DRF Response
+            response = HttpResponse(pdf_bytes, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            return response
+            
+        except ReportGenerationError as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class FlatAssessmentResponseViewSet(viewsets.ModelViewSet):

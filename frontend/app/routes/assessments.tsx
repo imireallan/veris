@@ -103,7 +103,9 @@ export default function AssessmentsListRoute() {
   const allItems = Array.isArray(assessments) ? assessments : [];
   const items = allItems.filter(
     (a: any) =>
-      (!search || a.ai_summary?.toLowerCase().includes(search.toLowerCase())) &&
+      (!search || 
+        a.display_name?.toLowerCase().includes(search.toLowerCase()) ||
+        a.ai_summary?.toLowerCase().includes(search.toLowerCase())) &&
       (!activeOrg || a.organization === activeOrg)
   );
   const totalPages = Math.ceil(items.length / PAGE_SIZE);

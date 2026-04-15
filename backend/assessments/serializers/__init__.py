@@ -149,27 +149,27 @@ class AssessmentSerializer(serializers.ModelSerializer):
     def get_display_name(self, obj) -> str:
         """Generate a human-readable name for the assessment."""
         parts = []
-        
+
         # Add framework name if available
         if obj.framework:
             parts.append(obj.framework.name)
-        
+
         # Add site name if available
         if obj.site:
             parts.append(obj.site.name)
-        
+
         # Add focus area if available
         if obj.focus_area:
             parts.append(obj.focus_area.name)
-        
+
         # If we have meaningful parts, join them
         if parts:
             return " - ".join(parts)
-        
+
         # Fallback to date-based name
         if obj.created_at:
             return f"Assessment {obj.created_at.strftime('%b %Y')}"
-        
+
         # Last resort: use ID
         return f"Assessment {str(obj.id)[:8]}"
 

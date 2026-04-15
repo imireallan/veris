@@ -36,10 +36,7 @@ from assessments.serializers import (
     TaskSerializer,
 )
 from organizations.models import OrganizationMembership
-from users.permissions import (
-    IsAssessmentOwner,
-    IsOrganizationMember,
-)
+from users.permissions import IsAssessmentOwner, IsOrganizationMember
 
 
 class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -78,7 +75,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        
+
         # Superusers can see all assessments
         if user.is_superuser:
             qs = Assessment.objects.all()
@@ -87,13 +84,13 @@ class AssessmentViewSet(viewsets.ModelViewSet):
             memberships = OrganizationMembership.objects.filter(user=user).values_list(
                 "organization_id", flat=True
             )
-            
+
             if not memberships:
                 return Assessment.objects.none()
-            
+
             # Filter assessments by user's organizations
             qs = Assessment.objects.filter(organization_id__in=memberships)
-        
+
         # Additional org filter from URL if provided
         org_id = (
             self.kwargs.get("org_pk")
@@ -102,7 +99,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         )
         if org_id:
             qs = qs.filter(organization_id=org_id)
-        
+
         return qs.select_related(
             "site", "focus_area", "framework", "created_by", "assigned_to"
         )

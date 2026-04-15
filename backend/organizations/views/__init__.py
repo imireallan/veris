@@ -237,8 +237,10 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         requesting_membership = OrganizationMembership.objects.filter(
             user=request.user, organization_id=org_pk
         ).first()
-        
-        if not requesting_membership or not requesting_membership.has_permission("user:remove"):
+
+        if not requesting_membership or not requesting_membership.has_permission(
+            "user:remove"
+        ):
             return Response(
                 {"detail": "You do not have permission to remove members."},
                 status=403,
@@ -247,7 +249,9 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         # Prevent self-removal
         if membership.user == request.user:
             return Response(
-                {"detail": "Cannot remove yourself. Transfer ownership first if needed."},
+                {
+                    "detail": "Cannot remove yourself. Transfer ownership first if needed."
+                },
                 status=400,
             )
 
@@ -325,18 +329,23 @@ class InvitationViewSet(viewsets.ModelViewSet):
             )
 
         # Send invitation email
-        from organizations.email_service import send_invitation_email
         from django.conf import settings
+
+        from organizations.email_service import send_invitation_email
 
         try:
             email_sent = send_invitation_email(invitation)
             if not email_sent:
                 # In development, log warning but still return success
-                is_debug = getattr(settings, 'DEBUG', False)
+                is_debug = getattr(settings, "DEBUG", False)
                 if is_debug:
-                    print(f"⚠️  Email not sent (development mode). Invitation would be sent to: {invitation.email}")
+                    print(
+                        f"⚠️  Email not sent (development mode). Invitation would be sent to: {invitation.email}"
+                    )
                     return Response(
-                        {"detail": f"Invitation resend processed (email logging in development). Would send to: {invitation.email}"},
+                        {
+                            "detail": f"Invitation resend processed (email logging in development). Would send to: {invitation.email}"
+                        },
                         status=status.HTTP_200_OK,
                     )
                 return Response(
@@ -347,11 +356,15 @@ class InvitationViewSet(viewsets.ModelViewSet):
                 )
         except Exception as e:
             print(f"Exception in resend: {e}")
-            is_debug = getattr(settings, 'DEBUG', False)
+            is_debug = getattr(settings, "DEBUG", False)
             if is_debug:
-                print(f"⚠️  Email exception in development mode. Would send to: {invitation.email}")
+                print(
+                    f"⚠️  Email exception in development mode. Would send to: {invitation.email}"
+                )
                 return Response(
-                    {"detail": f"Invitation resend processed (email error in dev). Would send to: {invitation.email}"},
+                    {
+                        "detail": f"Invitation resend processed (email error in dev). Would send to: {invitation.email}"
+                    },
                     status=status.HTTP_200_OK,
                 )
             return Response(

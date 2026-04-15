@@ -299,7 +299,14 @@ class InvitationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def resend(self, request, pk=None, org_pk=None):
         """Resend an invitation email."""
-        invitation = self.get_object()
+        try:
+            invitation = self.get_object()
+        except Exception as e:
+            print(f"Error getting invitation: {e}")
+            return Response(
+                {"detail": f"Invitation not found: {str(e)}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         if invitation.status != Invitation.Status.PENDING:
             return Response(
@@ -319,14 +326,36 @@ class InvitationViewSet(viewsets.ModelViewSet):
 
         # Send invitation email
         from organizations.email_service import send_invitation_email
+        from django.conf import settings
 
-        email_sent = send_invitation_email(invitation)
-
-        if not email_sent:
+        try:
+            email_sent = send_invitation_email(invitation)
+            if not email_sent:
+                # In development, log warning but still return success
+                is_debug = getattr(settings, 'DEBUG', False)
+                if is_debug:
+                    print(f"⚠️  Email not sent (development mode). Invitation would be sent to: {invitation.email}")
+                    return Response(
+                        {"detail": f"Invitation resend processed (email logging in development). Would send to: {invitation.email}"},
+                        status=status.HTTP_200_OK,
+                    )
+                return Response(
+                    {
+                        "detail": "Failed to send invitation email. Please check email configuration or contact support."
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        except Exception as e:
+            print(f"Exception in resend: {e}")
+            is_debug = getattr(settings, 'DEBUG', False)
+            if is_debug:
+                print(f"⚠️  Email exception in development mode. Would send to: {invitation.email}")
+                return Response(
+                    {"detail": f"Invitation resend processed (email error in dev). Would send to: {invitation.email}"},
+                    status=status.HTTP_200_OK,
+                )
             return Response(
-                {
-                    "detail": "Failed to send invitation email. Please try again or contact support."
-                },
+                {"detail": f"Failed to send email: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

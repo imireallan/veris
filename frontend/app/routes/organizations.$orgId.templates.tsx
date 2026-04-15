@@ -68,8 +68,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function TemplatesRoute() {
-export default function TemplatesRoute() {
   const { templates, orgId, user, accessDenied } = useLoaderData<typeof loader>();
+  const [isCreating, setIsCreating] = useState(false);
 
   if (accessDenied) {
     return (

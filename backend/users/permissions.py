@@ -184,3 +184,238 @@ class IsAssessmentOwner(permissions.BasePermission):
             ).exists()
 
         return False
+
+
+class CanManageAssessments(permissions.BasePermission):
+    """
+    Permission for assessment CRUD operations based on role.
+
+    Matrix:
+    - View: All org members (handled by IsOrganizationMember)
+    - Create: ADMIN, COORDINATOR, OPERATOR
+    - Edit: ADMIN, COORDINATOR
+    - Delete: ADMIN, COORDINATOR
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        org_pk = view.kwargs.get("org_pk")
+        if not org_pk:
+            org_pk = request.query_params.get("organization")
+
+        if not org_pk:
+            return True
+
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not membership:
+            return False
+
+        # CREATE - ADMIN, COORDINATOR, OPERATOR
+        if request.method == "POST":
+            return membership.fallback_role in ["ADMIN", "COORDINATOR", "OPERATOR"]
+
+        # DELETE - ADMIN, COORDINATOR only
+        if request.method == "DELETE":
+            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+
+        # UPDATE/PUT/PATCH - ADMIN, COORDINATOR only
+        if request.method in ["PUT", "PATCH"]:
+            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+
+        # SAFE methods (GET, HEAD, OPTIONS) - all org members
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return False
+
+
+class CanManageSites(permissions.BasePermission):
+    """
+    Permission for site CRUD operations based on role.
+
+    Matrix:
+    - View: All org members
+    - Create: ADMIN, COORDINATOR, OPERATOR
+    - Edit: ADMIN, COORDINATOR, OPERATOR
+    - Delete: ADMIN, COORDINATOR
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        org_pk = view.kwargs.get("org_pk")
+        if not org_pk:
+            org_pk = request.query_params.get("organization")
+
+        if not org_pk:
+            return True
+
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not membership:
+            return False
+
+        # DELETE - ADMIN, COORDINATOR only
+        if request.method == "DELETE":
+            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+
+        # CREATE/UPDATE - ADMIN, COORDINATOR, OPERATOR
+        if request.method in ["POST", "PUT", "PATCH"]:
+            return membership.fallback_role in ["ADMIN", "COORDINATOR", "OPERATOR"]
+
+        # SAFE methods - all org members
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return False
+
+
+class CanManageTasks(permissions.BasePermission):
+    """
+    Permission for task CRUD operations based on role.
+
+    Matrix:
+    - View: All org members
+    - Create: ADMIN, COORDINATOR, OPERATOR
+    - Update: ADMIN, COORDINATOR, OPERATOR
+    - Delete: ADMIN, COORDINATOR
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        org_pk = view.kwargs.get("org_pk")
+        if not org_pk:
+            org_pk = request.query_params.get("organization")
+
+        if not org_pk:
+            return True
+
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not membership:
+            return False
+
+        # DELETE - ADMIN, COORDINATOR only
+        if request.method == "DELETE":
+            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+
+        # CREATE/UPDATE - ADMIN, COORDINATOR, OPERATOR
+        if request.method in ["POST", "PUT", "PATCH"]:
+            return membership.fallback_role in ["ADMIN", "COORDINATOR", "OPERATOR"]
+
+        # SAFE methods - all org members
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return False
+
+
+class CanManageFindings(permissions.BasePermission):
+    """
+    Permission for finding CRUD operations based on role.
+
+    Matrix:
+    - View: All org members
+    - Create: ADMIN, COORDINATOR
+    - Edit: ADMIN, COORDINATOR
+    - Delete: ADMIN only
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        org_pk = view.kwargs.get("org_pk")
+        if not org_pk:
+            org_pk = request.query_params.get("organization")
+
+        if not org_pk:
+            return True
+
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not membership:
+            return False
+
+        # DELETE - ADMIN only
+        if request.method == "DELETE":
+            return membership.fallback_role == "ADMIN"
+
+        # CREATE/UPDATE - ADMIN, COORDINATOR only
+        if request.method in ["POST", "PUT", "PATCH"]:
+            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+
+        # SAFE methods - all org members
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return False
+
+
+class CanManageTemplates(permissions.BasePermission):
+    """
+    Permission for template CRUD operations based on role.
+
+    Matrix:
+    - View: All org members
+    - Create: ADMIN, COORDINATOR
+    - Edit: ADMIN, COORDINATOR
+    - Delete: ADMIN, COORDINATOR
+    """
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        org_pk = view.kwargs.get("org_pk")
+        if not org_pk:
+            org_pk = request.query_params.get("organization")
+
+        if not org_pk:
+            return True
+
+        membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not membership:
+            return False
+
+        # All write operations - ADMIN, COORDINATOR only
+        if request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+
+        # SAFE methods - all org members
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        return False

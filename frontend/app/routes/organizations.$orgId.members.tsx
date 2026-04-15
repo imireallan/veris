@@ -45,7 +45,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   // Only ADMIN and SUPERADMIN can manage members
   if (!RBAC.canManageOrg(user, orgId)) {
-    throw redirect("/");
+    // Return accessDenied instead of throwing - consistent with other routes
+    return { 
+      members: [], 
+      invitations: [], 
+      orgId, 
+      availableInviteRoles: [], 
+      userRole: user.fallbackRole || "OPERATOR",
+      accessDenied: true 
+    };
   }
 
   const [membersResponse, invitationsResponse] = await Promise.all([
@@ -59,7 +67,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   // Get roles this user can invite based on their role
   const availableInviteRoles = getAvailableRolesForInviter(user.fallbackRole || "OPERATOR");
 
-  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole || "OPERATOR" };
+  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole || "OPERATOR", accessDenied: false };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -174,7 +182,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function OrganizationMembersRoute() {
-  const { members, invitations, orgId, availableInviteRoles, userRole } = useLoaderData<typeof loader>();
+  const { members, invitations, orgId, availableInviteRoles, userRole, accessDenied } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -188,6 +196,28 @@ export default function OrganizationMembersRoute() {
   const [memberToRemove, setMemberToRemove] = useState<any | null>(null);
   const [memberToEditRole, setMemberToEditRole] = useState<any | null>(null);
   const [newRole, setNewRole] = useState("");
+
+  // Show access denied state
+  if (accessDenied) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center p-8">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-6xl">🔒</div>
+          <h2 className="text-2xl font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">
+            You don't have permission to manage members. Contact your administrator if you need access.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/organizations/${orgId}`)}
+          >
+            ← Back to Organization
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Role label helper
   const getRoleLabel = (role: string) => {

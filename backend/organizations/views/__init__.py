@@ -228,6 +228,40 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         membership.save()
         return Response(self.get_serializer(membership).data)
 
+    @action(detail=True, methods=["post"])
+    def remove(self, request, pk=None, org_pk=None):
+        """Remove a member from the organization."""
+        membership = self.get_object()
+
+        # Check if requesting user has permission to remove members
+        requesting_membership = OrganizationMembership.objects.filter(
+            user=request.user, organization_id=org_pk
+        ).first()
+
+        if not requesting_membership or not requesting_membership.has_permission(
+            "user:remove"
+        ):
+            return Response(
+                {"detail": "You do not have permission to remove members."},
+                status=403,
+            )
+
+        # Prevent self-removal
+        if membership.user == request.user:
+            return Response(
+                {
+                    "detail": "Cannot remove yourself. Transfer ownership first if needed."
+                },
+                status=400,
+            )
+
+        # Delete the membership
+        membership.delete()
+        return Response(
+            {"detail": "Member removed successfully."},
+            status=status.HTTP_200_OK,
+        )
+
 
 class InvitationViewSet(viewsets.ModelViewSet):
     """Organization invitation routes — /api/organizations/:org_pk/invitations/.
@@ -269,7 +303,14 @@ class InvitationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def resend(self, request, pk=None, org_pk=None):
         """Resend an invitation email."""
-        invitation = self.get_object()
+        try:
+            invitation = self.get_object()
+        except Exception as e:
+            print(f"Error getting invitation: {e}")
+            return Response(
+                {"detail": f"Invitation not found: {str(e)}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         if invitation.status != Invitation.Status.PENDING:
             return Response(
@@ -288,15 +329,46 @@ class InvitationViewSet(viewsets.ModelViewSet):
             )
 
         # Send invitation email
+        from django.conf import settings
+
         from organizations.email_service import send_invitation_email
 
-        email_sent = send_invitation_email(invitation)
-
-        if not email_sent:
+        try:
+            email_sent = send_invitation_email(invitation)
+            if not email_sent:
+                # In development, log warning but still return success
+                is_debug = getattr(settings, "DEBUG", False)
+                if is_debug:
+                    print(
+                        f"⚠️  Email not sent (development mode). Invitation would be sent to: {invitation.email}"
+                    )
+                    return Response(
+                        {
+                            "detail": f"Invitation resend processed (email logging in development). Would send to: {invitation.email}"
+                        },
+                        status=status.HTTP_200_OK,
+                    )
+                return Response(
+                    {
+                        "detail": "Failed to send invitation email. Please check email configuration or contact support."
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+        except Exception as e:
+            print(f"Exception in resend: {e}")
+            is_debug = getattr(settings, "DEBUG", False)
+            if is_debug:
+                print(
+                    f"⚠️  Email exception in development mode. Would send to: {invitation.email}"
+                )
+                return Response(
+                    {
+                        "detail": f"Invitation resend processed (email error in dev). Would send to: {invitation.email}"
+                    },
+                    status=status.HTTP_200_OK,
+                )
             return Response(
-                {
-                    "detail": "Failed to send invitation email. Please try again or contact support."
-                },
+                {"detail": f"Failed to send email: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

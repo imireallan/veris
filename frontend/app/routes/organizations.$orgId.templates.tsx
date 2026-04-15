@@ -17,14 +17,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId;
 
-  if (!RBAC.isOrgMember(user, orgId!)) {
-    throw new Response("Access denied", { status: 403 });
+  // Check RBAC - return empty state instead of throwing
+  const isMember = RBAC.isOrgMember(user, orgId!);
+  if (!isMember) {
+    return { templates: [], orgId, user, accessDenied: true };
   }
 
-  const response = await api.get<any>(`/api/organizations/${orgId}/templates/`, token, request).catch(() => []);
+  const response = await api.get<any>(`/api/organizations/${orgId}/templates/`, token, request)
+    .catch(() => ({ results: [] }));
   const templates = Array.isArray(response) ? response : (response?.results || []);
 
-  return { templates, orgId, user };
+  return { templates, orgId, user, accessDenied: false };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -65,11 +68,23 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function TemplatesRoute() {
-  const { templates, orgId } = useLoaderData<typeof loader>();
-  const [isCreating, setIsCreating] = useState(false);
+export default function TemplatesRoute() {
+  const { templates, orgId, user, accessDenied } = useLoaderData<typeof loader>();
+
+  if (accessDenied) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <h2 className="text-xl font-medium">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have access to this organization's templates.</p>
+        <Link to="/organizations" className="text-primary hover:underline">
+          ← Back to organizations
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="p-8">
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">Assessment Templates</h1>

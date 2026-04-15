@@ -1,13 +1,13 @@
-import { useFetcher, useLoaderData, useNavigate, useParams } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data, redirect } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { RBAC } from "~/types/rbac";
-import type { User } from "~/types";
 import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 import { useEffect, useRef, useState } from "react";
 
 // Role hierarchy - higher number = more permissions
@@ -125,9 +125,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     if (actionType === "remove_member") {
       const membershipId = formData.get("membershipId") as string;
-      // Note: Backend doesn't have delete endpoint for members yet
-      // This would need to be added to the backend
-      return { success: false, error: "Remove member not implemented on backend" };
+      await api.post(
+        `/api/organizations/${orgId}/members/${membershipId}/remove/`,
+        {},
+        token,
+        request
+      );
+      return { success: true, message: "Member removed successfully" };
     }
 
     if (actionType === "resend_invitation") {
@@ -174,12 +178,16 @@ export default function OrganizationMembersRoute() {
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("");
   const [inviteRoleLabel, setInviteRoleLabel] = useState("");
-  const lastActionType = useRef<string | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [invitationSearch, setInvitationSearch] = useState("");
+  const [memberToRemove, setMemberToRemove] = useState<any | null>(null);
+  const [memberToEditRole, setMemberToEditRole] = useState<any | null>(null);
+  const [newRole, setNewRole] = useState("");
 
   // Role label helper
   const getRoleLabel = (role: string) => {
@@ -199,36 +207,77 @@ export default function OrganizationMembersRoute() {
     }
   }, [showInviteModal, availableInviteRoles, inviteRole]);
 
+  // Handle fetcher result with centralized toast logic
   useEffect(() => {
-    // Track when form is submitted
-    if (fetcher.state === "submitting") {
-      lastActionType.current = "create_invitation";
-    }
-    
-    if (fetcher.data && !hasShownToast.current) {
-      // Only show toast for the last action type
-      if (lastActionType.current === "create_invitation") {
-        if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
-          toastSuccess("Success", fetcher.data.message as string);
-          hasShownToast.current = true;
+    handleFetcherResult(fetcher, {
+      actionSuccessHandlers: {
+        create_invitation: (data) => {
+          if ("message" in data) {
+            toastSuccess("Success", data.message as string);
+          }
           // Close modal and reset form on successful invitation
           setShowInviteModal(false);
           setInviteEmail("");
           setInviteRole("");
-          lastActionType.current = null;
-        } else if ("error" in fetcher.data && fetcher.data.error) {
-          toastError("Invitation Failed", fetcher.data.error as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        }
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
+        },
+        update_role: (data) => {
+          if ("message" in data) {
+            toastSuccess("Role Updated", data.message as string);
+          }
+        },
+        remove_member: (data) => {
+          if ("message" in data) {
+            toastSuccess("Member Removed", data.message as string);
+          }
+        },
+        resend_invitation: (data) => {
+          if ("message" in data) {
+            toastSuccess("Invitation Resent", data.message as string);
+          }
+        },
+        revoke_invitation: (data) => {
+          if ("message" in data) {
+            toastSuccess("Invitation Revoked", data.message as string);
+          }
+        },
+      },
+      error: (data) => {
+        // Map action types to error messages
+        const errorMessages: Record<string, string> = {
+          create_invitation: "Invitation Failed",
+          update_role: "Update Failed",
+          remove_member: "Remove Failed",
+          resend_invitation: "Resend Failed",
+          revoke_invitation: "Revoke Failed",
+        };
+        const actionType = fetcher.formData?.get("actionType") as string || "unknown";
+        toastError(errorMessages[actionType] || "Action Failed", data.error as string);
+      },
+    });
+  }, [fetcher, toastSuccess, toastError]);
 
   const isProcessing = fetcher.state === "submitting";
+
+  // Filter members and invitations by search
+  const filteredMembers = members.filter((m: any) => {
+    if (!memberSearch) return true;
+    const searchLower = memberSearch.toLowerCase();
+    return (
+      (m.user_name || "").toLowerCase().includes(searchLower) ||
+      (m.user_email || "").toLowerCase().includes(searchLower) ||
+      (m.role_name || m.fallback_role || "").toLowerCase().includes(searchLower)
+    );
+  });
+
+  const filteredInvitations = invitations.filter((i: any) => {
+    if (!invitationSearch) return true;
+    const searchLower = invitationSearch.toLowerCase();
+    return (
+      (i.email || "").toLowerCase().includes(searchLower) ||
+      (i.role_name || i.fallback_role || "").toLowerCase().includes(searchLower) ||
+      (i.status || "").toLowerCase().includes(searchLower)
+    );
+  });
 
   // Note: Form submission handled directly by fetcher.Form
   // actionType is set via hidden input field
@@ -272,21 +321,29 @@ export default function OrganizationMembersRoute() {
       {/* Members Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold">Members</h3>
               <CardDescription>
                 Current members of your organization
               </CardDescription>
             </div>
-            <Badge variant="secondary">{members.length} members</Badge>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search members..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="w-[200px]"
+              />
+              <Badge variant="secondary">{filteredMembers.length} members</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {members.length === 0 ? (
+          {filteredMembers.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No members yet</p>
+              <p>{memberSearch ? `No members found matching "${memberSearch}"` : "No members yet"}</p>
             </div>
           ) : (
             <Table>
@@ -300,7 +357,7 @@ export default function OrganizationMembersRoute() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {members.map((member: any) => (
+                {filteredMembers.map((member: any) => (
                   <TableRow key={member.id}>
                     <TableCell className="font-medium">
                       {member.user_name || "Unknown"}
@@ -325,11 +382,28 @@ export default function OrganizationMembersRoute() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem disabled>
-                            Change role
+                          <DropdownMenuItem>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMemberToEditRole(member);
+                                setNewRole(member.fallback_role || member.role_name || "");
+                              }}
+                              className="flex items-center w-full"
+                            >
+                              <Shield className="w-3 h-3 mr-2" />
+                              Change role
+                            </button>
                           </DropdownMenuItem>
-                          <DropdownMenuItem disabled>
-                            Remove member
+                          <DropdownMenuItem>
+                            <button
+                              type="button"
+                              onClick={() => setMemberToRemove(member)}
+                              className="flex items-center w-full text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3 mr-2" />
+                              Remove member
+                            </button>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -345,21 +419,29 @@ export default function OrganizationMembersRoute() {
       {/* Invitations Section */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-semibold">Invitations</h3>
               <CardDescription>
                 Pending and processed invitations
               </CardDescription>
             </div>
-            <Badge variant="secondary">{invitations.length} invitations</Badge>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Search invitations..."
+                value={invitationSearch}
+                onChange={(e) => setInvitationSearch(e.target.value)}
+                className="w-[200px]"
+              />
+              <Badge variant="secondary">{filteredInvitations.length} invitations</Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
-          {invitations.length === 0 ? (
+          {filteredInvitations.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <Mail className="w-12 h-12 mx-auto mb-2 opacity-50" />
-              <p>No invitations sent</p>
+              <p>{invitationSearch ? `No invitations found matching "${invitationSearch}"` : "No invitations sent"}</p>
             </div>
           ) : (
             <Table>
@@ -373,7 +455,7 @@ export default function OrganizationMembersRoute() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invitations.map((invitation: any) => (
+                {filteredInvitations.map((invitation: any) => (
                   <TableRow key={invitation.id}>
                     <TableCell className="font-medium">
                       {invitation.email}
@@ -462,7 +544,7 @@ export default function OrganizationMembersRoute() {
             <div className="space-y-2">
               <Label htmlFor="fallback_role">Role</Label>
               <Select value={inviteRole} onValueChange={(v) => {
-                setInviteRole(v);
+                if (v) setInviteRole(v);
               }}>
                 <SelectTrigger className="w-full">
                   <SelectValue>{inviteRole ? getRoleLabel(inviteRole) : "Select a role"}</SelectValue>
@@ -503,6 +585,100 @@ export default function OrganizationMembersRoute() {
               </Button>
             </DialogFooter>
           </fetcher.Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Member Confirmation Dialog */}
+      <Dialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove Member</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove {memberToRemove?.user_name || memberToRemove?.user_email} from this organization? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMemberToRemove(null)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => {
+                const formData = new FormData();
+                formData.append("actionType", "remove_member");
+                formData.append("membershipId", memberToRemove.id);
+                fetcher.submit(formData, { method: "post" });
+                setMemberToRemove(null);
+              }}
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Removing..." : "Remove"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={!!memberToEditRole} onOpenChange={(open) => !open && setMemberToEditRole(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+            <DialogDescription>
+              Update role for {memberToEditRole?.user_name || memberToEditRole?.user_email}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-role">New Role</Label>
+              <Select value={newRole} onValueChange={(v) => {
+                if (v) setNewRole(v);
+              }}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                    <SelectItem value="COORDINATOR">Coordinator</SelectItem>
+                    <SelectItem value="OPERATOR">Operator</SelectItem>
+                    <SelectItem value="EXECUTIVE">Executive</SelectItem>
+                    <SelectItem value="ASSESSOR">Assessor</SelectItem>
+                    <SelectItem value="CONSULTANT">Consultant</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMemberToEditRole(null)}
+              disabled={isProcessing}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                const formData = new FormData();
+                formData.append("actionType", "update_role");
+                formData.append("membershipId", memberToEditRole.id);
+                formData.append("fallback_role", newRole);
+                fetcher.submit(formData, { method: "post" });
+                setMemberToEditRole(null);
+              }}
+              disabled={isProcessing || !newRole}
+            >
+              {isProcessing ? "Updating..." : "Update Role"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

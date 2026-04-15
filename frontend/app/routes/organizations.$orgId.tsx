@@ -23,11 +23,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   try {
     org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
   } catch (error: any) {
-    // Create a proper Error object with status for ErrorBoundary
     const status = error.status || 500;
     const message = error.message || "An error occurred";
     
-    // Create error with proper status that ErrorBoundary can read
     const errorObj = new Error(message);
     (errorObj as any).status = status;
     (errorObj as any).statusCode = status;
@@ -41,18 +39,26 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   
   const assessments = assessmentList.filter((a: any) => a.organization === orgId || a.organization_id === orgId);
 
-  return { org, assessments, user };
+  return { org, assessments, user, accessDenied: !RBAC.isOrgMember(user, orgId) };
 }
 
 export default function OrganizationDetailRoute() {
-  const { org, assessments, user } = useLoaderData<typeof loader>();
+  const { org, assessments, user, accessDenied } = useLoaderData<typeof loader>();
 
   if (!user) {
     return <div className="p-8 text-center">Loading user profile...</div>;
   }
 
-  if (!RBAC.isOrgMember(user, org.id)) {
-    throw new Response("Access denied", { status: 403 });
+  if (accessDenied) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <h2 className="text-xl font-medium">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have access to this organization.</p>
+        <Link to="/organizations" className="text-primary hover:underline">
+          ← Back to organizations
+        </Link>
+      </div>
+    );
   }
 
   return (

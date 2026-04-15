@@ -20,6 +20,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { User as UserType } from "~/types";
 import { UserRole, RBAC } from "~/types/rbac";
+import { getSelectedOrganization } from "~/components/OrganizationSwitcher";
 
 function getRoleBadgeVariant(role: UserRole | string): "destructive" | "default" | "secondary" | "outline" {
   const priority = RBAC.getRolePriority(role);
@@ -64,6 +65,8 @@ export function UserProfileCard({
     : user.email.slice(0, 2).toUpperCase();
 
   const RoleIcon = getRoleIconComponent(user.role);
+  const selectedOrg = getSelectedOrganization(user);
+  const isValidSelectedOrg = selectedOrg && user.organizations?.some((org) => org.id === selectedOrg.id);
 
   return (
     <Card className={cn("w-full max-w-md border bg-card", className)}>
@@ -146,14 +149,15 @@ export function UserProfileCard({
               All Organizations ({user.organizations.length})
             </p>
             <div className="space-y-1.5">
-              {user.organizations.map((org: any) => {
+              {user.organizations.map((org) => {
                 const OrgRoleIcon = getRoleIconComponent(org.role);
+                const isSelected = isValidSelectedOrg && selectedOrg.id === org.id;
                 return (
                   <div
                     key={org.id}
                     className={cn(
                       "flex items-center justify-between p-2 rounded-md text-sm border",
-                      org.id === user.orgId
+                      isSelected
                         ? "bg-primary/5 border-primary/20"
                         : "bg-muted/30 border-border"
                     )}

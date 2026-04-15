@@ -1,11 +1,12 @@
-import { useFetcher, useLoaderData, useNavigate, useParams } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { data, redirect } from "react-router";
+import { data } from "react-router";
 import { api } from "~/.server/lib/api";
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Alert, AlertDescription, Input, Label } from "~/components/ui";
-import { CheckCircle2, XCircle, Lock, Mail } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
-import { useEffect, useRef } from "react";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
+import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Alert, AlertDescription, Input, Label } from "~/components/ui";
+import { CheckCircle2, XCircle, Mail } from "lucide-react";
+import { useEffect } from "react";
 
 // Public route - no auth required
 export async function loader({ params, request }: LoaderFunctionArgs) {
@@ -80,27 +81,20 @@ export default function OnboardingSetPasswordRoute() {
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
 
   useEffect(() => {
-    if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success) {
-        toastSuccess("Success", fetcher.data.message as string);
-        hasShownToast.current = true;
-        
+    handleFetcherResult(fetcher, {
+      success: (data: any) => {
+        toastSuccess("Success", data.message as string);
         // Redirect to login after 2 seconds
         setTimeout(() => {
           navigate("/login");
         }, 2000);
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Error", fetcher.data.error);
-        hasShownToast.current = true;
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError, navigate]);
+      },
+      error: (data: any) => toastError("Error", data.error),
+    });
+  }, [fetcher, toastSuccess, toastError, navigate]);
 
   const isProcessing = fetcher.state === "submitting";
 

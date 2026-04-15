@@ -2,10 +2,11 @@ import { useFetcher, useNavigate, useParams } from "react-router";
 import type { ActionFunctionArgs } from "react-router";
 import { data } from "react-router";
 import { api } from "~/.server/lib/api";
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Input, Label } from "~/components/ui";
-import { CheckCircle2, Lock } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
-import { useEffect, useRef } from "react";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
+import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Input, Label } from "~/components/ui";
+import { CheckCircle2 } from "lucide-react";
+import { useEffect } from "react";
 
 export async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -66,27 +67,20 @@ export default function ResetPasswordConfirmRoute() {
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
 
   useEffect(() => {
-    if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success) {
-        toastSuccess("Success", fetcher.data.message as string);
-        hasShownToast.current = true;
-        
+    handleFetcherResult(fetcher, {
+      success: (data: any) => {
+        toastSuccess("Success", data.message as string);
         // Redirect to login after 2 seconds
         setTimeout(() => {
           navigate("/login");
         }, 2000);
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Error", fetcher.data.error);
-        hasShownToast.current = true;
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError, navigate]);
+      },
+      error: (data: any) => toastError("Error", data.error),
+    });
+  }, [fetcher, toastSuccess, toastError, navigate]);
 
   const isProcessing = fetcher.state === "submitting";
 

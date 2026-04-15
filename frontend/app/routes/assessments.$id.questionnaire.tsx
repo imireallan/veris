@@ -66,7 +66,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const assessmentId = params.id;
   
   // First, fetch the assessment to get its organization_id
-  // This allows superadmins (user.orgId === null) to still access the questionnaire
+  // This allows superadmins to still access the questionnaire
   const assessment = await api.get<any>(`/api/assessments/${assessmentId}/`, token, request);
   
   if (!assessment) {

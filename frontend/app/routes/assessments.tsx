@@ -17,7 +17,13 @@ export async function loader({ request }: LoaderFunctionArgs) {
     try {
       const result = await api.get<any>(path, token, request);
       return Array.isArray(result) ? result : (result?.results ?? []);
-    } catch {
+    } catch (err: any) {
+      // Handle 403 permission errors gracefully - return empty array
+      if (err.status === 403) {
+        console.warn(`Permission denied for ${label}: User lacks access`);
+        return [];
+      }
+      console.warn(`Failed to fetch ${label}:`, err.message);
       return [];
     }
   };

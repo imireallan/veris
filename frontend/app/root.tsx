@@ -131,10 +131,32 @@ export function ErrorBoundary() {
   let stack: string | undefined;
 
   if (error instanceof Response) {
-    message = String(error.status);
-    details = error.statusText || details;
+    // Handle HTTP errors gracefully
+    if (error.status === 403) {
+      message = "Access Denied";
+      details = "You don't have permission to access this resource.";
+    } else if (error.status === 404) {
+      message = "Not Found";
+      details = "The requested resource could not be found.";
+    } else if (error.status === 401) {
+      message = "Unauthorized";
+      details = "Please log in to continue.";
+    } else {
+      message = String(error.status);
+      details = error.statusText || details;
+    }
   } else if (error instanceof Error) {
-    details = error.message;
+    // Check if it's an API error with status
+    const apiError = error as any;
+    if (apiError.status === 403) {
+      message = "Access Denied";
+      details = "You don't have permission to access this resource.";
+    } else if (apiError.status === 404) {
+      message = "Not Found";
+      details = "The requested resource could not be found.";
+    } else {
+      details = error.message;
+    }
     stack = error.stack;
   }
 

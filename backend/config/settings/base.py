@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "themes",
     "assessments",
     "knowledge",
+    "reports",
 ]
 
 MIDDLEWARE = [
@@ -55,7 +56,10 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [BASE_DIR / "settings" / "templates"],
+        "DIRS": [
+            BASE_DIR / "settings" / "templates",
+            BASE_DIR / "reports" / "templates",
+        ],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

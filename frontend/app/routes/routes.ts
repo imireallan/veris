@@ -26,4 +26,6 @@ export default [
   ]),
   // Public routes (no auth/layout required)
   route("invitations/:token", "routes/invitations.$token.tsx"),
+  // Resource routes (API endpoints proxied to backend)
+  route("resources/reports/:id/pdf", "routes/resources/reports.$id.pdf.ts"),
 ] satisfies RouteConfig;

@@ -17,6 +17,7 @@ import type { User } from "~/types";
 
 import { ThemeProvider } from "~/providers/ThemeProvider";
 import { Toaster } from "~/components/ui/sonner";
+import { TooltipProvider } from "~/components/ui/tooltip";
 import { fetchThemeConfig } from "~/.server/themes";
 
 import "./app.css";
@@ -110,16 +111,18 @@ export default function App() {
 
   return (
     <ThemeProvider initialTheme={theme}>
-      {/* Inject favicon from theme */}
-      {theme?.favicon_url && (
-        <link rel="icon" href={theme.favicon_url} key="theme-favicon" />
-      )}
-      {/* Inject custom CSS from theme */}
-      {theme?.custom_css && (
-        <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: theme.custom_css }} />
-      )}
-      <Outlet context={{ user }} />
-      <Toaster position="top-right" richColors closeButton />
+      <TooltipProvider delay={0}>
+        {/* Inject favicon from theme */}
+        {theme?.favicon_url && (
+          <link rel="icon" href={theme.favicon_url} key="theme-favicon" />
+        )}
+        {/* Inject custom CSS from theme */}
+        {theme?.custom_css && (
+          <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: theme.custom_css }} />
+        )}
+        <Outlet context={{ user }} />
+        <Toaster position="top-right" richColors closeButton />
+      </TooltipProvider>
     </ThemeProvider>
   );
 }

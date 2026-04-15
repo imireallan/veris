@@ -94,6 +94,24 @@ export const api = {
     return apiRequest(path, { method: "DELETE", token }, undefined, request) as Promise<T>;
   },
 
+  /** Raw fetch for non-JSON responses (PDFs, files, etc.) */
+  raw(path: string, options?: RequestOptions, baseUrl?: string, request?: Request) {
+    const { token, headers: extraHeaders, ...init } = options ?? {};
+    const headers: Record<string, string> = {
+      ...(extraHeaders as Record<string, string> ?? {}),
+    };
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Ensure trailing slash for Django APPEND_SLASH compatibility
+    const [pathOnly, queryString] = path.split('?');
+    const normalizedPath = pathOnly.endsWith("/") ? path : `${pathOnly}/${queryString ? `?${queryString}` : ''}`;
+    const url = `${baseUrl ?? API_URL}${normalizedPath}`;
+    return fetch(url, { ...init, headers });
+  },
+
   /** Request to the AI engine service. */
   ai: {
     get<T>(path: string, token?: string | null, request?: Request) {

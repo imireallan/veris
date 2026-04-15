@@ -372,17 +372,17 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
         if not data.get("framework_id"):
             return Response(
                 {"error": "framework_id is required"},
-                status=status.HTTP_400_BAD_REQUEST
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         # Validate framework exists
         from assessments.models import Framework
+
         try:
             framework = Framework.objects.get(id=data["framework_id"])
         except Framework.DoesNotExist:
             return Response(
-                {"error": "Framework not found"},
-                status=status.HTTP_404_NOT_FOUND
+                {"error": "Framework not found"}, status=status.HTTP_404_NOT_FOUND
             )
 
         # Create mapping entry
@@ -395,21 +395,25 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Check for duplicates
         existing = next(
-            (m for m in question.framework_mappings 
-             if m["framework_id"] == mapping["framework_id"] 
-             and m["provision_code"] == mapping["provision_code"]),
-            None
+            (
+                m
+                for m in question.framework_mappings
+                if m["framework_id"] == mapping["framework_id"]
+                and m["provision_code"] == mapping["provision_code"]
+            ),
+            None,
         )
         if existing:
             return Response(
-                {"error": "Mapping already exists"},
-                status=status.HTTP_409_CONFLICT
+                {"error": "Mapping already exists"}, status=status.HTTP_409_CONFLICT
             )
 
         question.framework_mappings.append(mapping)
         question.save()
 
-        return Response({"mappings": question.framework_mappings}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"mappings": question.framework_mappings}, status=status.HTTP_201_CREATED
+        )
 
     @action(detail=True, methods=["delete"], url_path="mappings/(?P<index>[^/.]+)")
     def delete_mapping(self, request, pk=None, index=None):
@@ -425,18 +429,19 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
                 raise ValueError("Index out of range")
         except (ValueError, TypeError):
             return Response(
-                {"error": "Invalid mapping index"},
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Invalid mapping index"}, status=status.HTTP_400_BAD_REQUEST
             )
 
         removed = question.framework_mappings.pop(idx)
         question.save()
 
-        return Response({
-            "message": "Mapping removed",
-            "removed": removed,
-            "mappings": question.framework_mappings
-        })
+        return Response(
+            {
+                "message": "Mapping removed",
+                "removed": removed,
+                "mappings": question.framework_mappings,
+            }
+        )
 
 
 class FlatSiteViewSet(viewsets.ModelViewSet):

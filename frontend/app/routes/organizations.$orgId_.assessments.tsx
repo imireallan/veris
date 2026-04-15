@@ -13,11 +13,28 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const { orgId } = params;
 
+  // Check RBAC - if user can't access org, show empty state instead of throwing
   if (!RBAC.isOrgMember(user, orgId!)) {
-    throw new Response("Access denied", { status: 403 });
+    // Return empty data instead of throwing 403
+    return { 
+      assessments: [], 
+      orgId, 
+      user,
+      orgName: "Organization",
+      accessDenied: true,
+    };
   }
 
-  const assessmentsResponse = await api.get<any>(`/api/organizations/${orgId}/assessments/`, token, request);
+  // Fetch assessments - handle 403 gracefully
+  const assessmentsResponse = await api.get<any>(`/api/organizations/${orgId}/assessments/`, token, request)
+    .catch((err: any) => {
+      if (err.status === 403) {
+        console.warn("User doesn't have permission to view assessments in this organization");
+        return { results: [] };
+      }
+      console.warn("Failed to fetch assessments:", err.message);
+      return { results: [] };
+    });
   
   const data = assessmentsResponse?.results || (Array.isArray(assessmentsResponse) ? assessmentsResponse : []);
   
@@ -29,6 +46,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     orgId, 
     user,
     orgName: org?.name || "Organization",
+    accessDenied: data.length === 0 && !RBAC.canAccessAssessments(user, orgId!),
   };
 }
 
@@ -155,11 +173,19 @@ export default function OrganizationAssessments() {
       />
 
       {filteredAssessments.length === 0 ? (
-        <EmptyState
-          icon={FileText}
-          title="No assessments found"
-          description="Try adjusting your search or filter."
-        />
+        accessDenied ? (
+          <EmptyState
+            icon={FileText}
+            title="No access to assessments"
+            description="You don't have permission to view assessments in this organization. Contact your admin if you need access."
+          />
+        ) : (
+          <EmptyState
+            icon={FileText}
+            title="No assessments found"
+            description="Try adjusting your search or filter."
+          />
+        )
       ) : (
         <>
           <div className="grid gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">

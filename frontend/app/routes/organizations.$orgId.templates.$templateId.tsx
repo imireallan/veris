@@ -23,16 +23,19 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const { orgId, templateId } = params;
 
-  if (!RBAC.isOrgMember(user, orgId!)) {
-    throw new Response("Access denied", { status: 403 });
+  // Check RBAC - return empty state instead of throwing
+  const isMember = RBAC.isOrgMember(user, orgId!);
+  if (!isMember) {
+    return { template: null, questions: [], orgId, templateId, user, accessDenied: true };
   }
 
-  const template = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/`, token, request);
+  const template = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/`, token, request)
+    .catch(() => null);
   const questions = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/questions/`, token, request)
     .then(res => Array.isArray(res) ? res : (res?.results || []))
     .catch(() => []);
 
-  return { template, questions, orgId, templateId, user };
+  return { template, questions, orgId, templateId, user, accessDenied: false };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -75,7 +78,20 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function TemplateEditor() {
-  const { template, questions, orgId, templateId, user } = useLoaderData<typeof loader>();
+  const { template, questions, orgId, templateId, user, accessDenied } = useLoaderData<typeof loader>();
+
+  if (accessDenied) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <h2 className="text-xl font-medium">Access Denied</h2>
+        <p className="text-muted-foreground">You don't have access to this template.</p>
+        <Link to={`/organizations/${orgId}/templates`} className="text-primary hover:underline">
+          ← Back to templates
+        </Link>
+      </div>
+    );
+  }
+
   const [isAdding, setIsAdding] = useState(false);
 
   const groupedQuestions = questions.reduce((acc: Record<string, any[]>, q: any) => {

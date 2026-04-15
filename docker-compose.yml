@@ -42,28 +42,28 @@ services:
       "
 
   # ── AI Engine (FastAPI + LangChain + RAG) ───────────────────
-  ai_engine:
-    build:
-      context: ./ai_engine
-      target: development
-    ports:
-      - "8001:8001"
-    env_file: .env
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/veris
-      - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
-      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-    volumes:
-      - ./ai_engine:/app
-    depends_on:
-      db:
-        condition: service_healthy
-    command: >
-      sh -c "
-        uvicorn main:app --host 0.0.0.0 --port 8001 --reload
-      "
+  # ai_engine:
+  #   build:
+  #     context: ./ai_engine
+  #     target: development
+  #   ports:
+  #     - "8001:8001"
+  #   env_file: .env
+  #   environment:
+  #     - DATABASE_URL=postgresql://postgres:postgres@db:5432/veris
+  #     - PINECONE_API_KEY=${PINECONE_API_KEY}
+  #     - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT}
+  #     - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME}
+  #     - OPENAI_API_KEY=${OPENAI_API_KEY}
+  #   volumes:
+  #     - ./ai_engine:/app
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #   command: >
+  #     sh -c "
+  #       uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+  #     "
 
 # ── PostgreSQL ──────────────────────────────────────────────
   db:

@@ -1,14 +1,13 @@
-import { useFetcher, useLoaderData, Form } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import type { User } from "~/types";
-import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
-import { User as UserIcon, Save, Key, Building2, Shield, Bell, Mail, Laptop, Image as ImageIcon, Clock } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
-import { useEffect, useRef } from "react";
-import { RBAC } from "~/types/rbac";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
+import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
+import { User as UserIcon, Key, Building2, Save, Mail, Bell, ImageIcon, Laptop, Clock, Shield } from "lucide-react";
+import { useEffect } from "react";
 
 interface Membership {
   id: string;
@@ -32,12 +31,13 @@ interface ProfileData {
     name: string;
     role: string;
     fallback_role: string;
+    slug?: string;
   }>;
   memberships: Membership[];
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const user = await requireUser(request);
+  await requireUser(request);
   const token = await getUserToken(request);
 
   // Fetch user profile from backend - use /api/auth/me/ which returns organizations[]
@@ -99,22 +99,15 @@ export default function ProfileRoute() {
   const { profile } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
 
+  // Handle fetcher result with centralized toast logic
   useEffect(() => {
-    if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success) {
-        toastSuccess("Profile updated", "Your changes have been saved successfully.");
-        hasShownToast.current = true;
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Update failed", fetcher.data.error);
-        hasShownToast.current = true;
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
+    handleFetcherResult(fetcher, {
+      success: (data: any) => toastSuccess("Profile updated", "Your changes have been saved successfully."),
+      error: (data: any) => toastError("Update failed", data.error),
+    });
+  }, [fetcher, toastSuccess, toastError]);
 
   const isSaving = fetcher.state === "submitting";
 

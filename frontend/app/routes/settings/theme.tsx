@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { useFetcher, useLoaderData, useOutletContext } from "react-router";
+import { useFetcher, useLoaderData } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data, redirect } from "react-router";
 import { useTheme } from "~/providers/ThemeProvider";
-import type { ThemeConfig, User } from "~/types";
+import type { ThemeConfig } from "~/types";
 import { Button, Input, Label, Card, CardContent, CardHeader, Alert, AlertDescription } from "~/components/ui";
 import { RBAC } from "~/types/rbac";
 import { Paintbrush, Save, RotateCcw } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { requireUser } = await import("~/.server/sessions");
@@ -297,27 +298,18 @@ export default function ThemeSettingsRoute() {
   const fetcher = useFetcher<typeof action>();
   const { setTheme } = useTheme();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = React.useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
   
   const theme = loaderData.theme;
   const isSaving = fetcher.state === "submitting";
   
-  // Show success toast when fetcher completes (only once per save)
+  // Show success toast when fetcher completes
   useEffect(() => {
-    if (fetcher.data && 'success' in fetcher.data && !hasShownToast.current) {
-      if (fetcher.data.success) {
-        toastSuccess("Theme saved", "Your branding changes have been saved successfully.");
-        hasShownToast.current = true;
-      } else if (fetcher.data.error) {
-        toastError("Save failed", fetcher.data.error);
-        hasShownToast.current = true;
-      }
-    }
-    // Reset flag when fetcher becomes idle (ready for next save)
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
+    handleFetcherResult(fetcher, {
+      success: () => toastSuccess("Theme saved", "Your branding changes have been saved successfully."),
+      error: (data) => toastError("Save failed", data.error),
+    });
+  }, [fetcher, toastSuccess, toastError]);
   
   // Local state for live preview
   const [localTheme, setLocalTheme] = useState<Partial<ThemeConfig>>({});

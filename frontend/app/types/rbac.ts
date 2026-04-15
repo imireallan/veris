@@ -86,6 +86,22 @@ export class RBAC {
   }
 
   /**
+   * Can user VIEW assessments (read-only access).
+   * OPERATOR, ASSESSOR, CONSULTANT, EXECUTIVE can view but not create.
+   */
+  static canAccessAssessments(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") {
+      return RBAC.isOrgMember(user, orgId);
+    }
+    
+    // Check if user belongs to this org
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    // All org members can VIEW assessments
+    return true;
+  }
+
+  /**
    * Can edit assessment metadata, status, and AI summaries.
    */
   static canEditAssessment(user: User, orgId: string): boolean {

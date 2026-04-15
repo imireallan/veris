@@ -1,13 +1,13 @@
-import { useFetcher, useLoaderData, useNavigate, useParams } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data, redirect } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { RBAC } from "~/types/rbac";
-import type { User } from "~/types";
 import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { Users, UserPlus, Mail, Shield, Trash2, MoreVertical, X } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 import { useEffect, useRef, useState } from "react";
 
 // Role hierarchy - higher number = more permissions
@@ -178,7 +178,7 @@ export default function OrganizationMembersRoute() {
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("");
@@ -188,7 +188,6 @@ export default function OrganizationMembersRoute() {
   const [memberToRemove, setMemberToRemove] = useState<any | null>(null);
   const [memberToEditRole, setMemberToEditRole] = useState<any | null>(null);
   const [newRole, setNewRole] = useState("");
-  const lastActionType = useRef<string | null>(null);
 
   // Role label helper
   const getRoleLabel = (role: string) => {
@@ -208,74 +207,54 @@ export default function OrganizationMembersRoute() {
     }
   }, [showInviteModal, availableInviteRoles, inviteRole]);
 
+  // Handle fetcher result with centralized toast logic
   useEffect(() => {
-    // Track when form is submitted
-    if (fetcher.state === "submitting") {
-      lastActionType.current = "create_invitation";
-    }
-    
-    if (fetcher.data && !hasShownToast.current) {
-      // Only show toast for the last action type
-      if (lastActionType.current === "create_invitation") {
-        if ("success" in fetcher.data && fetcher.data.success && "message" in fetcher.data) {
-          toastSuccess("Success", fetcher.data.message as string);
-          hasShownToast.current = true;
+    handleFetcherResult(fetcher, {
+      actionSuccessHandlers: {
+        create_invitation: (data) => {
+          if ("message" in data) {
+            toastSuccess("Success", data.message as string);
+          }
           // Close modal and reset form on successful invitation
           setShowInviteModal(false);
           setInviteEmail("");
           setInviteRole("");
-          lastActionType.current = null;
-        } else if ("error" in fetcher.data && fetcher.data.error) {
-          toastError("Invitation Failed", fetcher.data.error as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        }
-      } else if (lastActionType.current === "update_role") {
-        if ("success" in fetcher.data && fetcher.data.success) {
-          toastSuccess("Role Updated", fetcher.data.message as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        } else if ("error" in fetcher.data && fetcher.data.error) {
-          toastError("Update Failed", fetcher.data.error as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        }
-      } else if (lastActionType.current === "remove_member") {
-        if ("success" in fetcher.data && fetcher.data.success) {
-          toastSuccess("Member Removed", fetcher.data.message as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        } else if ("error" in fetcher.data && fetcher.data.error) {
-          toastError("Remove Failed", fetcher.data.error as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        }
-      } else if (lastActionType.current === "resend_invitation") {
-        if ("success" in fetcher.data && fetcher.data.success) {
-          toastSuccess("Invitation Resent", fetcher.data.message as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        } else if ("error" in fetcher.data && fetcher.data.error) {
-          toastError("Resend Failed", fetcher.data.error as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        }
-      } else if (lastActionType.current === "revoke_invitation") {
-        if ("success" in fetcher.data && fetcher.data.success) {
-          toastSuccess("Invitation Revoked", fetcher.data.message as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        } else if ("error" in fetcher.data && fetcher.data.error) {
-          toastError("Revoke Failed", fetcher.data.error as string);
-          hasShownToast.current = true;
-          lastActionType.current = null;
-        }
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
+        },
+        update_role: (data) => {
+          if ("message" in data) {
+            toastSuccess("Role Updated", data.message as string);
+          }
+        },
+        remove_member: (data) => {
+          if ("message" in data) {
+            toastSuccess("Member Removed", data.message as string);
+          }
+        },
+        resend_invitation: (data) => {
+          if ("message" in data) {
+            toastSuccess("Invitation Resent", data.message as string);
+          }
+        },
+        revoke_invitation: (data) => {
+          if ("message" in data) {
+            toastSuccess("Invitation Revoked", data.message as string);
+          }
+        },
+      },
+      error: (data) => {
+        // Map action types to error messages
+        const errorMessages: Record<string, string> = {
+          create_invitation: "Invitation Failed",
+          update_role: "Update Failed",
+          remove_member: "Remove Failed",
+          resend_invitation: "Resend Failed",
+          revoke_invitation: "Revoke Failed",
+        };
+        const actionType = fetcher.formData?.get("actionType") as string || "unknown";
+        toastError(errorMessages[actionType] || "Action Failed", data.error as string);
+      },
+    });
+  }, [fetcher, toastSuccess, toastError]);
 
   const isProcessing = fetcher.state === "submitting";
 
@@ -565,7 +544,7 @@ export default function OrganizationMembersRoute() {
             <div className="space-y-2">
               <Label htmlFor="fallback_role">Role</Label>
               <Select value={inviteRole} onValueChange={(v) => {
-                setInviteRole(v);
+                if (v) setInviteRole(v);
               }}>
                 <SelectTrigger className="w-full">
                   <SelectValue>{inviteRole ? getRoleLabel(inviteRole) : "Select a role"}</SelectValue>
@@ -657,7 +636,9 @@ export default function OrganizationMembersRoute() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="new-role">New Role</Label>
-              <Select value={newRole} onValueChange={setNewRole}>
+              <Select value={newRole} onValueChange={(v) => {
+                if (v) setNewRole(v);
+              }}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>

@@ -1,11 +1,12 @@
-import { useFetcher, useLoaderData, useNavigate, useParams } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data } from "react-router";
 import { api } from "~/.server/lib/api";
+import { useToast } from "~/hooks/use-toast";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Alert, AlertDescription, Badge } from "~/components/ui";
 import { CheckCircle2, XCircle, Mail, Building2, User, Clock, LogIn } from "lucide-react";
-import { useToast } from "~/hooks/use-toast";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 // This route does NOT require authentication
 // Users can accept invitation and set password in one flow
@@ -47,22 +48,18 @@ export default function InvitationAcceptRoute() {
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
 
   useEffect(() => {
-    if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success && "redirectTo" in fetcher.data) {
-        hasShownToast.current = true;
-        navigate(fetcher.data.redirectTo as string);
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Action failed", fetcher.data.error);
-        hasShownToast.current = true;
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError, navigate]);
+    handleFetcherResult(fetcher, {
+      success: (data: any) => {
+        if ("redirectTo" in data) {
+          navigate(data.redirectTo as string);
+        }
+      },
+      error: (data: any) => toastError("Action failed", data.error),
+    });
+  }, [fetcher, toastSuccess, toastError, navigate]);
 
   const isProcessing = fetcher.state === "submitting";
 

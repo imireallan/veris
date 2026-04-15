@@ -39,7 +39,6 @@ from organizations.models import OrganizationMembership
 from users.permissions import (
     IsAssessmentOwner,
     IsOrganizationMember,
-    IsOrganizationOwnerOrAdmin,
 )
 
 
@@ -75,10 +74,27 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     """Full CRUD for assessments."""
 
     serializer_class = AssessmentSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationOwnerOrAdmin]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        qs = Assessment.objects.all()
+        user = self.request.user
+        
+        # Superusers can see all assessments
+        if user.is_superuser:
+            qs = Assessment.objects.all()
+        else:
+            # Get all organizations the user belongs to
+            memberships = OrganizationMembership.objects.filter(user=user).values_list(
+                "organization_id", flat=True
+            )
+            
+            if not memberships:
+                return Assessment.objects.none()
+            
+            # Filter assessments by user's organizations
+            qs = Assessment.objects.filter(organization_id__in=memberships)
+        
+        # Additional org filter from URL if provided
         org_id = (
             self.kwargs.get("org_pk")
             or self.request.query_params.get("org")
@@ -86,6 +102,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
         )
         if org_id:
             qs = qs.filter(organization_id=org_id)
+        
         return qs.select_related(
             "site", "focus_area", "framework", "created_by", "assigned_to"
         )

@@ -29,10 +29,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   
   // We need to resolve the assessment first to get its organization context
   // since the route /assessments/:id doesn't explicitly have orgId in the URL
-  const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token, request).catch(() => null);
+  const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token, request).catch((err: any) => {
+    if (err.status === 403) {
+      console.warn("Permission denied: User cannot access this assessment");
+      return null;
+    }
+    console.warn("Failed to fetch assessment:", err.message);
+    return null;
+  });
   
   if (!assessment) {
-    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null };
+    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null, error: "permission_denied" };
   }
 
   const orgId = assessment.organization;
@@ -120,10 +127,15 @@ export default function AssessmentDetailRoute() {
   const [editingFinding, setEditingFinding] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  if (!data.assessment) {
+  // Handle permission denied error
+  if (data.error === "permission_denied" || !data.assessment) {
     return (
       <div className="text-center py-12 space-y-4">
-        <h2 className="text-xl font-medium">Assessment not found</h2>
+        <AlertTriangle className="w-12 h-12 mx-auto text-orange-500" />
+        <h2 className="text-xl font-medium">Access Denied</h2>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          You don't have permission to view this assessment. Contact your organization admin if you believe this is an error.
+        </p>
         <Link to="/assessments" className="text-primary hover:underline">
           ← Back to assessments
         </Link>

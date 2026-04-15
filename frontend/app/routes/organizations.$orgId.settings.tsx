@@ -1,13 +1,13 @@
-import { useFetcher, useLoaderData, useNavigate, useParams } from "react-router";
+import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data, Link } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import type { User } from "~/types";
+import { useToast } from "~/hooks/use-toast";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 import { Button, Input, Label, Card, CardContent, CardHeader, CardDescription, Alert, AlertDescription, SelectWithOptions as Select } from "~/components/ui";
 import { Save, Building2 } from "lucide-react";
-import { useToast } from "~/hooks/use-toast";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -83,23 +83,15 @@ export default function OrganizationSettingsRoute() {
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
-  const hasShownToast = useRef(false);
+  const { handleFetcherResult } = useFetcherToast();
 
   // Show success toast when fetcher completes
   useEffect(() => {
-    if (fetcher.data && !hasShownToast.current) {
-      if ("success" in fetcher.data && fetcher.data.success) {
-        toastSuccess("Organization updated", "Your changes have been saved successfully.");
-        hasShownToast.current = true;
-      } else if ("error" in fetcher.data && fetcher.data.error) {
-        toastError("Update failed", fetcher.data.error);
-        hasShownToast.current = true;
-      }
-    }
-    if (fetcher.state === "idle" && fetcher.data === null) {
-      hasShownToast.current = false;
-    }
-  }, [fetcher.data, fetcher.state, toastSuccess, toastError]);
+    handleFetcherResult(fetcher, {
+      success: () => toastSuccess("Organization updated", "Your changes have been saved successfully."),
+      error: (data: any) => toastError("Update failed", data.error),
+    });
+  }, [fetcher, toastSuccess, toastError]);
 
   const isSaving = fetcher.state === "submitting";
 

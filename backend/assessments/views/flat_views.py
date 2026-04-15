@@ -350,6 +350,94 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
             )
         return queryset
 
+    @action(detail=True, methods=["get"], url_path="mappings")
+    def get_mappings(self, request, pk=None):
+        """
+        Get framework mappings for a question.
+        GET /api/questions/:id/mappings/
+        """
+        question = self.get_object()
+        return Response({"mappings": question.framework_mappings})
+
+    @action(detail=True, methods=["post"], url_path="mappings")
+    def add_mapping(self, request, pk=None):
+        """
+        Add a framework mapping to a question.
+        POST /api/questions/:id/mappings/
+        Body: {"framework_id": "uuid", "provision_code": "P1.2.3", "provision_name": "..."}
+        """
+        question = self.get_object()
+        data = request.data
+
+        if not data.get("framework_id"):
+            return Response(
+                {"error": "framework_id is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate framework exists
+        from assessments.models import Framework
+        try:
+            framework = Framework.objects.get(id=data["framework_id"])
+        except Framework.DoesNotExist:
+            return Response(
+                {"error": "Framework not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Create mapping entry
+        mapping = {
+            "framework_id": str(framework.id),
+            "framework_name": framework.name,
+            "provision_code": data.get("provision_code", ""),
+            "provision_name": data.get("provision_name", ""),
+        }
+
+        # Check for duplicates
+        existing = next(
+            (m for m in question.framework_mappings 
+             if m["framework_id"] == mapping["framework_id"] 
+             and m["provision_code"] == mapping["provision_code"]),
+            None
+        )
+        if existing:
+            return Response(
+                {"error": "Mapping already exists"},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        question.framework_mappings.append(mapping)
+        question.save()
+
+        return Response({"mappings": question.framework_mappings}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["delete"], url_path="mappings/(?P<index>[^/.]+)")
+    def delete_mapping(self, request, pk=None, index=None):
+        """
+        Remove a framework mapping from a question.
+        DELETE /api/questions/:id/mappings/:index/
+        """
+        question = self.get_object()
+
+        try:
+            idx = int(index)
+            if idx < 0 or idx >= len(question.framework_mappings):
+                raise ValueError("Index out of range")
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Invalid mapping index"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        removed = question.framework_mappings.pop(idx)
+        question.save()
+
+        return Response({
+            "message": "Mapping removed",
+            "removed": removed,
+            "mappings": question.framework_mappings
+        })
+
 
 class FlatSiteViewSet(viewsets.ModelViewSet):
     """Flat site routes — /api/sites/ (org-scoped by default)."""

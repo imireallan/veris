@@ -245,6 +245,10 @@ class AssessmentQuestion(models.Model):
     category = models.CharField(max_length=200, blank=True, default="")
     scoring_criteria = models.JSONField(default=dict)
     is_required = models.BooleanField(default=True)
+    
+    # Cross-framework mapping (P2-1)
+    # Structure: [{"framework_id": "uuid", "provision_code": "P1.2.3", "provision_name": "..."}, ...]
+    framework_mappings = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "assessment_questions"

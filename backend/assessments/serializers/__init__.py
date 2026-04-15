@@ -105,6 +105,7 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
             "category",
             "scoring_criteria",
             "is_required",
+            "framework_mappings",
         ]
 
 

@@ -132,6 +132,82 @@ export class RBAC {
   }
 
   /**
+   * Can manage sites (create, edit).
+   * OPERATOR can create/edit but not delete.
+   */
+  static canManageSites(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") {
+      return RBAC.isOrgMember(user, orgId);
+    }
+    
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "COORDINATOR" ||
+           user.fallbackRole === "OPERATOR";
+  }
+
+  /**
+   * Can delete sites (ADMIN, COORDINATOR only).
+   */
+  static canDeleteSites(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") return true;
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "COORDINATOR";
+  }
+
+  /**
+   * Can manage tasks (create, update).
+   * OPERATOR can create/update but not delete.
+   */
+  static canManageTasks(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") {
+      return RBAC.isOrgMember(user, orgId);
+    }
+    
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "COORDINATOR" ||
+           user.fallbackRole === "OPERATOR";
+  }
+
+  /**
+   * Can delete tasks (ADMIN, COORDINATOR only).
+   */
+  static canDeleteTasks(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") return true;
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "COORDINATOR";
+  }
+
+  /**
+   * Can delete assessments (ADMIN, COORDINATOR only).
+   */
+  static canDeleteAssessments(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") return true;
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "COORDINATOR";
+  }
+
+  /**
+   * Can delete templates (ADMIN, COORDINATOR only).
+   */
+  static canDeleteTemplates(user: User, orgId: string): boolean {
+    if (user.fallbackRole === "SUPERADMIN") return true;
+    if (!RBAC.isOrgMember(user, orgId)) return false;
+    
+    return user.fallbackRole === "ADMIN" || 
+           user.fallbackRole === "COORDINATOR";
+  }
+
+  /**
    * Can user create new organizations?
    */
   static canCreateOrganization(user: User): boolean {

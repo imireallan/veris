@@ -51,7 +51,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export default function OrganizationAssessments() {
-  const { assessments, orgId, user, orgName } = useLoaderData<typeof loader>();
+  const { assessments, orgId, user, orgName, accessDenied } = useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const search = searchParams.get("q") || "";

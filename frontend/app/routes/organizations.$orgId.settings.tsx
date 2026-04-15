@@ -16,14 +16,13 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
   if (user.fallbackRole !== "SUPERADMIN") {
-    throw new Response("Access denied. Organization settings require SUPERADMIN privileges.", { 
-      status: 403 
-    });
+    // Return accessDenied instead of throwing - consistent with other routes
+    return { org: null, orgId, accessDenied: true };
   }
 
   const org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
 
-  return { org, orgId };
+  return { org, orgId, accessDenied: false };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -33,9 +32,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
   // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
   if (user.fallbackRole !== "SUPERADMIN") {
-    throw new Response("Access denied. Organization settings require SUPERADMIN privileges.", { 
-      status: 403 
-    });
+    return data({ error: "Access denied. Organization settings require SUPERADMIN privileges." }, { status: 403 });
   }
 
   const formData = await request.formData();
@@ -79,11 +76,34 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function OrganizationSettingsRoute() {
-  const { org } = useLoaderData<typeof loader>();
+  const { org, orgId, accessDenied } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
   const { handleFetcherResult } = useFetcherToast();
+
+  // Show access denied state
+  if (accessDenied) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center p-8">
+        <div className="text-center space-y-4 max-w-md">
+          <div className="text-6xl">🔒</div>
+          <h2 className="text-2xl font-semibold">Access Denied</h2>
+          <p className="text-muted-foreground">
+            Organization settings require SUPERADMIN privileges.
+            Contact your administrator if you need access.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate(`/organizations/${orgId}`)}
+          >
+            ← Back to Organization
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   // Show success toast when fetcher completes
   useEffect(() => {
@@ -214,41 +234,6 @@ export default function OrganizationSettingsRoute() {
           </Button>
         </div>
       </fetcher.Form>
-    </div>
-  );
-}
-
-export function ErrorBoundary({ error }: { error: Error }) {
-  const errorWithStatus = error as Error & { status?: number };
-  const status = errorWithStatus.status;
-  const isForbidden = status === 403;
-
-  return (
-    <div className="min-h-[400px] flex items-center justify-center p-8">
-      <div className="text-center space-y-4 max-w-md">
-        {isForbidden ? (
-          <>
-            <div className="text-6xl">🔒</div>
-            <h2 className="text-2xl font-semibold">Access Denied</h2>
-            <p className="text-muted-foreground">
-              Organization settings require SUPERADMIN privileges.
-              Contact your administrator if you need access.
-            </p>
-          </>
-        ) : (
-          <>
-            <div className="text-6xl">⚠️</div>
-            <h2 className="text-2xl font-semibold">Something went wrong</h2>
-            <p className="text-muted-foreground">{error.message}</p>
-          </>
-        )}
-        <Link
-          to="/organizations"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
-          ← Back to Organizations
-        </Link>
-      </div>
     </div>
   );
 }

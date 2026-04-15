@@ -36,7 +36,15 @@ from assessments.serializers import (
     TaskSerializer,
 )
 from organizations.models import OrganizationMembership
-from users.permissions import IsAssessmentOwner, IsOrganizationMember
+from users.permissions import (
+    CanManageAssessments,
+    CanManageFindings,
+    CanManageSites,
+    CanManageTasks,
+    CanManageTemplates,
+    IsAssessmentOwner,
+    IsOrganizationMember,
+)
 
 
 class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -71,7 +79,7 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     """Full CRUD for assessments."""
 
     serializer_class = AssessmentSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanManageAssessments]
 
     def get_queryset(self):
         user = self.request.user
@@ -176,7 +184,7 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
 
 class AssessmentTemplateViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentTemplateSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanManageTemplates]
 
     def get_queryset(self):
         return AssessmentTemplate.objects.filter(
@@ -290,7 +298,7 @@ class AIInsightViewSet(viewsets.ReadOnlyModelViewSet):
 
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanManageTasks]
 
     def get_queryset(self):
         return Task.objects.filter(organization_id=self.kwargs.get("org_pk"))
@@ -298,7 +306,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
 class SiteViewSet(viewsets.ModelViewSet):
     serializer_class = SiteSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanManageSites]
 
     def get_queryset(self):
         org_id = (
@@ -328,7 +336,7 @@ class AssessmentReportViewSet(viewsets.ModelViewSet):
 
 class FindingViewSet(viewsets.ModelViewSet):
     serializer_class = FindingSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanManageFindings]
 
     def get_queryset(self):
         org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(

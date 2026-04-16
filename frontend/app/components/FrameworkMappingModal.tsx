@@ -63,51 +63,35 @@ export function FrameworkMappingModal({
     }
   }, [open, organizationId, frameworks.length]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedFramework) return;
 
-    const token = localStorage.getItem("token");
-    const response = await fetch(`/api/questions/${questionId}/mappings/`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
+    fetcher.submit(
+      {
+        intent: "add-mapping",
+        question_id: questionId,
         framework_id: selectedFramework,
         provision_code: provisionCode,
         provision_name: provisionName,
-      }),
-    });
+      },
+      { method: "post" }
+    );
 
-    if (response.ok) {
-      const data = await response.json();
-      onMappingAdded(data.mappings);
-      resetForm();
-      onOpenChange(false);
-    } else {
-      const error = await response.json().catch(() => ({ error: "Failed to add mapping" }));
-      alert(error.error || "Failed to add mapping");
-    }
+    resetForm();
+    onOpenChange(false);
   };
 
-  const handleRemove = async (index: number) => {
-    const token = localStorage.getItem("token");
-    const response = await fetch(`/api/questions/${questionId}/mappings/${index}/`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
+  const handleRemove = (index: number) => {
+    fetcher.submit(
+      {
+        intent: "remove-mapping",
+        question_id: questionId,
+        mapping_index: index.toString(),
       },
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      onMappingRemoved(data.mappings);
-    } else {
-      alert("Failed to remove mapping");
-    }
+      { method: "post" }
+    );
   };
 
   const resetForm = () => {

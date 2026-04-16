@@ -10,7 +10,8 @@ import {
   Paperclip, 
   Save,
   ShieldCheck,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react";
 import { 
   Card, 
@@ -24,6 +25,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "~/components/ui";
+import { FrameworkMappingBadge, type FrameworkMapping } from "~/components/FrameworkMappingBadge";
+import { FrameworkMappingModal } from "~/components/FrameworkMappingModal";
 
 function UploadEvidenceButton({
   responseId,
@@ -185,7 +188,8 @@ function QuestionCard({
   isEditing,
   onEdit,
   assessmentId,
-  orgId
+  orgId,
+  onAddMapping,
 }: {
   question: any;
   index: number;
@@ -194,6 +198,7 @@ function QuestionCard({
   onEdit: () => void;
   assessmentId: string;
   orgId: string;
+  onAddMapping: (questionId: string) => void;
 }) {
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
   const [localAnswer, setLocalAnswer] = useState(existingResponse?.answer_text || "");
@@ -258,6 +263,23 @@ function QuestionCard({
             {question.description && (
               <p className="text-sm text-muted-foreground mt-1">{question.description}</p>
             )}
+            {/* Framework Mappings */}
+            <div className="mt-2">
+              <FrameworkMappingBadge
+                mappings={question.framework_mappings || []}
+                canEdit={true}
+                onAdd={() => onAddMapping(question.id)}
+                onRemove={(index) => {
+                  // Handle remove via API call in parent component
+                  console.log("Remove mapping at index:", index);
+                }}
+              />
+              {question.framework_mappings && question.framework_mappings.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  This answer also satisfies: {question.framework_mappings.map(m => m.framework_name).join(", ")}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {existingResponse && existingResponse.validation_status !== "validated" && (
@@ -389,6 +411,30 @@ function QuestionCard({
 export default function QuestionnaireRoute() {
   const { assessmentId, orgId, questions, responses } = useLoaderData<typeof loader>();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [mappingModalOpen, setMappingModalOpen] = useState(false);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
+  const [localQuestions, setLocalQuestions] = useState(questions);
+
+  const handleAddMapping = (questionId: string) => {
+    setSelectedQuestionId(questionId);
+    setMappingModalOpen(true);
+  };
+
+  const handleMappingAdded = (mappings: FrameworkMapping[]) => {
+    if (selectedQuestionId) {
+      setLocalQuestions(localQuestions.map(q =>
+        q.id === selectedQuestionId ? { ...q, framework_mappings: mappings } : q
+      ));
+    }
+  };
+
+  const handleMappingRemoved = (mappings: FrameworkMapping[]) => {
+    if (selectedQuestionId) {
+      setLocalQuestions(localQuestions.map(q =>
+        q.id === selectedQuestionId ? { ...q, framework_mappings: mappings } : q
+      ));
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-6">
@@ -432,11 +478,25 @@ export default function QuestionnaireRoute() {
                 onEdit={() => setEditingIndex(editingIndex === idx ? null : idx)}
                 assessmentId={assessmentId || ""}
                 orgId={orgId || ""}
+                onAddMapping={handleAddMapping}
               />
             );
           })
         )}
       </div>
+
+      {/* Framework Mapping Modal */}
+      {selectedQuestionId && (
+        <FrameworkMappingModal
+          open={mappingModalOpen}
+          onOpenChange={setMappingModalOpen}
+          questionId={selectedQuestionId}
+          organizationId={orgId || ""}
+          currentMappings={localQuestions.find(q => q.id === selectedQuestionId)?.framework_mappings || []}
+          onMappingAdded={handleMappingAdded}
+          onMappingRemoved={handleMappingRemoved}
+        />
+      )}
     </div>
   );
 }

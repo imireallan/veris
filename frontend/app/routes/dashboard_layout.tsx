@@ -24,6 +24,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const navLinks: { to: string; label: string; icon: string }[] = [
     { to: "/", label: "Dashboard", icon: "LayoutDashboard" },
     { to: "/assessments", label: "Assessments", icon: "ClipboardCheck" },
+    // Templates link - only for users who can manage templates (SUPERADMIN/ADMIN/COORDINATOR)
+    { to: "/templates", label: "Templates", icon: "FileText" },
     { to: "/organizations", label: "Organizations", icon: "Building2" },
     { to: "/knowledge", label: "Knowledge", icon: "BookOpen" },
     { to: "/knowledge/chat", label: "AI Chat", icon: "MessageSquare" },

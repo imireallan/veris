@@ -93,10 +93,70 @@ class AssessmentAdmin(admin.ModelAdmin):
 
 @admin.register(AssessmentTemplate)
 class AssessmentTemplateAdmin(admin.ModelAdmin):
-    list_display = ("name", "organization", "framework", "is_system", "created_at")
-    list_filter = ("is_system", "framework")
-    search_fields = ("name", "description")
-    readonly_fields = ("id", "created_at", "updated_at")
+    """Admin interface for assessment templates (SUPERADMIN management)."""
+
+    list_display = (
+        "name",
+        "version",
+        "status",
+        "is_public",
+        "owner_org",
+        "framework",
+        "question_count_display",
+        "instance_count_display",
+        "created_at",
+    )
+    list_filter = ("status", "is_public", "framework", "owner_org")
+    search_fields = ("name", "description", "slug")
+    readonly_fields = (
+        "id",
+        "slug",
+        "published_at",
+        "published_by",
+        "created_by",
+        "created_at",
+        "updated_at",
+        "question_count_display",
+        "instance_count_display",
+    )
+    ordering = ("-created_at",)
+
+    fieldsets = (
+        ("Basic Info", {"fields": ("name", "slug", "description", "framework")}),
+        ("Versioning", {"fields": ("version", "version_notes", "status")}),
+        ("Visibility & Tenancy", {"fields": ("is_public", "owner_org")}),
+        (
+            "Audit",
+            {
+                "fields": (
+                    "published_at",
+                    "published_by",
+                    "created_by",
+                    "created_at",
+                    "updated_at",
+                )
+            },
+        ),
+        (
+            "Read-only Stats",
+            {"fields": ("question_count_display", "instance_count_display")},
+        ),
+    )
+
+    def question_count_display(self, obj):
+        return obj.assessment_questions.count()
+
+    question_count_display.short_description = "Questions"
+
+    def instance_count_display(self, obj):
+        return obj.assessments.count()
+
+    instance_count_display.short_description = "Instances"
+
+    def save_model(self, request, obj, form, change):
+        if not change:  # Creating new
+            obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(AssessmentQuestion)

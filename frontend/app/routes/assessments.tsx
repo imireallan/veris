@@ -205,13 +205,11 @@ export default function AssessmentsListRoute() {
             Create, track, and manage sustainability assessments.
           </p>
         </div>
-        {!isSuperAdmin && (
-          <Link to="/assessments/new">
-            <Button>
-              <Plus className="w-4 h-4" /> New Assessment
-            </Button>
-          </Link>
-        )}
+        <Link to="/assessments/new">
+          <Button>
+            <Plus className="w-4 h-4" /> New Assessment
+          </Button>
+        </Link>
       </div>
 
       {isSuperAdmin && (

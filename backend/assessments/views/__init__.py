@@ -114,6 +114,16 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        
+        # Auto-set organization from user's membership if not provided
+        if not serializer.validated_data.get("organization"):
+            # Get user's primary organization membership
+            membership = OrganizationMembership.objects.filter(user=user).first()
+            if membership:
+                serializer.validated_data["organization"] = membership.organization
+            else:
+                raise PermissionDenied("You must belong to an organization to create assessments")
+        
         serializer.save(created_by=user)
 
 

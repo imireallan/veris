@@ -6,6 +6,7 @@ Supports both fallback roles and custom roles with dynamic permissions.
 from rest_framework import permissions
 
 from organizations.models import OrganizationMembership
+from users.roles import UserRole
 
 
 class IsOrganizationMember(permissions.BasePermission):
@@ -96,7 +97,7 @@ class IsOrganizationOwnerOrAdmin(permissions.BasePermission):
         if membership.has_permission("role:manage"):
             return True
 
-        if membership.fallback_role == "ADMIN":
+        if membership.fallback_role == UserRole.ADMIN:
             return True
 
         # Backward compatibility: custom role named "Admin"
@@ -220,15 +221,19 @@ class CanManageAssessments(permissions.BasePermission):
 
         # CREATE - ADMIN, COORDINATOR, OPERATOR
         if request.method == "POST":
-            return membership.fallback_role in ["ADMIN", "COORDINATOR", "OPERATOR"]
+            return membership.fallback_role in [
+                UserRole.ADMIN,
+                UserRole.COORDINATOR,
+                UserRole.OPERATOR,
+            ]
 
         # DELETE - ADMIN, COORDINATOR only
         if request.method == "DELETE":
-            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+            return membership.fallback_role in [UserRole.ADMIN, UserRole.COORDINATOR]
 
         # UPDATE/PUT/PATCH - ADMIN, COORDINATOR only
         if request.method in ["PUT", "PATCH"]:
-            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+            return membership.fallback_role in [UserRole.ADMIN, UserRole.COORDINATOR]
 
         # SAFE methods (GET, HEAD, OPTIONS) - all org members
         if request.method in permissions.SAFE_METHODS:
@@ -271,11 +276,15 @@ class CanManageSites(permissions.BasePermission):
 
         # DELETE - ADMIN, COORDINATOR only
         if request.method == "DELETE":
-            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+            return membership.fallback_role in [UserRole.ADMIN, UserRole.COORDINATOR]
 
         # CREATE/UPDATE - ADMIN, COORDINATOR, OPERATOR
         if request.method in ["POST", "PUT", "PATCH"]:
-            return membership.fallback_role in ["ADMIN", "COORDINATOR", "OPERATOR"]
+            return membership.fallback_role in [
+                UserRole.ADMIN,
+                UserRole.COORDINATOR,
+                UserRole.OPERATOR,
+            ]
 
         # SAFE methods - all org members
         if request.method in permissions.SAFE_METHODS:
@@ -318,11 +327,15 @@ class CanManageTasks(permissions.BasePermission):
 
         # DELETE - ADMIN, COORDINATOR only
         if request.method == "DELETE":
-            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+            return membership.fallback_role in [UserRole.ADMIN, UserRole.COORDINATOR]
 
         # CREATE/UPDATE - ADMIN, COORDINATOR, OPERATOR
         if request.method in ["POST", "PUT", "PATCH"]:
-            return membership.fallback_role in ["ADMIN", "COORDINATOR", "OPERATOR"]
+            return membership.fallback_role in [
+                UserRole.ADMIN,
+                UserRole.COORDINATOR,
+                UserRole.OPERATOR,
+            ]
 
         # SAFE methods - all org members
         if request.method in permissions.SAFE_METHODS:
@@ -365,11 +378,11 @@ class CanManageFindings(permissions.BasePermission):
 
         # DELETE - ADMIN only
         if request.method == "DELETE":
-            return membership.fallback_role == "ADMIN"
+            return membership.fallback_role == UserRole.ADMIN
 
         # CREATE/UPDATE - ADMIN, COORDINATOR only
         if request.method in ["POST", "PUT", "PATCH"]:
-            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+            return membership.fallback_role in [UserRole.ADMIN, UserRole.COORDINATOR]
 
         # SAFE methods - all org members
         if request.method in permissions.SAFE_METHODS:
@@ -412,7 +425,7 @@ class CanManageTemplates(permissions.BasePermission):
 
         # All write operations - ADMIN, COORDINATOR only
         if request.method in ["POST", "PUT", "PATCH", "DELETE"]:
-            return membership.fallback_role in ["ADMIN", "COORDINATOR"]
+            return membership.fallback_role in [UserRole.ADMIN, UserRole.COORDINATOR]
 
         # SAFE methods - all org members
         if request.method in permissions.SAFE_METHODS:

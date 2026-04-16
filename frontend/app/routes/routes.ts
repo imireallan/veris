@@ -6,6 +6,11 @@ export default [
   // Authenticated routes with sidebar layout
   route("", "routes/dashboard_layout.tsx", [
     index("routes/index.tsx"),
+    // Template routes (SUPERADMIN dashboard)
+    route("templates", "routes/templates.tsx"),
+    route("templates/new", "routes/templates.new.tsx"),
+    route("templates/:id", "routes/templates.$id.tsx"),
+    // Assessment routes
     route("assessments", "routes/assessments.tsx"),
     route("assessments/new", "routes/assessments.new.tsx"),
     route("assessments/:id", "routes/assessments_detail.tsx"),

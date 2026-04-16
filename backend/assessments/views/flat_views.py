@@ -79,9 +79,12 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        org_id = self.request.query_params.get("org") or self.request.query_params.get(
-            "organization"
-        )
+        # Check request body first, then query params
+        org_id = serializer.validated_data.get("organization_id") or serializer.validated_data.get("organization")
+        if not org_id:
+            org_id = self.request.query_params.get("org") or self.request.query_params.get(
+                "organization"
+            )
         if not org_id:
             # Non-platform-admins default to their first membership
             if not (user.is_superuser or getattr(user, "role", None) == "SUPERADMIN"):

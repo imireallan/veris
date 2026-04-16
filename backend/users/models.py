@@ -82,3 +82,21 @@ class User(AbstractBaseUser):
 
     def has_module_perms(self, app_label):
         return True
+
+    @property
+    def fallback_role(self):
+        """
+        Get the user's fallback role from their primary organization membership.
+        Returns 'SUPERADMIN' for superusers, otherwise the fallback_role from first membership.
+        """
+        if self.is_superuser:
+            return "SUPERADMIN"
+
+        # Get primary membership (first one)
+        from organizations.models import OrganizationMembership
+
+        membership = OrganizationMembership.objects.filter(user=self).first()
+        if membership:
+            return membership.fallback_role
+
+        return None

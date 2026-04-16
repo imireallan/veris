@@ -24,6 +24,7 @@ import {
   ChevronRight,
   RotateCcw,
   Sparkle,
+  Copy,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { RichEditor } from "~/components/RichEditor";
@@ -35,7 +36,14 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "~/components/ui";
+import { RBAC } from "~/types/rbac";
 
 /* ──────────────────────────── SERVER ──────────────────────────── */
 
@@ -51,6 +59,9 @@ export async function action({ request }: ActionFunctionArgs) {
     return { error: "Organization required. Please select an organization first." };
   }
   
+  // Force organization ID from server-side (don't trust client)
+  const organizationId = selectedOrg.id;
+  
   // Handle site creation inline (hidden field with JSON payload)
   const siteJson = formData.get("__new_site");
   let siteId = formData.get("site") as string;
@@ -64,7 +75,7 @@ export async function action({ request }: ActionFunctionArgs) {
           name,
           type,
           country_code,
-          organization: selectedOrg.id,
+          organization: organizationId,
           operational_status: "ACTIVE",
           risk_profile: "MEDIUM",
           coordinates: {},
@@ -83,6 +94,7 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   const data: Record<string, any> = {
+    organization: organizationId,
     status: formData.get("status") || "DRAFT",
     risk_level: formData.get("risk_level") || "LOW",
     overall_score: 0,
@@ -118,8 +130,15 @@ export async function action({ request }: ActionFunctionArgs) {
 const unwrap = (r: any) => (Array.isArray(r) ? r : (r?.results ?? []));
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  const user = await requireUser(request);
   const token = await getUserToken(request);
-  const [sites, frameworks, focusAreas] = await Promise.all([
+  
+  // Check if user can access templates
+  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
+  const selectedOrg = getSelectedOrganization(user);
+  const canAccessTemplates = selectedOrg && RBAC.canManageTemplates(user, selectedOrg.id);
+  
+  const [sites, frameworks, focusAreas, templates] = await Promise.all([
     api
       .get<any>("/api/sites/", token)
       .then(unwrap)
@@ -132,8 +151,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
       .get<any>("/api/focus-areas/", token)
       .then(unwrap)
       .catch(() => []),
+    // Fetch available templates if user has permission
+    canAccessTemplates
+      ? api
+          .get<any>("/api/templates/public/", token)
+          .then(unwrap)
+          .catch(() => [])
+      : Promise.resolve([]),
   ]);
-  return { sites, frameworks, focusAreas };
+  return { sites, frameworks, focusAreas, templates, canAccessTemplates };
 }
 
 /* ──────────────────────────── STEPS CONFIG ──────────────────────────── */
@@ -147,6 +173,22 @@ const STEPS = [
 ] as const;
 
 /* ──────────────────────────── CLIENT ──────────────────────────── */
+
+interface FormState {
+  name: string;
+  site: string;
+  __new_site: string;
+  framework: string;
+  focus_area: string;
+  start_date: string;
+  due_date: string;
+  status: string;
+  risk_level: string;
+  ai_summary: string;
+  // Template selection (new)
+  from_template: string;
+  template_id: string;
+}
 
 /** Collect all form state into one object for draft persistence. */
 interface AssessmentForm {
@@ -166,7 +208,7 @@ interface AssessmentForm {
 }
 
 export default function NewAssessmentRoute() {
-  const { sites, frameworks, focusAreas } = useLoaderData<typeof loader>();
+  const { sites, frameworks, focusAreas, templates, canAccessTemplates } = useLoaderData<typeof loader>();
   const actionData = useActionData<{ error?: string; success?: boolean }>();
   const submitRemix = useSubmit();
   const navigation = useNavigation();
@@ -200,6 +242,8 @@ export default function NewAssessmentRoute() {
       newSiteName: "",
       newSiteType: "",
       newSiteCountry: "",
+      fromTemplate: "",
+      templateId: "",
     },
     onSubmit: async (values) => {
       const formData = new FormData();
@@ -360,16 +404,73 @@ export default function NewAssessmentRoute() {
           {/* STEP 1: BASICS */}
           {step === 1 && (
             <StepWrapper title="Basic Details">
-              <Field label="Status">
-                <select
-                  value={status}
-                  onChange={(e) => update("status")(e.target.value)}
+              {/* Template Selection (NEW) */}
+              {canAccessTemplates && templates && templates.length > 0 && (
+                <div className="mb-6 p-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Copy className="w-4 h-4 text-primary" />
+                    <h4 className="text-sm font-semibold">Start from Template</h4>
+                  </div>
+                  <Select
+                    value={form.fromTemplate}
+                    onValueChange={(value) => {
+                      update("fromTemplate")(value);
+                      const template = templates.find((t: any) => t.id === value);
+                      if (template) {
+                        update("templateId")(template.id);
+                        update("framework")(template.framework);
+                        update("name")(`${template.name} - ${new Date().getFullYear()}`);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="">Select a template...</SelectItem>
+                        {templates.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name} (v{t.version})
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {form.fromTemplate && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ✓ Template selected. Questions will be copied to your assessment.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <Field label="Assessment Name">
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => update("name")(e.target.value)}
+                  placeholder="e.g., Q2 2026 Assessment"
                   className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                />
+              </Field>
+
+              <Field label="Status">
+                <Select
+                  value={status}
+                  onValueChange={update("status")}
                 >
-                  <option value="DRAFT">Draft</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="UNDER_REVIEW">Under Review</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="DRAFT">Draft</SelectItem>
+                      <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                      <SelectItem value="UNDER_REVIEW">Under Review</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Risk Level">
                 <div className="grid grid-cols-4 gap-2">
@@ -402,18 +503,24 @@ export default function NewAssessmentRoute() {
               {!showCreateSite ? (
                 <div className="space-y-4">
                   <Field label="Site" required>
-                    <select
-                      value={site}
-                      onChange={(e) => update("site")(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg"
+                    <Select
+                      value={site || "none"}
+                      onValueChange={(value) => update("site")(value === "none" ? "" : value)}
                     >
-                      <option value="">— Select a site —</option>
-                      {siteList.map((s: any) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a site" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="none">— Select a site —</SelectItem>
+                          {siteList.map((s: any) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {s.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </Field>
                   <button
                     type="button"
@@ -444,14 +551,20 @@ export default function NewAssessmentRoute() {
                   </Field>
                   <div className="grid grid-cols-2 gap-4">
                     <Field label="Type">
-                      <select
-                        value={newSiteType}
-                        onChange={(e) => update("newSiteType")(e.target.value)}
-                        className="w-full border p-2 rounded"
+                      <Select
+                        value={newSiteType || "none"}
+                        onValueChange={(value) => update("newSiteType")(value === "none" ? "" : value)}
                       >
-                        <option value="">Select</option>
-                        {/* Add your siteTypeOptions.map here */}
-                      </select>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="none">Select</SelectItem>
+                            {/* Add your siteTypeOptions.map here */}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
                     </Field>
                     <Field label="Country Code">
                       <input
@@ -472,32 +585,44 @@ export default function NewAssessmentRoute() {
           {step === 3 && (
             <StepWrapper title="Framework & Focus Area">
               <Field label="Framework">
-                <select
-                  value={framework}
-                  onChange={(e) => update("framework")(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
+                <Select
+                  value={framework || "none"}
+                  onValueChange={(value) => update("framework")(value === "none" ? "" : value)}
                 >
-                  <option value="">— Select framework —</option>
-                  {fwList.map((f: any) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select framework" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">— Select framework —</SelectItem>
+                      {fwList.map((f: any) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
               <Field label="Focus Area">
-                <select
-                  value={focusArea}
-                  onChange={(e) => update("focusArea")(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
+                <Select
+                  value={focusArea || "none"}
+                  onValueChange={(value) => update("focusArea")(value === "none" ? "" : value)}
                 >
-                  <option value="">— Select focus area —</option>
-                  {faList.map((f: any) => (
-                    <option key={f.id} value={f.id}>
-                      {f.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select focus area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="none">— Select focus area —</SelectItem>
+                      {faList.map((f: any) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </Field>
             </StepWrapper>
           )}

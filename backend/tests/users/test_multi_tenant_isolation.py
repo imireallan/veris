@@ -131,6 +131,40 @@ class TestUserViewSetMultiTenant:
         assert org_data["Org 1"]["fallback_role"] == "ADMIN"
         assert org_data["Org 2"]["fallback_role"] == "OPERATOR"
 
+    def test_accessible_organizations_endpoint_returns_memberships(
+        self, api_factory, make_user, make_org, make_membership
+    ):
+        user = make_user(email="test@user.com", name="Test User")
+        org1 = make_org(name="Org 1", slug="org1")
+        org2 = make_org(name="Org 2", slug="org2")
+        make_membership(user=user, organization=org1, fallback_role="ADMIN")
+        make_membership(user=user, organization=org2, fallback_role="ASSESSOR")
+
+        client = api_factory
+        client.force_authenticate(user=user)
+        response = client.get("/api/organizations/accessible/")
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data) == 2
+        org_data = {org["name"]: org for org in response.data}
+        assert org_data["Org 1"]["fallback_role"] == "ADMIN"
+        assert org_data["Org 2"]["fallback_role"] == "ASSESSOR"
+
+    def test_accessible_organizations_endpoint_returns_all_orgs_for_superuser(
+        self, api_factory, make_org, superuser
+    ):
+        org1 = make_org(name="Org 1", slug="org1")
+        org2 = make_org(name="Org 2", slug="org2")
+
+        client = api_factory
+        client.force_authenticate(user=superuser)
+        response = client.get("/api/organizations/accessible/")
+
+        assert response.status_code == status.HTTP_200_OK
+        org_data = {org["name"]: org for org in response.data}
+        assert org_data[org1.name]["fallback_role"] == "SUPERADMIN"
+        assert org_data[org2.name]["fallback_role"] == "SUPERADMIN"
+
 
 @pytest.mark.django_db
 class TestAssessmentViewSetMultiTenant:

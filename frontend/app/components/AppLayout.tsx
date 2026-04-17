@@ -3,11 +3,12 @@ import { Menu, X, Sun, Moon } from "lucide-react"
 import Sidebar from "~/components/Sidebar"
 import { UserDropdown } from "~/components/UserDropdown"
 import { OrganizationSwitcher } from "~/components/OrganizationSwitcher"
-import type { User } from "~/types"
+import type { User, OrganizationMembership } from "~/types"
 
 interface AppLayoutProps {
   children: React.ReactNode
   user: User
+  organizations: OrganizationMembership[]
   navLinks: { to: string; label: string; icon: string }[]
 }
 
@@ -41,7 +42,7 @@ function useDarkMode(): [boolean, () => void] {
   return [dark, toggle]
 }
 
-export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
+export function AppLayout({ children, user, organizations, navLinks }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [dark, toggleTheme] = useDarkMode()
 
@@ -90,8 +91,8 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
           <div className="flex-1" />
 
           {/* Organization Switcher - only for multi-org users */}
-          {user.organizations && user.organizations.length > 1 && (
-            <OrganizationSwitcher user={user} className="mr-4" />
+          {organizations.length > 1 && (
+            <OrganizationSwitcher organizations={organizations} className="mr-4" />
           )}
 
           {/* Theme toggle */}
@@ -104,7 +105,7 @@ export function AppLayout({ children, user, navLinks }: AppLayoutProps) {
           </button>
 
           {/* User dropdown */}
-          <UserDropdown user={user} />
+          <UserDropdown user={user} organizations={organizations} />
         </header>
 
         {/* Page content — responsive padding */}

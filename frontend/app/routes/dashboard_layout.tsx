@@ -7,7 +7,7 @@ import {
 import type { LoaderFunctionArgs } from "react-router";
 import { getUserToken, requireUser } from "~/.server/sessions";
 import { AppLayout } from "~/components/AppLayout";
-import type { User } from "~/types";
+import type { User, OrganizationMembership } from "~/types";
 import { RBAC } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -15,16 +15,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!token) throw redirect("/login");
 
   const user = await requireUser(request);
-  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
-  
-  // Get selected organization from user's organizations array
-  const selectedOrg = getSelectedOrganization(user);
+  const {
+    getAccessibleOrganizations,
+    getSelectedOrganizationForRequest,
+  } = await import("~/.server/organizations");
 
-  // Build nav links dynamically based on user permissions
+  const organizations = await getAccessibleOrganizations(request, token);
+  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+
   const navLinks: { to: string; label: string; icon: string }[] = [
     { to: "/", label: "Dashboard", icon: "LayoutDashboard" },
     { to: "/assessments", label: "Assessments", icon: "ClipboardCheck" },
-    // Templates link - only for users who can manage templates (SUPERADMIN/ADMIN/COORDINATOR)
     { to: "/templates", label: "Templates", icon: "FileText" },
     { to: "/organizations", label: "Organizations", icon: "Building2" },
     { to: "/knowledge", label: "Knowledge", icon: "BookOpen" },
@@ -32,7 +33,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     { to: "/data", label: "Data", icon: "Database" },
   ];
 
-  // Only show Theme settings to users who can manage org (ADMIN or SUPERADMIN)
   if (selectedOrg && RBAC.canManageOrg(user, selectedOrg.id)) {
     navLinks.push({ to: "/settings/theme", label: "Theme", icon: "Paintbrush" });
   }
@@ -40,13 +40,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     navLinks,
     user,
+    organizations,
     selectedOrg,
   };
 }
 
 export default function DashboardLayoutRoute() {
-  const { navLinks } = useLoaderData<typeof loader>();
-  const context = useOutletContext<{ user: User | null }>();
+  const { navLinks, organizations } = useLoaderData<typeof loader>();
+  const context = useOutletContext<{ user: User | null; organizations?: OrganizationMembership[] }>();
   const user = context?.user;
 
   if (!user) {
@@ -58,8 +59,8 @@ export default function DashboardLayoutRoute() {
   }
 
   return (
-    <AppLayout user={user} navLinks={navLinks}>
-      <Outlet context={{ user }} />
+    <AppLayout user={user} organizations={organizations} navLinks={navLinks}>
+      <Outlet context={{ user, organizations }} />
     </AppLayout>
   );
 }

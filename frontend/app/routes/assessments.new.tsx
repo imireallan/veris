@@ -51,11 +51,10 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const formData = await request.formData();
-  const { getSelectedOrganization } =
-    await import("~/components/OrganizationSwitcher");
+  const { getSelectedOrganizationForRequest } =
+    await import("~/.server/organizations");
 
-  // Get selected organization from user's organizations array
-  const selectedOrg = getSelectedOrganization(user);
+  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
   if (!selectedOrg) {
     return {
       error: "Organization required. Please select an organization first.",
@@ -141,10 +140,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  // Check if user can access templates
-  const { getSelectedOrganization } =
-    await import("~/components/OrganizationSwitcher");
-  const selectedOrg = getSelectedOrganization(user);
+  const { getSelectedOrganizationForRequest } =
+    await import("~/.server/organizations");
+  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
   const canAccessTemplates =
     selectedOrg && RBAC.canManageTemplates(user, selectedOrg.id);
 
@@ -203,6 +201,7 @@ interface FormState {
 /** Collect all form state into one object for draft persistence. */
 interface AssessmentForm {
   // step: number;
+  name: string;
   site: string;
   framework: string;
   focusArea: string;
@@ -215,6 +214,8 @@ interface AssessmentForm {
   newSiteName: string;
   newSiteType: string;
   newSiteCountry: string;
+  fromTemplate: string;
+  templateId: string;
 }
 
 export default function NewAssessmentRoute() {
@@ -241,6 +242,7 @@ export default function NewAssessmentRoute() {
     persistKey: STORAGE_KEY,
     totalSteps: 5,
     initialData: {
+      name: "",
       site: "",
       framework: "",
       focusArea: "",
@@ -315,7 +317,7 @@ export default function NewAssessmentRoute() {
   const siteMap = new Map(siteList.map((s: any) => [s.id, s.name]));
   const frameworkMap = new Map(fwList.map((f: any) => [f.id, f.name]));
   const focusAreaMap = new Map(faList.map((f: any) => [f.id, f.name]));
-  const templateMap = new Map(templates.map((t: any) => [t.id, t.name]));
+  const templateMap = new Map<string, string>(templates.map((t: any) => [t.id, t.name]));
 
   // Site type options
   const siteTypeOptions = [

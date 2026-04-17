@@ -47,20 +47,25 @@ export const meta: MetaFunction = () => [
 export async function loader({ request }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   let user: User | null = null;
+  let organizations: User["organizations"] = [];
 
   if (token) {
     try {
       user = await requireUser(request);
+      const { getAccessibleOrganizations, getSelectedOrganizationForRequest } = await import(
+        "~/.server/organizations"
+      );
+      organizations = await getAccessibleOrganizations(request, token);
+      const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+      const theme = await fetchThemeConfig(selectedOrg?.id ?? user?.orgId ?? "", token);
+      return data({ user, organizations, theme });
     } catch {
       // Not authenticated or token expired — continue without user
-      // (requireUser already throws redirect to /login for non-dashboard routes,
-      //  but the root layout should render even for anonymous users on /login etc.)
     }
   }
 
-  const theme = await fetchThemeConfig(user?.orgId ?? "", token);
-
-  return data({ user, theme });
+  const theme = await fetchThemeConfig("", token);
+  return data({ user, organizations, theme });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -107,6 +112,7 @@ export function HydrateFallback() {
 export default function App() {
   const data = useLoaderData<typeof loader>();
   const user = data?.user || null;
+  const organizations = data?.organizations || [];
   const theme = data?.theme;
 
   return (
@@ -120,7 +126,7 @@ export default function App() {
         {theme?.custom_css && (
           <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: theme.custom_css }} />
         )}
-        <Outlet context={{ user }} />
+        <Outlet context={{ user, organizations }} />
         <Toaster position="top-right" richColors closeButton />
       </TooltipProvider>
     </ThemeProvider>

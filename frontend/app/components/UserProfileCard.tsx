@@ -44,6 +44,7 @@ function getRoleLabel(role: UserRole | string): string {
 
 interface UserProfileCardProps {
   user: UserType;
+  organizations?: UserType["organizations"];
   onLogout?: () => void;
   onSettings?: () => void;
   className?: string;
@@ -51,6 +52,7 @@ interface UserProfileCardProps {
 
 export function UserProfileCard({
   user,
+  organizations = user.organizations,
   onLogout,
   onSettings,
   className,
@@ -65,8 +67,8 @@ export function UserProfileCard({
     : user.email.slice(0, 2).toUpperCase();
 
   const RoleIcon = getRoleIconComponent(user.role);
-  const selectedOrg = getSelectedOrganization(user);
-  const isValidSelectedOrg = selectedOrg && user.organizations?.some((org) => org.id === selectedOrg.id);
+  const selectedOrg = getSelectedOrganization(organizations || []);
+  const isValidSelectedOrg = selectedOrg && organizations?.some((org) => org.id === selectedOrg.id);
 
   return (
     <Card className={cn("w-full max-w-md border bg-card", className)}>
@@ -143,13 +145,13 @@ export function UserProfileCard({
         </div>
 
         {/* Organizations List */}
-        {user.organizations && user.organizations.length > 1 && (
+        {organizations && organizations.length > 1 && (
           <div className="pt-3 border-t">
             <p className="text-xs font-medium text-muted-foreground mb-2">
-              All Organizations ({user.organizations.length})
+              All Organizations ({organizations.length})
             </p>
             <div className="space-y-1.5">
-              {user.organizations.map((org) => {
+              {organizations.map((org) => {
                 const OrgRoleIcon = getRoleIconComponent(org.role);
                 const isSelected = isValidSelectedOrg && selectedOrg.id === org.id;
                 return (

@@ -2,6 +2,7 @@ import { useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data } from "react-router";
 import { api } from "~/.server/lib/api";
+import { getUserToken } from "~/.server/sessions";
 import { useToast } from "~/hooks/use-toast";
 import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Alert, AlertDescription, Badge } from "~/components/ui";
@@ -12,15 +13,17 @@ import { useEffect } from "react";
 // Users can accept invitation and set password in one flow
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const token = params.token!;
+  const sessionToken = await getUserToken(request);
 
   try {
     // Pass request but NO token - this is a public endpoint
     const invitation = await api.get<any>(`/api/invitations/${token}/`, null, request);
-    return { invitation, token };
+    return { invitation, token, hasSession: Boolean(sessionToken) };
   } catch (error: any) {
-    return { 
-      invitation: null, 
-      token, 
+    return {
+      invitation: null,
+      token,
+      hasSession: Boolean(sessionToken),
       error: error.body?.detail || error.message || "Invalid or expired invitation",
     };
   }
@@ -41,16 +44,34 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
  */
 export async function action({ request, params }: ActionFunctionArgs) {
   const token = params.token!;
+  const sessionToken = await getUserToken(request);
+
   try {
+    const invitation = await api.get<any>(`/api/invitations/${token}/`, null, request);
+
+    if (invitation.needs_onboarding) {
+      return { success: true, redirectTo: `/onboarding/set-password/${token}` };
+    }
+
+    if (!sessionToken) {
+      return {
+        success: true,
+        redirectTo: `/login?redirectTo=${encodeURIComponent(`/invitations/${token}`)}`,
+      };
+    }
+
     const result = await api.post<any>(
       `/api/invitations/${token}/accept/`,
       null,
+      sessionToken,
       request
     );
+
     if (result.needs_onboarding) {
       return { success: true, redirectTo: `/onboarding/set-password/${token}` };
     }
-    return { success: true, redirectTo: "/dashboard" };
+
+    return { success: true, redirectTo: "/" };
   } catch (error: any) {
     return data(
       { error: error.body?.detail || "Failed to accept invitation" },
@@ -60,7 +81,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 export default function InvitationAcceptRoute() {
-  const { invitation, error, token } = useLoaderData<typeof loader>();
+  const { invitation, error, hasSession } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -204,7 +225,13 @@ export default function InvitationAcceptRoute() {
             <input type="hidden" name="action" value="accept" />
             
             <Button type="submit" className="w-full" size="lg" disabled={isProcessing}>
-              {isProcessing ? "Processing..." : "Accept Invitation & Set Password"}
+              {isProcessing
+                ? "Processing..."
+                : invitation.needs_onboarding
+                  ? "Continue to Set Password"
+                  : hasSession
+                    ? "Accept Invitation"
+                    : "Login to Accept Invitation"}
             </Button>
           </fetcher.Form>
 

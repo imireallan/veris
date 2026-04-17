@@ -118,6 +118,26 @@ class TestFlatAssessmentViewSet:
         assert str(self.assessment1.id) in assessment_ids
         assert str(self.assessment2.id) in assessment_ids
 
+    def test_aggregate_endpoint_does_not_leak_other_org_assessments(self):
+        """Regular users cannot use org_ids to access assessments from other orgs."""
+        other_org = Organization.objects.create(name="Other Org", slug="other-org")
+        other_assessment = Assessment.objects.create(
+            organization=other_org,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+        )
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(
+            f"/api/assessments/aggregate/?org_ids={other_org.id}"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 0
+        assert all(item["id"] != str(other_assessment.id) for item in data)
+
     def test_aggregate_endpoint_unauthenticated(self):
         """Test that aggregate endpoint returns 403 for unauthenticated users."""
         response = self.client.get("/api/assessments/aggregate/")

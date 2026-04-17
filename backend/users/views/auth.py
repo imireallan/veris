@@ -13,6 +13,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from organizations.models import OrganizationMembership
 from users.models import User
+from users.roles import UserRole
 
 
 @api_view(["POST"])
@@ -67,8 +68,8 @@ def me_view(request):
     role = None
     fallback_role = None
     if user.is_superuser:
-        role = "SUPERADMIN"
-        fallback_role = "SUPERADMIN"
+        role = UserRole.SUPERADMIN
+        fallback_role = UserRole.SUPERADMIN
     elif primary_membership and primary_membership.role:
         role = primary_membership.role.name
         fallback_role = primary_membership.fallback_role

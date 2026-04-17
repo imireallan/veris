@@ -168,6 +168,23 @@ class Assessment(models.Model):
         blank=True,
         related_name="assessments",
     )
+
+    # Template association (P0 - Template Management)
+    template = models.ForeignKey(
+        "assessments.AssessmentTemplate",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessments",
+        help_text="If set, this assessment was instantiated from a template.",
+    )
+    template_version = models.CharField(
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="Snapshot of template version at instantiation time.",
+    )
+
     start_date = models.DateTimeField()
     due_date = models.DateTimeField()
     completed_at = models.DateTimeField(null=True, blank=True)
@@ -202,14 +219,23 @@ class Assessment(models.Model):
 
 
 class AssessmentTemplate(models.Model):
-    """Template for assessments."""
+    """
+    Master template for assessments (SUPERADMIN-managed).
+    Templates can be global (is_public=True) or organization-specific.
+    Published templates are immutable — must duplicate to edit.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        PUBLISHED = "PUBLISHED", "Published"
+        ARCHIVED = "ARCHIVED", "Archived"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organization = models.ForeignKey(
-        "organizations.Organization", on_delete=models.CASCADE, related_name="templates"
-    )
     name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True, null=True, blank=True)
     description = models.TextField(blank=True, default="")
+
+    # Framework association
     framework = models.ForeignKey(
         "assessments.Framework",
         on_delete=models.SET_NULL,
@@ -217,18 +243,71 @@ class AssessmentTemplate(models.Model):
         blank=True,
         related_name="templates",
     )
-    questions = models.JSONField(default=list)
-    is_system = models.BooleanField(default=False)
+
+    # Versioning
+    version = models.CharField(max_length=50, default="1.0.0")
+    version_notes = models.TextField(blank=True, default="")
+
+    # Visibility & tenancy
+    is_public = models.BooleanField(
+        default=False,
+        help_text="If True, visible to all organizations. If False, only owner_org can use.",
+    )
+    owner_org = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="owned_templates",
+        help_text="If set, template is scoped to this organization (client-specific).",
+    )
+
+    # Lifecycle
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+    )
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="published_templates",
+    )
+
+    # Audit
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_templates",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "assessment_templates"
-        ordering = ["name"]
-        unique_together = ["organization", "name"]
+        ordering = ["-created_at"]
+        # No unique_together - old constraint was on (organization, slug) which was removed in 0007
+        # We don't declare unique_together here to avoid Django trying to alter it
+        indexes = [
+            models.Index(fields=["is_public", "status"]),
+            models.Index(fields=["owner_org", "status"]),
+        ]
 
     def __str__(self):
-        return self.name
+        return f"{self.name} (v{self.version})"
+
+    def can_edit(self):
+        """Published templates are immutable."""
+        return self.status == self.Status.DRAFT
+
+    def can_delete(self):
+        """Cannot delete if has instances."""
+        return not self.assessments.exists()
 
 
 class AssessmentQuestion(models.Model):
@@ -245,6 +324,10 @@ class AssessmentQuestion(models.Model):
     category = models.CharField(max_length=200, blank=True, default="")
     scoring_criteria = models.JSONField(default=dict)
     is_required = models.BooleanField(default=True)
+
+    # Cross-framework mapping (P2-1)
+    # Structure: [{"framework_id": "uuid", "provision_code": "P1.2.3", "provision_name": "..."}, ...]
+    framework_mappings = models.JSONField(default=list, blank=True)
 
     class Meta:
         db_table = "assessment_questions"

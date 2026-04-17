@@ -1,5 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -35,6 +36,8 @@ from assessments.serializers import (
     SiteSerializer,
     TaskSerializer,
 )
+from assessments.services.access import AssessmentAccessService
+from assessments.views.mixins import ReportExportMixin, ResponseValidationMixin
 from organizations.models import OrganizationMembership
 from users.permissions import (
     CanManageAssessments,
@@ -82,29 +85,14 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageAssessments]
 
     def get_queryset(self):
-        user = self.request.user
+        qs = AssessmentAccessService.get_accessible_assessments(self.request.user)
 
-        # Superusers can see all assessments
-        if user.is_superuser:
-            qs = Assessment.objects.all()
-        else:
-            # Get all organizations the user belongs to
-            memberships = OrganizationMembership.objects.filter(user=user).values_list(
-                "organization_id", flat=True
-            )
-
-            if not memberships:
-                return Assessment.objects.none()
-
-            # Filter assessments by user's organizations
-            qs = Assessment.objects.filter(organization_id__in=memberships)
-
-        # Additional org filter from URL if provided
         org_id = (
             self.kwargs.get("org_pk")
             or self.request.query_params.get("org")
             or self.request.query_params.get("organization")
         )
+
         if org_id:
             qs = qs.filter(organization_id=org_id)
 
@@ -114,6 +102,18 @@ class AssessmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+
+        # Auto-set organization from user's membership if not provided
+        if not serializer.validated_data.get("organization"):
+            # Get user's primary organization membership
+            membership = OrganizationMembership.objects.filter(user=user).first()
+            if membership:
+                serializer.validated_data["organization"] = membership.organization
+            else:
+                raise PermissionDenied(
+                    "You must belong to an organization to create assessments"
+                )
+
         serializer.save(created_by=user)
 
 
@@ -219,20 +219,16 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
         return AssessmentQuestion.objects.none()
 
 
-class AssessmentResponseViewSet(viewsets.ModelViewSet):
+class AssessmentResponseViewSet(ResponseValidationMixin, viewsets.ModelViewSet):
     serializer_class = AssessmentResponseSerializer
     permission_classes = [IsAuthenticated, IsAssessmentOwner]
 
     def get_queryset(self):
         assessment_pk = self.kwargs.get("assessment_pk")
-        org_pk = self.kwargs.get("org_pk")
-        if assessment_pk:
-            queryset = AssessmentResponse.objects.filter(assessment_id=assessment_pk)
-            # Additional org scoping if org_pk is provided
-            if org_pk:
-                queryset = queryset.filter(assessment__organization_id=org_pk)
-            return queryset
-        return AssessmentResponse.objects.none()
+        if not assessment_pk:
+            return AssessmentResponse.objects.none()
+
+        return AssessmentResponse.objects.filter(assessment_id=assessment_pk)
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def validate(self, request, pk=None):
@@ -320,67 +316,20 @@ class SiteViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class AssessmentReportViewSet(viewsets.ModelViewSet):
+class AssessmentReportViewSet(ReportExportMixin, viewsets.ModelViewSet):
     serializer_class = AssessmentReportSerializer
     permission_classes = [IsAuthenticated, CanManageTemplates]
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
+        qs = AssessmentReport.objects.select_related("assessment", "organization")
+
+        org_id = self.kwargs.get("org_pk") or self.request.query_params.get(
             "organization"
         )
-        qs = AssessmentReport.objects.select_related("assessment", "organization")
-        if org_pk:
-            qs = qs.filter(organization_id=org_pk)
+        if org_id:
+            qs = qs.filter(organization_id=org_id)
+
         return qs
-
-    @action(detail=True, methods=["get"], url_path="export/pdf")
-    def export_pdf(self, request, pk=None):
-        """
-        Generate and download PDF report for an assessment.
-
-        GET /api/reports/<id>/export/pdf/
-
-        Returns:
-            PDF file download
-        """
-        from django.http import HttpResponse
-
-        from reports.services import ReportGenerationError, ReportGenerator
-
-        report = self.get_object()
-
-        # Check permissions - user must have access to the organization
-        org_id = str(report.organization_id)
-        if not request.user.is_superuser:
-            from organizations.models import OrganizationMembership
-
-            has_access = OrganizationMembership.objects.filter(
-                user=request.user, organization_id=org_id
-            ).exists()
-            if not has_access:
-                return Response(
-                    {"error": "Access denied"}, status=status.HTTP_403_FORBIDDEN
-                )
-
-        try:
-            generator = ReportGenerator(report)
-            pdf_bytes = generator.generate_pdf()
-            filename = generator.generate_filename()
-
-            # Use HttpResponse for binary content, not DRF Response
-            response = HttpResponse(pdf_bytes, content_type="application/pdf")
-            response["Content-Disposition"] = f'attachment; filename="{filename}"'
-            return response
-
-        except ReportGenerationError as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        except Exception as e:
-            return Response(
-                {"error": f"Report generation failed: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
 
 
 class FindingViewSet(viewsets.ModelViewSet):

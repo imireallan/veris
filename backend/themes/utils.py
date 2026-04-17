@@ -1,6 +1,45 @@
 """Theme color utilities for converting between HEX and HSL formats."""
 
+import re
 from typing import Tuple
+
+
+def is_valid_hex(hex_color: str) -> bool:
+    """Validate HEX color format.
+
+    Args:
+        hex_color: Color string to validate
+
+    Returns:
+        True if valid HEX format (#RGB, #RRGGBB, or RRGGBB)
+    """
+    if not hex_color:
+        return False
+    hex_color = hex_color.lstrip("#")
+    return bool(re.match(r"^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$", hex_color))
+
+
+def is_valid_hsl(hsl: str) -> bool:
+    """Validate HSL color format.
+
+    Args:
+        hsl: Color string to validate
+
+    Returns:
+        True if valid HSL format (h s l or h s% l%)
+    """
+    if not hsl:
+        return False
+    parts = hsl.replace("%", "").strip().split()
+    if len(parts) != 3:
+        return False
+    try:
+        h = float(parts[0])
+        s = float(parts[1])
+        l = float(parts[2])  # noqa: E741
+        return 0 <= h <= 360 and 0 <= s <= 100 and 0 <= l <= 100
+    except (ValueError, TypeError):
+        return False
 
 
 def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:

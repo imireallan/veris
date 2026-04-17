@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
+from users.roles import UserRole
+
 
 class Organization(models.Model):
     """Multi-tenant organization (tenant) model."""
@@ -87,15 +89,8 @@ class OrganizationMembership(models.Model):
     # Fallback to standard roles if no custom role is assigned
     fallback_role = models.CharField(
         max_length=20,
-        choices=[
-            ("ADMIN", "Admin"),
-            ("COORDINATOR", "Coordinator"),
-            ("OPERATOR", "Operator"),
-            ("EXECUTIVE", "Executive"),
-            ("ASSESSOR", "Assessor"),
-            ("CONSULTANT", "Consultant"),
-        ],
-        default="OPERATOR",
+        choices=UserRole.choices,
+        default=UserRole.OPERATOR,
     )
 
     # Membership-specific attributes (Merged from AssessorProfile)
@@ -188,15 +183,8 @@ class Invitation(models.Model):
     )
     fallback_role = models.CharField(
         max_length=20,
-        choices=[
-            ("ADMIN", "Admin"),
-            ("COORDINATOR", "Coordinator"),
-            ("OPERATOR", "Operator"),
-            ("EXECUTIVE", "Executive"),
-            ("ASSESSOR", "Assessor"),
-            ("CONSULTANT", "Consultant"),
-        ],
-        default="OPERATOR",
+        choices=UserRole.choices,
+        default=UserRole.OPERATOR,
     )
     # Token for secure acceptance link
     token = models.CharField(max_length=64, unique=True, editable=False)

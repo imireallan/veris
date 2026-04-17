@@ -51,8 +51,9 @@ RUN --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
 COPY . .
 
 EXPOSE 8000
+EXPOSE 5678
 ENV DJANGO_SETTINGS_MODULE=config.settings.development
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["python", "-m", "debugpy","--listen", "0.0.0.0:5678","manage.py", "runserver","0.0.0.0:8000","--noreload"]
 
 # ─────────────────────────────────────────────
 # Production Runtime

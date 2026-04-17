@@ -6,6 +6,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { PageHeader, SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
+import { UserRole } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -30,7 +31,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
   // Non-admin users are server-side scoped to their own org by default.
   // For admins, optionally pass ?org= to filter.
-  const isSuperAdmin = user.fallbackRole === "SUPERADMIN";
+  const isSuperAdmin = user.fallbackRole === UserRole.SUPERADMIN;
 
   const assessmentsPath = isSuperAdmin && orgFilter
     ? `/api/assessments?organization=${orgFilter}`
@@ -39,6 +40,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const orgPath = orgFilter
     ? `/api/organizations?organization=${orgFilter}`
     : `/api/organizations/`;
+
+  console.log({ assessmentsPath })
 
   const [assessments, sites, frameworks, focusAreas, organizations] =
     await Promise.all([
@@ -93,7 +96,7 @@ export default function AssessmentsListRoute() {
   const search = searchParams.get("q") || "";
   const activeOrg = (searchParams.get("org") || searchParams.get("organization") || "").replace(/\/$/, "");
 
-  const isSuperAdmin = user.fallbackRole === "SUPERADMIN";
+  const isSuperAdmin = user.fallbackRole === UserRole.SUPERADMIN;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -205,13 +208,11 @@ export default function AssessmentsListRoute() {
             Create, track, and manage sustainability assessments.
           </p>
         </div>
-        {!isSuperAdmin && (
-          <Link to="/assessments/new">
-            <Button>
-              <Plus className="w-4 h-4" /> New Assessment
-            </Button>
-          </Link>
-        )}
+        <Link to="/assessments/new">
+          <Button>
+            <Plus className="w-4 h-4" /> New Assessment
+          </Button>
+        </Link>
       </div>
 
       {isSuperAdmin && (

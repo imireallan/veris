@@ -54,13 +54,15 @@ export class RBAC {
 
   /**
    * Can manage templates and high-level assessment configuration.
+   * SUPERADMIN can manage any org's templates.
+   * ADMIN, COORDINATOR can manage their org's templates.
    */
   static canManageTemplates(user: User, orgId: string): boolean {
-    // SUPERADMIN can manage any org's templates
+    // SUPERADMIN can manage all templates
     if (user.fallbackRole === "SUPERADMIN") return true;
     
     // Check if user belongs to this org (supports multi-org users)
-    if (!RBAC.isOrgMember(user, orgId)) return false;
+    if (orgId && !RBAC.isOrgMember(user, orgId)) return false;
     
     return user.fallbackRole === "ADMIN" || 
            user.fallbackRole === "OWNER" || 

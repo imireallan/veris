@@ -78,20 +78,92 @@ class ExternalRatingSerializer(serializers.ModelSerializer):
 
 
 class AssessmentTemplateSerializer(serializers.ModelSerializer):
+    """
+    List/create serializer for AssessmentTemplate.
+    Includes basic fields for list view.
+    """
+
+    question_count = serializers.SerializerMethodField()
+    framework_name = serializers.CharField(source="framework.name", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True
+    )
+
     class Meta:
         model = AssessmentTemplate
         fields = [
             "id",
-            "organization",
             "name",
+            "slug",
             "description",
             "framework",
-            "questions",
-            "is_system",
+            "framework_name",
+            "version",
+            "status",
+            "is_public",
+            "owner_org",
+            "question_count",
+            "version_notes",
+            "published_at",
+            "created_by",
+            "created_by_name",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "slug", "created_at", "updated_at", "published_at"]
+
+    def get_question_count(self, obj):
+        return obj.assessment_questions.count()
+
+
+class AssessmentTemplateDetailSerializer(serializers.ModelSerializer):
+    """
+    Detail serializer for AssessmentTemplate.
+    Includes nested questions for detail view.
+    """
+
+    questions = serializers.SerializerMethodField()
+    framework_name = serializers.CharField(source="framework.name", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True
+    )
+    published_by_name = serializers.CharField(
+        source="published_by.full_name", read_only=True
+    )
+    instance_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssessmentTemplate
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "description",
+            "framework",
+            "framework_name",
+            "version",
+            "version_notes",
+            "status",
+            "is_public",
+            "owner_org",
+            "questions",
+            "instance_count",
+            "published_at",
+            "published_by",
+            "published_by_name",
+            "created_by",
+            "created_by_name",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "slug", "created_at", "updated_at", "published_at"]
+
+    def get_questions(self, obj):
+        questions = obj.assessment_questions.all().order_by("order")
+        return AssessmentQuestionSerializer(questions, many=True).data
+
+    def get_instance_count(self, obj):
+        return obj.assessments.count()
 
 
 class AssessmentQuestionSerializer(serializers.ModelSerializer):
@@ -105,7 +177,13 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
             "category",
             "scoring_criteria",
             "is_required",
+            "framework_mappings",
         ]
+        read_only_fields = ["id", "template", "order"]
+        extra_kwargs = {
+            "template": {"required": False},
+            "order": {"required": False},
+        }
 
 
 class AssessmentSerializer(serializers.ModelSerializer):
@@ -174,15 +252,18 @@ class AssessmentSerializer(serializers.ModelSerializer):
         return f"Assessment {str(obj.id)[:8]}"
 
     def create(self, validated_data):
-        # If no org provided, use the first org
-        if not validated_data.get("organization_id") and not validated_data.get(
-            "organization"
-        ):
-            from organizations.models import Organization
+        """Auto-set organization from user's membership if not provided."""
+        from organizations.models import OrganizationMembership
 
-            first_org = Organization.objects.first()
-            if first_org:
-                validated_data["organization"] = first_org
+        user = self.context.get("request").user if self.context.get("request") else None
+
+        if not validated_data.get("organization"):
+            if user:
+                # Get user's primary organization membership
+                membership = OrganizationMembership.objects.filter(user=user).first()
+                if membership:
+                    validated_data["organization"] = membership.organization
+
         return super().create(validated_data)
 
 

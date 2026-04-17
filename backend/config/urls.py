@@ -2,6 +2,11 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 from rest_framework.routers import DefaultRouter
 
 from assessments.views import (
@@ -28,6 +33,10 @@ from assessments.views.flat_views import (
     FlatSiteViewSet,
     FlatTaskViewSet,
 )
+from assessments.views.template_views import (
+    AssessmentTemplateViewSet,
+    TemplateQuestionViewSet,
+)
 from assessments.views.upload_evidence import upload_evidence_document
 from assessments.views.upload_image import upload_image
 from knowledge.views import KnowledgeDocumentViewSet
@@ -51,6 +60,12 @@ router.register(r"api/organizations", OrganizationViewSet, basename="organizatio
 router.register(r"api/users", UserViewSet, basename="user")
 router.register(r"api/themes", ThemeViewSet, basename="theme")
 router.register(r"api/frameworks", FrameworkViewSet, basename="framework")
+router.register(r"api/templates", AssessmentTemplateViewSet, basename="template")
+router.register(
+    r"api/templates/(?P<template_pk>[^/.]+)/questions",
+    TemplateQuestionViewSet,
+    basename="template-question",
+)
 router.register(
     r"api/creation-config",
     OrganizationCreationConfigViewSet,
@@ -125,6 +140,16 @@ router.register(r"api/plans-legacy", AssessmentPlanViewSet, basename="plan")
 router.register(r"api/reports-legacy", AssessmentReportViewSet, basename="report")
 
 urlpatterns = [
+    # schema
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    # Swagger UI
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    # Redoc UI (alternative)
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/health/", health_check, name="health-check"),
     path("", include("settings.urls")),
     path("api/", include("users.urls")),

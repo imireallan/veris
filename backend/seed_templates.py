@@ -170,12 +170,12 @@ def seed_templates():
     print(f"✓ Questions: {cgwg_template.assessment_questions.count()}")
 
     print("\n✅ Seed complete!")
-    print(f"\nAvailable templates:")
+    print("\nAvailable templates:")
     print(f"  1. {template.name} ({template.assessment_questions.count()} questions)")
     print(
         f"  2. {cgwg_template.name} ({cgwg_template.assessment_questions.count()} questions)"
     )
-    print(f"\nTest instantiation:")
+    print("\nTest instantiation:")
     print(f"  POST /api/templates/{template.id}/instantiate/")
 
 

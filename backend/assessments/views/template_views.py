@@ -7,8 +7,6 @@ Templates are SUPERADMIN-managed master blueprints that can be:
 - Instantiated into Assessment instances by ORG_ADMINs
 """
 
-from uuid import UUID
-
 from django.db import transaction
 from django.db.models import Max, Q
 from django.shortcuts import get_object_or_404

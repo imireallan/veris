@@ -36,7 +36,7 @@ def is_valid_hsl(hsl: str) -> bool:
     try:
         h = float(parts[0])
         s = float(parts[1])
-        l = float(parts[2])
+        l = float(parts[2])  # noqa: E741
         return 0 <= h <= 360 and 0 <= s <= 100 and 0 <= l <= 100
     except (ValueError, TypeError):
         return False

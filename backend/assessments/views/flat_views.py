@@ -60,18 +60,20 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
-        
+
         # 1. Determine the organization object
         # If it's already in validated_data, the serializer keeps it.
         # We only need to provide it if it's missing.
         org = serializer.validated_data.get("organization")
-        
+
         if not org:
             # Check query params for an override
-            org_id = self.request.query_params.get("org") or self.request.query_params.get("organization")
-            
+            org_id = self.request.query_params.get(
+                "org"
+            ) or self.request.query_params.get("organization")
+
             if org_id:
-                # You can assign the ID directly to organization_id 
+                # You can assign the ID directly to organization_id
                 # OR fetch the object to be safe:
                 org = Organization.objects.filter(id=org_id).first()
             else:
@@ -79,7 +81,7 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
                 membership = OrganizationMembership.objects.filter(user=user).first()
                 if membership:
                     org = membership.organization
-    
+
         # 2. Save with the organization object (or ID)
         # The serializer's create() method expects an object for the 'organization' field
         serializer.save(organization=org, created_by=user)

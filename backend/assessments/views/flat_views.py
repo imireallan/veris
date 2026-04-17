@@ -50,13 +50,48 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = AssessmentAccessService.get_accessible_assessments(self.request.user)
 
-        org_id = self.request.query_params.get("org") or self.request.query_params.get(
+        # Support single or comma‑separated list of org IDs
+        org_param = self.request.query_params.get("org") or self.request.query_params.get(
             "organization"
         )
-        if org_id:
-            qs = qs.filter(organization_id=org_id)
+        if org_param:
+            org_ids = [oid.strip() for oid in org_param.split(",") if oid.strip()]
+            if len(org_ids) == 1:
+                qs = qs.filter(organization_id=org_ids[0])
+            else:
+                # For superadmins we allow filtering across multiple orgs
+                qs = qs.filter(organization_id__in=org_ids)
 
         return qs
+
+    @action(detail=False, methods=["GET"])
+    def aggregate(self, request):
+        """
+        Return assessments from *all* organizations the user belongs to.
+        Optional query param: ?org_ids=uuid1,uuid2
+        """
+        user = request.user
+        org_ids = request.query_params.get("org_ids")
+        
+        if org_ids:
+            # Parse comma-separated org IDs from query param
+            org_ids = [oid.strip() for oid in org_ids.split(",") if oid.strip()]
+        else:
+            # Pull all org IDs from the membership table
+            org_ids = OrganizationMembership.objects.filter(
+                user=user
+            ).values_list("organization_id", flat=True)
+        
+        # Get assessments from all accessible orgs
+        assessments = Assessment.objects.filter(organization_id__in=org_ids)
+        
+        # Apply same filtering logic as main queryset
+        qs = AssessmentAccessService.get_accessible_assessments(user)
+        if org_ids:
+            qs = qs.filter(organization_id__in=org_ids)
+        
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         user = self.request.user

@@ -26,21 +26,37 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   }
 }
 
+/**
+ * Invitation acceptance action.
+ *
+ * Previously this action always redirected to the onboarding password‑set page,
+ * even when the invited user already existed and had a usable password. The
+ * backend `InvitationAcceptView` now returns a `needs_onboarding` flag that
+ * indicates whether the user must go through the onboarding flow.
+ *
+ * We call the POST `/api/invitations/:token/accept/` endpoint, which performs
+ * the acceptance logic and returns `{ needs_onboarding: boolean, ... }`.
+ * Based on that flag we either redirect to the password‑set page (new user) or
+ * straight to the dashboard (existing user).
+ */
 export async function action({ request, params }: ActionFunctionArgs) {
-  const formData = await request.formData();
-  const actionType = formData.get("action") as string;
   const token = params.token!;
-
-  if (actionType !== "accept") {
-    return data({ error: "Invalid action" }, { status: 400 });
+  try {
+    const result = await api.post<any>(
+      `/api/invitations/${token}/accept/`,
+      null,
+      request
+    );
+    if (result.needs_onboarding) {
+      return { success: true, redirectTo: `/onboarding/set-password/${token}` };
+    }
+    return { success: true, redirectTo: "/dashboard" };
+  } catch (error: any) {
+    return data(
+      { error: error.body?.detail || "Failed to accept invitation" },
+      { status: error.status || 500 }
+    );
   }
-
-  // For accept, we just redirect to onboarding
-  // The actual acceptance happens when they set their password
-  return { 
-    success: true, 
-    redirectTo: `/onboarding/set-password/${token}`
-  };
 }
 
 export default function InvitationAcceptRoute() {

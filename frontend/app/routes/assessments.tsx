@@ -33,9 +33,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
   // For admins, optionally pass ?org= to filter.
   const isSuperAdmin = user.fallbackRole === UserRole.SUPERADMIN;
 
-  const assessmentsPath = isSuperAdmin && orgFilter
+  // Use aggregate endpoint when no specific org is filtered
+  const assessmentsPath = orgFilter
     ? `/api/assessments?organization=${orgFilter}`
-    : "/api/assessments/";
+    : "/api/assessments/aggregate/";
 
   const orgPath = orgFilter
     ? `/api/organizations?organization=${orgFilter}`
@@ -215,7 +216,7 @@ export default function AssessmentsListRoute() {
         </Link>
       </div>
 
-      {isSuperAdmin && (
+      {user.organizations && user.organizations.length > 1 && (
         <div className="flex gap-3 items-center">
           <div className="relative min-w-[200px]">
             <Select

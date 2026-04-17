@@ -12,17 +12,29 @@ We're building a **generic, white-label AI sustainability platform**. **TDi Sust
 
 ---
 
+## Current Maturity Snapshot
+
+Important: this roadmap is strategic and demo-oriented. It is not a claim that all items below are already implemented.
+
+Current state at a glance:
+- Implemented foundation: multi-tenancy, invitations, org switching, assessment aggregation, white-label theme engine foundation
+- Partial: AI ingestion/validation groundwork, mapping CRUD/UI, report export/model support
+- Still to make demo-real: AI chat, downstream answer-once-map-many value, consultancy-grade reporting workflow
+
+Detailed review:
+- `docs/current-product-goal-alignment-review.md`
+
 ## Phase 1: Core Platform (Weeks 1-3)
 
 ### Focus: "Generic platform with TDi demo ready"
 
 ### Deliverables
 - [ ] **Monorepo setup**: FastAPI AI + React Router v7 + Django Core
-- [ ] **Multi-tenant architecture**: Organizations, users, roles (generic)
-- [ ] **Auth system**: JWT with role-based access
-- [ ] **White-label theme engine**: CSS variables with UI builder
+- [x] **Multi-tenant architecture**: Organizations, users, roles (generic) — foundation implemented
+- [x] **Auth system**: JWT with role-based access — foundation implemented
+- [x] **White-label theme engine**: CSS variables with UI builder — foundation implemented
 - [ ] **3 sample tenant configs**: TDi, Bettercoal, EO100 (demo ready)
-- [ ] **Basic dashboard**: Role-based views with org switcher
+- [x] **Basic dashboard**: Role-based views with org switcher — implemented
 - [ ] **Generic demo site**: Configurable branding (TDi-branded for pitch)
 
 ### Why This Matters
@@ -38,9 +50,9 @@ We're building a **generic, white-label AI sustainability platform**. **TDi Sust
 ### Focus: "Framework-agnostic AI that works for any standards"
 
 ### Deliverables
-- [ ] **Document upload pipeline**: PDF, DOCX extraction (any framework)
-- [ ] **Vector embedding pipeline**: Chunking, OpenAI embeddings, Pinecone
-- [ ] **Knowledge base UI**: Document browser, search, categories
+- [x] **Document upload pipeline**: PDF, DOCX extraction (any framework) — core ingestion exists
+- [x] **Vector embedding pipeline**: Chunking, OpenAI embeddings, Pinecone — groundwork exists
+- [x] **Knowledge base UI**: Document browser, search, categories — basic UI exists
 - [ ] **AI Chat assistant**: Context-aware responses with source citations
 - [ ] **Pre-loaded knowledge**: Bettercoal Code, EO100 Standard, OECD Guidelines
 - [ ] **RAG pipeline working end-to-end** (framework-agnostic)
@@ -57,12 +69,12 @@ We're building a **generic, white-label AI sustainability platform**. **TDi Sust
 ### Focus: "One data entry, multiple framework reports"
 
 ### Deliverables
-- [ ] **Questionnaire templates**: ESG Certification Standard, Coal Industry Program, basic ESG
-- [ ] **Assessment workflow**: CRUD, status tracking, progress
-- [ ] **Multi-framework mapping UI**: Data entered once, mapped to multiple standards
+- [x] **Questionnaire templates**: ESG Certification Standard, Coal Industry Program, basic ESG — template foundation exists
+- [x] **Assessment workflow**: CRUD, status tracking, progress — core workflow exists
+- [x] **Multi-framework mapping UI**: Data entered once, mapped to multiple standards — CRUD/UI foundation exists
 - [ ] **AI-guided questionnaire navigation**: Tips, context, suggestions
 - [ ] **Scoring engine**: Framework-specific scoring methods
-- [ ] **Evidence management**: File upload, categorization, link to responses
+- [x] **Evidence management**: File upload, categorization, link to responses — foundation exists
 - [ ] **Cross-framework gap analysis**: "You're missing X for ESG Certification Standard Principle 5"
 
 ### Why This Matters
@@ -78,9 +90,9 @@ We're building a **generic, white-label AI sustainability platform**. **TDi Sust
 
 ### Deliverables
 - [ ] **AI report generation**: Assessment data → executive summary, findings
-- [ ] **Multi-format export**: PDF, Excel, branded per-tenant
+- [x] **Multi-format export**: PDF, Excel, branded per-tenant — partial/export foundation exists
 - [ ] **Dashboard analytics**: Scores, trends, completion rates, AI insights
-- [ ] **Continuous improvement tracking**: Tasks, deadlines, reminders with AI nudging
+- [x] **Continuous improvement tracking**: Tasks, deadlines, reminders with AI nudging — task/CIP foundation exists, AI nudging partial
 - [ ] **Full Major Energy Operator demo**: Complete with branding, knowledge base, assessment
 - [ ] **Demo script + video walkthrough** for Our Consultancy Client pitch
 

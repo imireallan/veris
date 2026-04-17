@@ -1,11 +1,10 @@
 import * as React from "react";
-import { Link, Form } from "react-router";
+import { useNavigate, useSubmit } from "react-router";
 import { cn } from "~/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
@@ -23,7 +22,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { User as UserType } from "~/types";
+import type { User as UserType, OrganizationMembership } from "~/types";
 import { UserRole, RBAC } from "~/types/rbac";
 import { getSelectedOrganization } from "~/components/OrganizationSwitcher";
 
@@ -45,10 +44,14 @@ function getRoleIconComponent(role: UserRole | string): LucideIcon {
 
 interface UserDropdownProps {
   user: UserType;
+  organizations: OrganizationMembership[];
   className?: string;
 }
 
-export function UserDropdown({ user, className }: UserDropdownProps) {
+export function UserDropdown({ user, organizations, className }: UserDropdownProps) {
+  const navigate = useNavigate();
+  const submit = useSubmit();
+
   const initials = user.fullName
     ? user.fullName
         .split(" ")
@@ -59,35 +62,30 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
     : user.email.slice(0, 2).toUpperCase();
 
   const RoleIcon = getRoleIconComponent(user.role);
-  const selectedOrg = getSelectedOrganization(user);
-
-  // Validate that selectedOrg is actually in user's organizations
-  const isValidSelectedOrg = selectedOrg && user.organizations?.some((org) => org.id === selectedOrg.id);
+  const selectedOrg = getSelectedOrganization(organizations);
+  const isValidSelectedOrg =
+    selectedOrg && organizations.some((org) => org.id === selectedOrg.id);
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger>
-        <div
-          className={cn(
-            "flex items-center gap-2 rounded-full hover:bg-primary/10 p-1 pr-3 transition-colors cursor-pointer",
-            className
+      <DropdownMenuTrigger
+        className={cn(
+          "flex items-center gap-2 rounded-full hover:bg-primary/10 p-1 pr-3 transition-colors cursor-pointer",
+          className,
+        )}
+      >
+        <Avatar className="w-8 h-8 ring-1 ring-border bg-background">
+          <AvatarFallback className="text-xs font-semibold">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
+        <div className="text-left hidden sm:block">
+          <p className="text-sm font-medium leading-none">{user.fullName || "User"}</p>
+          {isValidSelectedOrg && (
+            <p className="text-xs text-muted-foreground mt-0.5">{selectedOrg.name}</p>
           )}
-          role="button"
-          tabIndex={0}
-        >
-          <Avatar className="w-8 h-8 ring-1 ring-border bg-background">
-            <AvatarFallback className="text-xs font-semibold">
-              {initials}
-            </AvatarFallback>
-          </Avatar>
-          <div className="text-left hidden sm:block">
-            <p className="text-sm font-medium leading-none">{user.fullName || "User"}</p>
-            {isValidSelectedOrg && (
-              <p className="text-xs text-muted-foreground mt-0.5">{selectedOrg.name}</p>
-            )}
-          </div>
-          <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
         </div>
+        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <div className="px-2 py-1.5">
@@ -97,8 +95,7 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
           </div>
         </div>
         <DropdownMenuSeparator />
-        
-        {/* Role Badges */}
+
         <div className="px-2 py-1.5">
           <div className="flex flex-wrap gap-1">
             {user.role && (
@@ -116,7 +113,6 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
           </div>
         </div>
 
-        {/* Selected Organization */}
         {isValidSelectedOrg && (
           <>
             <DropdownMenuSeparator />
@@ -134,8 +130,7 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
           </>
         )}
 
-        {/* All Organizations (compact list) */}
-        {user.organizations && user.organizations.length > 1 && (
+        {organizations.length > 1 && (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1">
@@ -143,14 +138,14 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
                 All Organizations
               </p>
               <div className="space-y-1 max-h-32 overflow-y-auto">
-                {user.organizations.map((org) => {
+                {organizations.map((org) => {
                   const isSelected = isValidSelectedOrg && selectedOrg.id === org.id;
                   return (
                     <div
                       key={org.id}
                       className={cn(
                         "flex items-center justify-between p-1.5 rounded-md text-xs transition-colors",
-                        isSelected ? "bg-primary/10 text-primary" : "hover:bg-primary/10"
+                        isSelected ? "bg-primary/10 text-primary" : "hover:bg-primary/10",
                       )}
                     >
                       <span className="text-foreground truncate">{org.name}</span>
@@ -166,22 +161,22 @@ export function UserDropdown({ user, className }: UserDropdownProps) {
         )}
 
         <DropdownMenuSeparator />
-        
-        {/* Actions */}
-        <DropdownMenuItem>
-          <Link to="/settings/profile" className="flex items-center gap-2 w-full">
-            <Settings className="w-4 h-4" />
-            Settings
-          </Link>
+
+        <DropdownMenuItem onClick={() => navigate("/settings/profile")}>
+          <Settings className="w-4 h-4" />
+          Settings
         </DropdownMenuItem>
-        
-        <DropdownMenuItem>
-          <Form method="post" action="/logout" className="w-full">
-            <button type="submit" className="flex items-center gap-2 w-full">
-              <LogOut className="w-4 h-4" />
-              Log out
-            </button>
-          </Form>
+
+        <DropdownMenuItem
+          onClick={() =>
+            submit(null, {
+              action: "/logout",
+              method: "post",
+            })
+          }
+        >
+          <LogOut className="w-4 h-4" />
+          Log out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

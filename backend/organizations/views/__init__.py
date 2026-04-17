@@ -1,5 +1,6 @@
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -97,6 +98,43 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         # May raise a permission denied
         self.check_object_permissions(self.request, obj)
         return obj
+
+    @action(detail=False, methods=["get"], url_path="accessible")
+    def accessible(self, request):
+        """Return lightweight org options for switchers/filters."""
+        user = request.user
+
+        if user.is_superuser:
+            data = [
+                {
+                    "id": str(org.id),
+                    "name": org.name,
+                    "role": "SUPERADMIN",
+                    "fallback_role": "SUPERADMIN",
+                }
+                for org in Organization.objects.all().order_by("name")
+            ]
+            return Response(data)
+
+        memberships = (
+            OrganizationMembership.objects.filter(user=user)
+            .select_related("organization", "role")
+            .order_by("organization__name")
+        )
+        data = [
+            {
+                "id": str(membership.organization_id),
+                "name": membership.organization.name,
+                "role": (
+                    membership.role.name
+                    if membership.role
+                    else membership.fallback_role
+                ),
+                "fallback_role": membership.fallback_role,
+            }
+            for membership in memberships
+        ]
+        return Response(data)
 
     def perform_create(self, serializer):
         """
@@ -291,6 +329,40 @@ class InvitationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         org_pk = self.kwargs.get("org_pk")
         organization = Organization.objects.get(id=org_pk)
+        fallback_role = self.request.data.get("fallback_role", "OPERATOR")
+
+        role_hierarchy = {
+            "SUPERADMIN": 100,
+            "ADMIN": 80,
+            "COORDINATOR": 60,
+            "CONSULTANT": 50,
+            "EXECUTIVE": 40,
+            "ASSESSOR": 30,
+            "OPERATOR": 20,
+        }
+
+        if fallback_role == "SUPERADMIN":
+            raise ValidationError("Cannot invite SUPERADMIN role.")
+
+        if not self.request.user.is_superuser:
+            inviter_membership = OrganizationMembership.objects.filter(
+                user=self.request.user,
+                organization_id=org_pk,
+            ).first()
+
+            if not inviter_membership:
+                raise ValidationError("You do not belong to this organization.")
+
+            inviter_priority = role_hierarchy.get(
+                inviter_membership.fallback_role or "", 0
+            )
+            invitee_priority = role_hierarchy.get(fallback_role, 0)
+
+            if invitee_priority > inviter_priority:
+                raise ValidationError(
+                    f"Cannot invite users with {fallback_role} role. Your role allows inviting equal or lower roles."
+                )
+
         invitation = serializer.save(
             organization=organization,
             invited_by=self.request.user,
@@ -447,9 +519,19 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        from users.models import User
+
+        invited_user = User.objects.filter(email__iexact=invitation.email).first()
+        has_existing_account = bool(
+            invited_user
+            and invited_user.password
+            and invited_user.has_usable_password()
+        )
+
         # Return invitation details
         return Response(
             {
+                "status": invitation.status,
                 "email": invitation.email,
                 "organization": {
                     "id": str(invitation.organization.id),
@@ -462,6 +544,8 @@ class InvitationAcceptView(APIView):
                 ),
                 "invited_by": invitation.invited_by.name,
                 "expires_at": invitation.expires_at.isoformat(),
+                "has_existing_account": has_existing_account,
+                "needs_onboarding": not has_existing_account,
             }
         )
 

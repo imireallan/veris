@@ -305,6 +305,29 @@ class TestInvitationAcceptView:
         assert response.data["email"] == "test@example.com"
         assert response.data["organization"]["name"] == org.name
         assert response.data["role_name"] == "Coordinator"
+        assert response.data["status"] == Invitation.Status.PENDING
+        assert response.data["needs_onboarding"] is True
+
+    def test_check_invitation_existing_user_needs_no_onboarding(
+        self, api_factory, make_user, make_org
+    ):
+        """Existing users with passwords should not be sent through onboarding."""
+        inviter = make_user()
+        org = make_org()
+        make_user(email="test@example.com", password="securepass123")
+
+        invitation = Invitation.objects.create(
+            organization=org,
+            email="test@example.com",
+            fallback_role="COORDINATOR",
+            invited_by=inviter,
+        )
+
+        response = api_factory.get(f"/api/invitations/{invitation.token}/")
+
+        assert response.status_code == 200
+        assert response.data["has_existing_account"] is True
+        assert response.data["needs_onboarding"] is False
 
     def test_check_invitation_invalid_token(self, api_factory):
         """Invalid token returns 404."""
@@ -348,6 +371,7 @@ class TestInvitationAcceptView:
 
         assert response.status_code == 200
         assert "accepted" in str(response.data["detail"]).lower()
+        assert response.data["needs_onboarding"] is False
 
         # Verify membership created
         assert OrganizationMembership.objects.filter(

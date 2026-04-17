@@ -72,6 +72,7 @@ export interface OrganizationMembership {
   id: string;
   name: string;
   role: string;
+  fallback_role?: string;
 }
 
 export interface User {

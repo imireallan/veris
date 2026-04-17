@@ -43,6 +43,16 @@ You (freelancer) → Veris Platform → Consultancy (TDi or competitor) → Thei
 2. **White-Label Switching** — One click switches branding between tenants
 3. **Multi-Framework Mapping** — Enter data once → maps to multiple frameworks simultaneously
 
+## Current Maturity Snapshot
+
+Current implementation status:
+- Implemented: multi-tenancy, invitations, org switching, org-scoped/aggregate assessments, white-label theming foundation
+- Partial: AI knowledge pipeline, cross-framework mapping, reporting workflows
+- Not yet fully true in product UX: the full "AI-first intelligent engine" promise described in strategic docs
+
+Detailed review:
+- `docs/current-product-goal-alignment-review.md`
+
 ## Docs
 
 - [PRD](./docs/PRD.md) - Product Requirements

@@ -149,7 +149,11 @@ export function FrameworkMappingModal({
 
             <div className="space-y-2">
               <Label htmlFor="framework">Framework *</Label>
-              <Select value={selectedFramework} onValueChange={setSelectedFramework} required>
+              <Select
+                value={selectedFramework}
+                onValueChange={(value) => setSelectedFramework(value ?? "")}
+                required
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a framework" />
                 </SelectTrigger>

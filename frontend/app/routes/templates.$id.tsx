@@ -31,7 +31,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const template = await api.get<any>(`/api/templates/${id}/`, token, request)
     .catch(() => null);
   
-  const questions = await api.get<any[]>(`/api/templates/${id}/questions/`, token, request)
+  const questions = await api.get<any>(`/api/templates/${id}/questions/`, token, request)
     .then(res => Array.isArray(res) ? res : (res?.results || []))
     .catch(() => []);
 
@@ -62,7 +62,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         token,
         request
       );
-      return { success: true, message: "Template updated" };
+      return { success: true, message: "Template updated", intent };
     } catch (err: any) {
       return { error: err.message ?? "Failed to update template" };
     }
@@ -71,7 +71,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (intent === "publish-template") {
     try {
       await api.post(`/api/templates/${id}/publish/`, {}, token, request);
-      return { success: true, message: "Template published successfully" };
+      return { success: true, message: "Template published successfully", intent };
     } catch (err: any) {
       return { error: err.message ?? "Failed to publish template" };
     }
@@ -89,7 +89,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         token,
         request
       );
-      return { success: true, message: "Question added" };
+      return { success: true, message: "Question added", intent };
     } catch (err: any) {
       return { error: err.message ?? "Failed to add question" };
     }
@@ -99,7 +99,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const questionId = formData.get("question_id") as string;
     try {
       await api.delete(`/api/templates/${id}/questions/${questionId}/`, token, request);
-      return { success: true, message: "Question deleted" };
+      return { success: true, message: "Question deleted", intent };
     } catch (err: any) {
       return { error: err.message ?? "Failed to delete question" };
     }
@@ -125,6 +125,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       return { 
         success: true, 
         message: "Mapping added",
+        intent,
         questionId,
         mappings: (result as any).mappings || [],
       };
@@ -146,6 +147,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       return { 
         success: true, 
         message: "Mapping removed",
+        intent,
         questionId,
         mappings: (result as any).mappings || [],
       };

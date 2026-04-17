@@ -49,7 +49,7 @@ export async function action({ request }: ActionFunctionArgs) {
     if (data.sector) payload.sector = data.sector;
     if (data.clientEmail) payload.client_email = data.clientEmail;
 
-    const result = await api.post("/api/organizations/", payload, token, request);
+    const result = await api.post<any>("/api/organizations/", payload, token, request);
     return redirect(`/organizations/${result.id}`);
   } catch (err: any) {
     console.error("Create org error:", err);

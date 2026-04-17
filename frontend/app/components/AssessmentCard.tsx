@@ -2,10 +2,7 @@ import {
   Badge, 
   Card, 
   CardContent, 
-  ProgressBar,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent
+  ProgressBar
 } from "~/components/ui";
 import { Clock, Building2 } from "lucide-react";
 
@@ -86,18 +83,11 @@ export function AssessmentCard({
           )}
         </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="inline-block">
-              <h3 className="font-medium group-hover:text-primary transition-colors">
-                {name}
-              </h3>
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="top" align="center" sideOffset={8}>
+        <div className="inline-block" title={name}>
+          <h3 className="font-medium group-hover:text-primary transition-colors">
             {name}
-          </TooltipContent>
-        </Tooltip>
+          </h3>
+        </div>
 
         <p className="text-xs text-muted-foreground">
           Due:{" "}

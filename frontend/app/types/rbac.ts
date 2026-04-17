@@ -11,21 +11,38 @@ export enum UserRole {
 }
 
 export class RBAC {
+  static getOrgMembership(user: User, orgId: string) {
+    if (!orgId) return null;
+
+    return user.organizations?.find((org) => String(org.id) === String(orgId)) ?? null;
+  }
+
+  static getOrgRole(user: User, orgId: string): string | null {
+    if (user.fallbackRole === UserRole.SUPERADMIN || user.isSuperuser) {
+      return UserRole.SUPERADMIN;
+    }
+
+    const membership = RBAC.getOrgMembership(user, orgId);
+    if (membership) {
+      return membership.fallback_role ?? membership.role ?? null;
+    }
+
+    if (String(user.orgId) === String(orgId)) {
+      return user.fallbackRole ?? user.role ?? null;
+    }
+
+    return null;
+  }
+
   /**
    * Global platform admin or member of the specific organization.
    */
   static isOrgMember(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    
-    // Check if this is the user's primary org
+    if (user.fallbackRole === UserRole.SUPERADMIN || user.isSuperuser) return true;
+
     if (String(user.orgId) === String(orgId)) return true;
-    
-    // For multi-org users, check the organizations array
-    if (user.organizations) {
-      return user.organizations.some((org) => org.id === orgId);
-    }
-    
-    return false;
+
+    return Boolean(RBAC.getOrgMembership(user, orgId));
   }
 
   /**
@@ -34,22 +51,15 @@ export class RBAC {
    * Org ADMIN can manage members and invitations only.
    */
   static canManageOrg(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    
-    // Check if user belongs to this org (supports multi-org users)
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    // Use fallback_role for durable permission checks
-    // Custom role names are display-only; fallback_role is the stable enum
-    return user.fallbackRole === "ADMIN" || user.fallbackRole === "OWNER";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === "OWNER";
   }
 
   /**
    * Can manage org settings (name, slug, status, subscription tier) - SUPERADMIN only.
    */
   static canManageOrgSettings(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    return false;
+    return RBAC.getOrgRole(user, orgId) === UserRole.SUPERADMIN;
   }
 
   /**
@@ -58,33 +68,20 @@ export class RBAC {
    * ADMIN, COORDINATOR can manage their org's templates.
    */
   static canManageTemplates(user: User, orgId: string): boolean {
-    // SUPERADMIN can manage all templates
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    
-    // Check if user belongs to this org (supports multi-org users)
-    if (orgId && !RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "OWNER" || 
-           user.fallbackRole === "COORDINATOR";
+    if (!orgId) {
+      return user.fallbackRole === UserRole.SUPERADMIN || user.isSuperuser === true;
+    }
+
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === "OWNER" || role === UserRole.COORDINATOR;
   }
 
   /**
    * Can create new assessments for the organization.
    */
   static canCreateAssessments(user: User, orgId: string): boolean {
-    // SUPERADMIN cannot create assessments unless they're a member of the org
-    if (user.fallbackRole === "SUPERADMIN") {
-      return RBAC.isOrgMember(user, orgId);
-    }
-    
-    // For regular users, check if they belong to this org and have the right role
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "OWNER" || 
-           user.fallbackRole === "COORDINATOR" ||
-           user.fallbackRole === "OPERATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === "OWNER" || role === UserRole.COORDINATOR || role === UserRole.OPERATOR;
   }
 
   /**
@@ -92,27 +89,15 @@ export class RBAC {
    * OPERATOR, ASSESSOR, CONSULTANT, EXECUTIVE can view but not create.
    */
   static canAccessAssessments(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") {
-      return RBAC.isOrgMember(user, orgId);
-    }
-    
-    // Check if user belongs to this org
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    // All org members can VIEW assessments
-    return true;
+    return RBAC.getOrgRole(user, orgId) !== null;
   }
 
   /**
    * Can edit assessment metadata, status, and AI summaries.
    */
   static canEditAssessment(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (user.fallbackRole === "ADMIN") return true;
-    if (user.fallbackRole === "COORDINATOR") {
-      return RBAC.isOrgMember(user, orgId);
-    }
-    return false;
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
   }
 
   /**
@@ -126,11 +111,8 @@ export class RBAC {
    * Can delete findings (High privilege).
    */
   static canDeleteFindings(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (user.fallbackRole === "ADMIN") {
-      return RBAC.isOrgMember(user, orgId);
-    }
-    return false;
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN;
   }
 
   /**
@@ -138,26 +120,16 @@ export class RBAC {
    * OPERATOR can create/edit but not delete.
    */
   static canManageSites(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") {
-      return RBAC.isOrgMember(user, orgId);
-    }
-    
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "COORDINATOR" ||
-           user.fallbackRole === "OPERATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.OPERATOR;
   }
 
   /**
    * Can delete sites (ADMIN, COORDINATOR only).
    */
   static canDeleteSites(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "COORDINATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
   }
 
   /**
@@ -165,48 +137,32 @@ export class RBAC {
    * OPERATOR can create/update but not delete.
    */
   static canManageTasks(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") {
-      return RBAC.isOrgMember(user, orgId);
-    }
-    
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "COORDINATOR" ||
-           user.fallbackRole === "OPERATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.OPERATOR;
   }
 
   /**
    * Can delete tasks (ADMIN, COORDINATOR only).
    */
   static canDeleteTasks(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "COORDINATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
   }
 
   /**
    * Can delete assessments (ADMIN, COORDINATOR only).
    */
   static canDeleteAssessments(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "COORDINATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
   }
 
   /**
    * Can delete templates (ADMIN, COORDINATOR only).
    */
   static canDeleteTemplates(user: User, orgId: string): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (!RBAC.isOrgMember(user, orgId)) return false;
-    
-    return user.fallbackRole === "ADMIN" || 
-           user.fallbackRole === "COORDINATOR";
+    const role = RBAC.getOrgRole(user, orgId);
+    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
   }
 
   /**
@@ -222,19 +178,7 @@ export class RBAC {
    * Check if user has access to a specific organization.
    */
   static hasOrgAccess(user: User, orgId: string): boolean {
-    if (user.isSuperuser || user.fallbackRole === "SUPERADMIN") {
-      return true;
-    }
-    
-    if (user.orgId === orgId) {
-      return true;
-    }
-    
-    if (user.organizations) {
-      return user.organizations.some((org) => org.id === orgId);
-    }
-    
-    return false;
+    return RBAC.isOrgMember(user, orgId);
   }
 
   /**

@@ -4,20 +4,26 @@ import { ChevronLeft, ChevronRight, Filter, FileText, Plus, X } from "lucide-rea
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { PageHeader, SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
+import { SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
-import { UserRole } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const url = new URL(request.url);
   const orgFilter = (url.searchParams.get("org") || url.searchParams.get("organization") || "").replace(/\/$/, "");
+  const { getAccessibleOrganizations } = await import("~/.server/organizations");
 
   const fetchWithLog = async (path: string, label: string) => {
     try {
       const result = await api.get<any>(path, token, request);
-      return Array.isArray(result) ? result : (result?.results ?? []);
+      if (Array.isArray(result)) {
+        return result;
+      }
+      if (Array.isArray(result?.results)) {
+        return result.results;
+      }
+      return result ? [result] : [];
     } catch (err: any) {
       // Handle 403 permission errors gracefully - return empty array
       if (err.status === 403) {
@@ -29,74 +35,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   };
 
-  // Non-admin users are server-side scoped to their own org by default.
-  // For admins, optionally pass ?org= to filter.
-  const isSuperAdmin = user.fallbackRole === UserRole.SUPERADMIN;
-
-  const assessmentsPath = isSuperAdmin && orgFilter
+  const assessmentsPath = orgFilter
     ? `/api/assessments?organization=${orgFilter}`
-    : "/api/assessments/";
+    : "/api/assessments/aggregate/";
 
-  const orgPath = orgFilter
-    ? `/api/organizations?organization=${orgFilter}`
-    : `/api/organizations/`;
+  const organizations = await getAccessibleOrganizations(request, token);
 
-  console.log({ assessmentsPath })
-
-  const [assessments, sites, frameworks, focusAreas, organizations] =
+  const [assessments, frameworks, focusAreas] =
     await Promise.all([
       fetchWithLog(assessmentsPath, "assessments"),
-      fetchWithLog("/api/sites/", "sites"),
       fetchWithLog("/api/frameworks/", "frameworks"),
       fetchWithLog("/api/focus-areas/", "focusAreas"),
-      fetchWithLog(orgPath, "organizations"),
     ]);
 
-  return { assessments, sites, frameworks, focusAreas, organizations, orgFilter, user };
+  return { assessments, frameworks, focusAreas, organizations, orgFilter, user };
 }
 
-const statusVariant = (
-  s: string,
-): "default" | "secondary" | "success" | "destructive" | "outline" => {
-  switch (s) {
-    case "COMPLETED":
-      return "default";
-    case "IN_PROGRESS":
-      return "secondary";
-    case "UNDER_REVIEW":
-      return "outline";
-    case "ARCHIVED":
-      return "outline";
-    default:
-      return "secondary";
-  }
-};
-
-const riskVariant = (
-  r: string,
-): "default" | "destructive" | "secondary" | "success" => {
-  switch (r) {
-    case "CRITICAL":
-    case "HIGH":
-      return "destructive";
-    case "MEDIUM":
-      return "secondary";
-    case "LOW":
-      return "success";
-    default:
-      return "secondary";
-  }
-};
-
 export default function AssessmentsListRoute() {
-  const { assessments, sites, frameworks, focusAreas, organizations, orgFilter, user } =
+  const { assessments, frameworks, focusAreas, organizations, user } =
     useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
   const activeOrg = (searchParams.get("org") || searchParams.get("organization") || "").replace(/\/$/, "");
-
-  const isSuperAdmin = user.fallbackRole === UserRole.SUPERADMIN;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -137,7 +98,7 @@ export default function AssessmentsListRoute() {
   );
 
   const activeOrgName = activeOrg ? orgMap.get(activeOrg) : null;
-  const displayValue = activeOrg ? (activeOrgName || activeOrg) : "all";
+  const displayValue = activeOrg || "all";
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -215,7 +176,7 @@ export default function AssessmentsListRoute() {
         </Link>
       </div>
 
-      {isSuperAdmin && (
+      {organizations.length > 1 && (
         <div className="flex gap-3 items-center">
           <div className="relative min-w-[200px]">
             <Select
@@ -270,7 +231,15 @@ export default function AssessmentsListRoute() {
 
       <SearchBar
         value={search}
-        onChange={(v) => setSearchParams(v ? { q: v } : {})}
+        onChange={(v) => {
+          const next = new URLSearchParams(searchParams);
+          if (v) {
+            next.set("q", v);
+          } else {
+            next.delete("q");
+          }
+          setSearchParams(next);
+        }}
         placeholder="Search assessments..."
       />
 

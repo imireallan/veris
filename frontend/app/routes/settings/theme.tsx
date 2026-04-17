@@ -13,12 +13,10 @@ import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { requireUser } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
-  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
+  const { getSelectedOrganizationForRequest } = await import("~/.server/organizations");
   
   const user = await requireUser(request);
-  
-  // Get selected organization from user's organizations array
-  const selectedOrg = getSelectedOrganization(user);
+  const selectedOrg = await getSelectedOrganizationForRequest(request, user);
   if (!selectedOrg) {
     throw redirect("/organizations");
   }
@@ -39,13 +37,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   const { requireUser, getUserToken } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
-  const { getSelectedOrganization } = await import("~/components/OrganizationSwitcher");
+  const { getSelectedOrganizationForRequest } = await import("~/.server/organizations");
   
   const token = await getUserToken(request);
   const user = await requireUser(request);
-  
-  // Get selected organization from user's organizations array
-  const selectedOrg = getSelectedOrganization(user);
+  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
   if (!selectedOrg) {
     return data({ error: "Organization required" }, { status: 400 });
   }

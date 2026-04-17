@@ -51,6 +51,7 @@ export async function action({ request }: ActionFunctionArgs) {
       return {
         success: true,
         message: `Template duplicated as v${version}`,
+        intent,
         newTemplateId: result.new_template_id,
       };
     } catch (err: any) {
@@ -72,6 +73,7 @@ export async function action({ request }: ActionFunctionArgs) {
       return {
         success: true,
         message: "Template published successfully",
+        intent,
       };
     } catch (err: any) {
       return { error: err.message ?? "Failed to publish template" };
@@ -91,6 +93,7 @@ export async function action({ request }: ActionFunctionArgs) {
       return {
         success: true,
         message: "Template deleted successfully",
+        intent,
       };
     } catch (err: any) {
       return { error: err.message ?? "Failed to delete template" };
@@ -191,12 +194,12 @@ export default function TemplatesRoute() {
           </p>
         </div>
         {canManageTemplates && (
-          <Button asChild variant="default">
-            <Link to="/templates/new" className="inline-flex items-center">
+          <Link to="/templates/new" className="inline-flex">
+            <Button variant="default">
               <Plus className="w-4 h-4 mr-2" />
               New Template
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         )}
       </div>
 
@@ -253,9 +256,9 @@ export default function TemplatesRoute() {
                 : "No public templates available"}
             </p>
             {canManageTemplates && (
-              <Button asChild>
-                <Link to="/templates/new">Create Template</Link>
-              </Button>
+              <Link to="/templates/new" className="inline-flex">
+                <Button>Create Template</Button>
+              </Link>
             )}
           </div>
         ) : (

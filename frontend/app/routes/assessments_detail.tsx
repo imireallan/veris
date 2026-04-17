@@ -21,9 +21,6 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
 } from "~/components/ui";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -169,18 +166,11 @@ export default function AssessmentDetailRoute() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="inline-block">
-                  <BreadcrumbPage>
-                    {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
-                  </BreadcrumbPage>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="center" sideOffset={8}>
+            <div className="inline-block" title={a.display_name || `Assessment ${a.id.slice(0, 8)}`}>
+              <BreadcrumbPage>
                 {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
-              </TooltipContent>
-            </Tooltip>
+              </BreadcrumbPage>
+            </div>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -190,18 +180,11 @@ export default function AssessmentDetailRoute() {
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </Link>
         <div className="flex-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="inline-block">
-                <h2 className="text-2xl font-semibold tracking-tight">
-                  {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
-                </h2>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" align="center" sideOffset={8}>
+          <div className="inline-block" title={a.display_name || `Assessment ${a.id.slice(0, 8)}`}>
+            <h2 className="text-2xl font-semibold tracking-tight">
               {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
-            </TooltipContent>
-          </Tooltip>
+            </h2>
+          </div>
           <p className="text-muted-foreground text-sm mt-0.5">
             Created {new Date(a.created_at).toLocaleDateString()}
           </p>

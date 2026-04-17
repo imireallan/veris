@@ -5,15 +5,16 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import type { User } from "~/types";
 import { api } from "~/.server/lib/api";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { Button, SearchBar, Skeleton } from "~/components/ui";
+import { Badge, Button, SearchBar, Skeleton } from "~/components/ui";
 import { useOrganizationCreationConfig } from "~/hooks/useOrganizationCreationConfig";
+import { UserRole } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
   // SUPERADMIN: fetch all orgs from API
-  if (user.fallbackRole === "SUPERADMIN") {
+  if (user.isSuperuser) {
     const response = await api.get<any>("/api/organizations/", token, request).catch(() => []);
     const orgsList = Array.isArray(response) ? response : (response?.results || []);
     return { orgs: orgsList, token };
@@ -43,7 +44,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  if (user.fallbackRole !== "SUPERADMIN") {
+  if (user.fallbackRole !== UserRole.SUPERADMIN) {
     throw new Response("Forbidden", { status: 403 });
   }
 
@@ -81,8 +82,9 @@ export async function action({ request }: ActionFunctionArgs) {
 
 export default function OrganizationsRoute() {
   const { orgs, token } = useLoaderData<typeof loader>();
-  const context = useOutletContext<{ user: User | null }>();
+  const context = useOutletContext<{ user: User | null; organizations?: User["organizations"] }>();
   const user = context?.user;
+  const organizationOptions = context?.organizations ?? user?.organizations ?? [];
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
@@ -163,7 +165,7 @@ export default function OrganizationsRoute() {
     return <div className="p-8 text-center">Please sign in to view your organizations.</div>;
   }
 
-  const canCreate = user.fallbackRole === "SUPERADMIN" || config?.can_create;
+  const canCreate = user.fallbackRole === UserRole.SUPERADMIN || config?.can_create;
 
   return (
     <div className="space-y-6">
@@ -205,18 +207,30 @@ export default function OrganizationsRoute() {
             key={currentPage}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 [animation-fill-mode:both] animate-fade-in"
           >
-            {paginatedItems.map((org: any) => (
-              <Link
-                key={`org-${org.id}-${currentPage}`}
-                to={`/organizations/${org.id}`}
-                className="p-4 border rounded-lg hover:shadow-sm transition-shadow block animate-in slide-in-from-bottom-2 duration-300 fade-in"
-              >
-                <h3 className="font-medium">{org.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {org.status} · {org.subscription_tier}
-                </p>
-              </Link>
-            ))}
+            {paginatedItems.map((org: any) => {
+              const membership = organizationOptions?.find((item) => item.id === org.id);
+              const membershipRole = membership?.fallback_role || membership?.role;
+
+              return (
+                <Link
+                  key={`org-${org.id}-${currentPage}`}
+                  to={`/organizations/${org.id}`}
+                  className="p-4 border rounded-lg hover:shadow-sm transition-shadow block animate-in slide-in-from-bottom-2 duration-300 fade-in"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-medium">{org.name}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {org.status} · {org.subscription_tier}
+                      </p>
+                    </div>
+                    {membershipRole && (
+                      <Badge variant="outline">{membershipRole}</Badge>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
           {totalPages > 1 && <PaginationControls />}
         </>

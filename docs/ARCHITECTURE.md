@@ -2,6 +2,19 @@
 
 ## 1. System Overview
 
+### Current Maturity Snapshot
+
+This document describes the target architecture, not a guarantee that every subsystem shown here is fully implemented today.
+
+Current reality:
+- Implemented strongly: Django multi-tenant core, organization access model, invitations, theming foundation, assessments and org-scoped access
+- Implemented partially: knowledge ingestion, AI validation pipeline, report export/model support, framework mappings
+- Not yet fully implemented as shown in the target architecture: polished AI chat/RAG product workflow and full end-to-end intelligent reporting/mapping experience
+
+See also:
+- `docs/current-product-goal-alignment-review.md`
+
+
 **Design Principle**: Generic Multi-Tenant Platform — Any sustainability consultancy can use it.
 
 ```

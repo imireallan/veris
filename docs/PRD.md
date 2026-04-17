@@ -9,6 +9,16 @@
 
 **Key Design Principle**: TDi-First, Not TDi-Specific — The platform is generic and configurable. TDi is the primary target, but any consultancy can use it with minimal customization.
 
+### Current Maturity Snapshot
+
+Current implementation status:
+- Implemented: multi-tenant organization model, invitation onboarding, org switching, assessments across accessible organizations, white-label theme foundation
+- Partial: AI chat product experience, cross-framework mapping execution, report workflows
+- Roadmap / not yet fully realized: end-to-end AI-first user experience across chat, assessments, and reports
+
+See also:
+- `docs/current-product-goal-alignment-review.md`
+
 ### Core Problem
 
 **For Consultancies **(e.g., TDi)

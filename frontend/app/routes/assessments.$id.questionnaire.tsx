@@ -28,6 +28,26 @@ import {
 import { FrameworkMappingBadge, type FrameworkMapping } from "~/components/FrameworkMappingBadge";
 import { FrameworkMappingModal } from "~/components/FrameworkMappingModal";
 
+interface QuestionnaireQuestion {
+  id: string;
+  text: string;
+  description?: string | null;
+  category?: string | null;
+  scoring_criteria?: Record<string, unknown> | null;
+  framework_mappings?: FrameworkMapping[];
+}
+
+interface QuestionnaireResponse {
+  id?: string;
+  question: string;
+  answer_text?: string;
+  validation_status?: string;
+  confidence_score?: number | null;
+  ai_score_suggestion?: number | null;
+  ai_feedback?: string | null;
+  evidence_files?: Array<unknown>;
+}
+
 function UploadEvidenceButton({
   responseId,
 }: {
@@ -191,9 +211,9 @@ function QuestionCard({
   orgId,
   onAddMapping,
 }: {
-  question: any;
+  question: QuestionnaireQuestion;
   index: number;
-  existingResponse?: any;
+  existingResponse?: QuestionnaireResponse;
   isEditing: boolean;
   onEdit: () => void;
   assessmentId: string;
@@ -276,7 +296,7 @@ function QuestionCard({
               />
               {question.framework_mappings && question.framework_mappings.length > 0 && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  This answer also satisfies: {question.framework_mappings.map(m => m.framework_name).join(", ")}
+                  This answer also satisfies: {question.framework_mappings.map((m: FrameworkMapping) => m.framework_name).join(", ")}
                 </p>
               )}
             </div>
@@ -413,7 +433,7 @@ export default function QuestionnaireRoute() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
-  const [localQuestions, setLocalQuestions] = useState(questions);
+  const [localQuestions, setLocalQuestions] = useState<QuestionnaireQuestion[]>(questions);
 
   const handleAddMapping = (questionId: string) => {
     setSelectedQuestionId(questionId);
@@ -422,7 +442,7 @@ export default function QuestionnaireRoute() {
 
   const handleMappingAdded = (mappings: FrameworkMapping[]) => {
     if (selectedQuestionId) {
-      setLocalQuestions(localQuestions.map(q =>
+      setLocalQuestions(localQuestions.map((q: QuestionnaireQuestion) =>
         q.id === selectedQuestionId ? { ...q, framework_mappings: mappings } : q
       ));
     }
@@ -430,7 +450,7 @@ export default function QuestionnaireRoute() {
 
   const handleMappingRemoved = (mappings: FrameworkMapping[]) => {
     if (selectedQuestionId) {
-      setLocalQuestions(localQuestions.map(q =>
+      setLocalQuestions(localQuestions.map((q: QuestionnaireQuestion) =>
         q.id === selectedQuestionId ? { ...q, framework_mappings: mappings } : q
       ));
     }
@@ -461,13 +481,13 @@ export default function QuestionnaireRoute() {
       </div>
 
       <div className="grid gap-6">
-        {questions.length === 0 ? (
+        {localQuestions.length === 0 ? (
           <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed">
             <p className="text-muted-foreground">No questions associated with this assessment.</p>
           </div>
         ) : (
-          questions.map((q: any, idx: number) => {
-            const response = responses.find((r: any) => r.question === q.id);
+          localQuestions.map((q: QuestionnaireQuestion, idx: number) => {
+            const response = responses.find((r: QuestionnaireResponse) => r.question === q.id);
             return (
               <QuestionCard
                 key={q.id}
@@ -492,7 +512,7 @@ export default function QuestionnaireRoute() {
           onOpenChange={setMappingModalOpen}
           questionId={selectedQuestionId}
           organizationId={orgId || ""}
-          currentMappings={localQuestions.find(q => q.id === selectedQuestionId)?.framework_mappings || []}
+          currentMappings={localQuestions.find((q: QuestionnaireQuestion) => q.id === selectedQuestionId)?.framework_mappings || []}
           onMappingAdded={handleMappingAdded}
           onMappingRemoved={handleMappingRemoved}
         />

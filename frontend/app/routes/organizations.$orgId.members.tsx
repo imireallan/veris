@@ -64,10 +64,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const members = Array.isArray(membersResponse) ? membersResponse : (membersResponse?.results || []);
   const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : (invitationsResponse?.results || []);
 
-  // Get roles this user can invite based on their role
-  const availableInviteRoles = getAvailableRolesForInviter(user.fallbackRole || "OPERATOR");
+  const orgRole = RBAC.getOrgRole(user, orgId) || "OPERATOR";
+  const availableInviteRoles = getAvailableRolesForInviter(orgRole);
 
-  return { members, invitations, orgId, availableInviteRoles, userRole: user.fallbackRole || "OPERATOR", accessDenied: false };
+  return { members, invitations, orgId, availableInviteRoles, userRole: orgRole, accessDenied: false };
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -96,7 +96,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
       }
 
       // Validate user can invite this role (can't invite higher roles)
-      const availableRoles = getAvailableRolesForInviter(user.fallbackRole || "OPERATOR");
+      const orgRole = RBAC.getOrgRole(user, orgId) || "OPERATOR";
+      const availableRoles = getAvailableRolesForInviter(orgRole);
       if (!availableRoles.includes(fallbackRole)) {
         return data(
           { error: `You cannot invite users with ${fallbackRole} role. Your role allows inviting: ${availableRoles.join(", ")}` },
@@ -404,36 +405,24 @@ export default function OrganizationMembersRoute() {
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreVertical className="w-4 h-4" />
-                          </Button>
+                        <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors cursor-pointer">
+                          <MoreVertical className="w-4 h-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMemberToEditRole(member);
-                                setNewRole(member.fallback_role || member.role_name || "");
-                              }}
-                              className="flex items-center w-full"
-                            >
-                              <Shield className="w-3 h-3 mr-2" />
-                              Change role
-                            </button>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setMemberToEditRole(member);
+                              setNewRole(member.fallback_role || member.role_name || "");
+                            }}
+                          >
+                            <Shield className="w-3 h-3 mr-2" />
+                            Change role
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <button
-                              type="button"
-                              onClick={() => setMemberToRemove(member)}
-                              className="flex items-center w-full text-destructive"
-                            >
-                              <Trash2 className="w-3 h-3 mr-2" />
-                              Remove member
-                            </button>
+                          <DropdownMenuItem onClick={() => setMemberToRemove(member)} className="text-destructive">
+                            <Trash2 className="w-3 h-3 mr-2" />
+                            Remove member
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -505,33 +494,42 @@ export default function OrganizationMembersRoute() {
                     <TableCell>
                       {invitation.status === "PENDING" && (
                         <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
+                          <DropdownMenuTrigger className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors cursor-pointer">
+                            <MoreVertical className="w-4 h-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <fetcher.Form method="post" className="w-full">
-                                <input type="hidden" name="actionType" value="resend_invitation" />
-                                <input type="hidden" name="invitationId" value={invitation.id} />
-                                <button type="submit" disabled={isProcessing} className="flex items-center w-full">
-                                  <Mail className="w-3 h-3 mr-2" />
-                                  Resend
-                                </button>
-                              </fetcher.Form>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                fetcher.submit(
+                                  {
+                                    actionType: "resend_invitation",
+                                    invitationId: invitation.id,
+                                  },
+                                  { method: "post" },
+                                )
+                              }
+                              disabled={isProcessing}
+                            >
+                              <Mail className="w-3 h-3 mr-2" />
+                              Resend
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <fetcher.Form method="post" className="w-full">
-                                <input type="hidden" name="actionType" value="revoke_invitation" />
-                                <input type="hidden" name="invitationId" value={invitation.id} />
-                                <button type="submit" disabled={isProcessing} className="flex items-center w-full text-destructive">
-                                  <Trash2 className="w-3 h-3 mr-2" />
-                                  Revoke
-                                </button>
-                              </fetcher.Form>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                fetcher.submit(
+                                  {
+                                    actionType: "revoke_invitation",
+                                    invitationId: invitation.id,
+                                  },
+                                  { method: "post" },
+                                )
+                              }
+                              disabled={isProcessing}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3 mr-2" />
+                              Revoke
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -298,8 +298,7 @@ class TemplateQuestionViewSet(viewsets.ModelViewSet):
 
         # Auto-increment order
         max_order = (
-            template.assessment_questions.aggregate(Max("order"))["order__max"]
-            or 0
+            template.assessment_questions.aggregate(Max("order"))["order__max"] or 0
         )
 
         serializer.save(template=template, order=max_order + 1)

@@ -342,7 +342,7 @@ class ThemeSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Create theme, converting HSL input to HEX for storage.
-        
+
         Validates that color fields are in correct format before saving.
         Prevents HSL strings from being stored in HEX fields.
         """
@@ -392,7 +392,7 @@ class ThemeSerializer(serializers.ModelSerializer):
                 hsl_value = validated_data.pop(hsl_field)
                 if hsl_value:
                     validated_data[model_field] = hsl_to_hex(hsl_value)
-        
+
         for hsl_field, model_field in hsl_fields_dark.items():
             if hsl_field in validated_data:
                 hsl_value = validated_data.pop(hsl_field)
@@ -402,40 +402,58 @@ class ThemeSerializer(serializers.ModelSerializer):
         # Validate that any direct color fields (not from HSL conversion) are valid HEX
         # This prevents accidental storage of HSL strings in HEX fields
         color_fields = [
-            "primary_color", "primary_foreground_color",
-            "secondary_color", "secondary_foreground_color",
-            "accent_color", "accent_foreground_color",
-            "background_color", "text_color",
-            "muted_color", "muted_foreground_color",
-            "card_color", "card_foreground_color",
-            "border_color", "destructive_color", "destructive_foreground_color",
+            "primary_color",
+            "primary_foreground_color",
+            "secondary_color",
+            "secondary_foreground_color",
+            "accent_color",
+            "accent_foreground_color",
+            "background_color",
+            "text_color",
+            "muted_color",
+            "muted_foreground_color",
+            "card_color",
+            "card_foreground_color",
+            "border_color",
+            "destructive_color",
+            "destructive_foreground_color",
             "success_color",
-            "primary_color_dark", "primary_foreground_color_dark",
-            "secondary_color_dark", "secondary_foreground_color_dark",
-            "accent_color_dark", "accent_foreground_color_dark",
-            "background_color_dark", "text_color_dark",
-            "muted_color_dark", "muted_foreground_color_dark",
-            "card_color_dark", "card_foreground_color_dark",
-            "border_color_dark", "destructive_color_dark", "destructive_foreground_color_dark",
+            "primary_color_dark",
+            "primary_foreground_color_dark",
+            "secondary_color_dark",
+            "secondary_foreground_color_dark",
+            "accent_color_dark",
+            "accent_foreground_color_dark",
+            "background_color_dark",
+            "text_color_dark",
+            "muted_color_dark",
+            "muted_foreground_color_dark",
+            "card_color_dark",
+            "card_foreground_color_dark",
+            "border_color_dark",
+            "destructive_color_dark",
+            "destructive_foreground_color_dark",
             "success_color_dark",
         ]
-        
+
         for field in color_fields:
             if field in validated_data:
                 value = validated_data[field]
                 if value and not is_valid_hex(value):
                     # If it looks like HSL (contains spaces), reject it
-                    if ' ' in str(value):
-                        raise serializers.ValidationError({
-                            field: f"Must be HEX format (e.g., '#10b981'), not HSL ('{value}'). "
-                                   f"Use the _hsl fields for HSL input."
-                        })
+                    if " " in str(value):
+                        raise serializers.ValidationError(
+                            {
+                                field: f"Must be HEX format (e.g., '#10b981'), not HSL ('{value}'). "
+                                f"Use the _hsl fields for HSL input."
+                            }
+                        )
 
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         """Update theme, converting HSL input to HEX for storage.
-        
+
         Validates that color fields are in correct format before saving.
         Prevents HSL strings from being stored in HEX fields.
         """
@@ -485,7 +503,7 @@ class ThemeSerializer(serializers.ModelSerializer):
                 hsl_value = validated_data.pop(hsl_field)
                 if hsl_value:
                     validated_data[model_field] = hsl_to_hex(hsl_value)
-        
+
         for hsl_field, model_field in hsl_fields_dark.items():
             if hsl_field in validated_data:
                 hsl_value = validated_data.pop(hsl_field)
@@ -495,33 +513,51 @@ class ThemeSerializer(serializers.ModelSerializer):
         # Validate that any direct color fields (not from HSL conversion) are valid HEX
         # This prevents accidental storage of HSL strings in HEX fields
         color_fields = [
-            "primary_color", "primary_foreground_color",
-            "secondary_color", "secondary_foreground_color",
-            "accent_color", "accent_foreground_color",
-            "background_color", "text_color",
-            "muted_color", "muted_foreground_color",
-            "card_color", "card_foreground_color",
-            "border_color", "destructive_color", "destructive_foreground_color",
+            "primary_color",
+            "primary_foreground_color",
+            "secondary_color",
+            "secondary_foreground_color",
+            "accent_color",
+            "accent_foreground_color",
+            "background_color",
+            "text_color",
+            "muted_color",
+            "muted_foreground_color",
+            "card_color",
+            "card_foreground_color",
+            "border_color",
+            "destructive_color",
+            "destructive_foreground_color",
             "success_color",
-            "primary_color_dark", "primary_foreground_color_dark",
-            "secondary_color_dark", "secondary_foreground_color_dark",
-            "accent_color_dark", "accent_foreground_color_dark",
-            "background_color_dark", "text_color_dark",
-            "muted_color_dark", "muted_foreground_color_dark",
-            "card_color_dark", "card_foreground_color_dark",
-            "border_color_dark", "destructive_color_dark", "destructive_foreground_color_dark",
+            "primary_color_dark",
+            "primary_foreground_color_dark",
+            "secondary_color_dark",
+            "secondary_foreground_color_dark",
+            "accent_color_dark",
+            "accent_foreground_color_dark",
+            "background_color_dark",
+            "text_color_dark",
+            "muted_color_dark",
+            "muted_foreground_color_dark",
+            "card_color_dark",
+            "card_foreground_color_dark",
+            "border_color_dark",
+            "destructive_color_dark",
+            "destructive_foreground_color_dark",
             "success_color_dark",
         ]
-        
+
         for field in color_fields:
             if field in validated_data:
                 value = validated_data[field]
                 if value and not is_valid_hex(value):
                     # If it looks like HSL (contains spaces), reject it
-                    if ' ' in str(value):
-                        raise serializers.ValidationError({
-                            field: f"Must be HEX format (e.g., '#10b981'), not HSL ('{value}'). "
-                                   f"Use the _hsl fields for HSL input."
-                        })
+                    if " " in str(value):
+                        raise serializers.ValidationError(
+                            {
+                                field: f"Must be HEX format (e.g., '#10b981'), not HSL ('{value}'). "
+                                f"Use the _hsl fields for HSL input."
+                            }
+                        )
 
         return super().update(instance, validated_data)

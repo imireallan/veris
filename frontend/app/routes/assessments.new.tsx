@@ -113,7 +113,7 @@ export async function action({ request }: ActionFunctionArgs) {
   if (startDate) data.start_date = `${startDate}T00:00:00Z`;
   if (dueDate) data.due_date = `${dueDate}T23:59:59Z`;
 
-  console.log(startDate, dueDate);
+  console.log({ data })
 
   try {
     const result = await api.post<any>(
@@ -876,7 +876,7 @@ export default function NewAssessmentRoute() {
               <button
                 type="button"
                 onClick={submit}
-                disabled={isSubmittingRemix || isHookSubmitting}
+                // disabled={isSubmittingRemix || isHookSubmitting}
                 className="px-6 py-2 bg-primary text-white rounded-lg"
               >
                 {isSubmittingRemix ? "Creating..." : "Create Assessment"}

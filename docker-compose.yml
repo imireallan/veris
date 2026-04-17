@@ -29,17 +29,18 @@ services:
       target: development
     ports:
       - "8000:8000"
+      - "5678:5678"
     env_file: .env
     volumes:
       - ./backend:/app
     depends_on:
       db:
         condition: service_healthy
-    command: >
-      sh -c "
-        python manage.py migrate &&
-        python manage.py runserver 0.0.0.0:8000
-      "
+    # command: >
+    #   sh -c "
+    #     python manage.py migrate &&
+    #     python manage.py runserver 0.0.0.0:8000
+    #   "
 
   # ── AI Engine (FastAPI + LangChain + RAG) ───────────────────
   # ai_engine:

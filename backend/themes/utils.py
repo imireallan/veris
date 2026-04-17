@@ -6,25 +6,25 @@ from typing import Tuple
 
 def is_valid_hex(hex_color: str) -> bool:
     """Validate HEX color format.
-    
+
     Args:
         hex_color: Color string to validate
-        
+
     Returns:
         True if valid HEX format (#RGB, #RRGGBB, or RRGGBB)
     """
     if not hex_color:
         return False
     hex_color = hex_color.lstrip("#")
-    return bool(re.match(r'^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$', hex_color))
+    return bool(re.match(r"^[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$", hex_color))
 
 
 def is_valid_hsl(hsl: str) -> bool:
     """Validate HSL color format.
-    
+
     Args:
         hsl: Color string to validate
-        
+
     Returns:
         True if valid HSL format (h s l or h s% l%)
     """

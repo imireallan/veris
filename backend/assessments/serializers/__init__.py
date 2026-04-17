@@ -254,16 +254,16 @@ class AssessmentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         """Auto-set organization from user's membership if not provided."""
         from organizations.models import OrganizationMembership
-        
+
         user = self.context.get("request").user if self.context.get("request") else None
-        
+
         if not validated_data.get("organization"):
             if user:
                 # Get user's primary organization membership
                 membership = OrganizationMembership.objects.filter(user=user).first()
                 if membership:
                     validated_data["organization"] = membership.organization
-        
+
         return super().create(validated_data)
 
 

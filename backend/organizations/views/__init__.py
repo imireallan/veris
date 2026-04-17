@@ -125,7 +125,11 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             {
                 "id": str(membership.organization_id),
                 "name": membership.organization.name,
-                "role": membership.role.name if membership.role else membership.fallback_role,
+                "role": (
+                    membership.role.name
+                    if membership.role
+                    else membership.fallback_role
+                ),
                 "fallback_role": membership.fallback_role,
             }
             for membership in memberships
@@ -349,7 +353,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
             if not inviter_membership:
                 raise ValidationError("You do not belong to this organization.")
 
-            inviter_priority = role_hierarchy.get(inviter_membership.fallback_role or "", 0)
+            inviter_priority = role_hierarchy.get(
+                inviter_membership.fallback_role or "", 0
+            )
             invitee_priority = role_hierarchy.get(fallback_role, 0)
 
             if invitee_priority > inviter_priority:
@@ -517,7 +523,9 @@ class InvitationAcceptView(APIView):
 
         invited_user = User.objects.filter(email__iexact=invitation.email).first()
         has_existing_account = bool(
-            invited_user and invited_user.password and invited_user.has_usable_password()
+            invited_user
+            and invited_user.password
+            and invited_user.has_usable_password()
         )
 
         # Return invitation details

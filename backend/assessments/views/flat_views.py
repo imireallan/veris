@@ -51,9 +51,9 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
         qs = AssessmentAccessService.get_accessible_assessments(self.request.user)
 
         # Support single or comma‑separated list of org IDs
-        org_param = self.request.query_params.get("org") or self.request.query_params.get(
-            "organization"
-        )
+        org_param = self.request.query_params.get(
+            "org"
+        ) or self.request.query_params.get("organization")
         if org_param:
             org_ids = [oid.strip() for oid in org_param.split(",") if oid.strip()]
             if len(org_ids) == 1:

@@ -42,6 +42,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Button,
 } from "~/components/ui";
 import { RBAC } from "~/types/rbac";
 
@@ -58,6 +59,13 @@ export async function action({ request }: ActionFunctionArgs) {
   if (!selectedOrg) {
     return {
       error: "Organization required. Please select an organization first.",
+    };
+  }
+
+  if (!RBAC.canCreateAssessments(user, selectedOrg.id)) {
+    return {
+      error: `You do not have permission to create assessments in ${selectedOrg.name}.`,
+      success: false,
     };
   }
 
@@ -143,6 +151,31 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const { getSelectedOrganizationForRequest } =
     await import("~/.server/organizations");
   const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+
+  if (!selectedOrg) {
+    return {
+      sites: [],
+      frameworks: [],
+      focusAreas: [],
+      templates: [],
+      canAccessTemplates: false,
+      selectedOrgName: null,
+      accessDenied: true,
+    };
+  }
+
+  if (!RBAC.canCreateAssessments(user, selectedOrg.id)) {
+    return {
+      sites: [],
+      frameworks: [],
+      focusAreas: [],
+      templates: [],
+      canAccessTemplates: false,
+      selectedOrgName: selectedOrg.name,
+      accessDenied: true,
+    };
+  }
+
   const canAccessTemplates =
     selectedOrg && RBAC.canManageTemplates(user, selectedOrg.id);
 
@@ -167,7 +200,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
           .catch(() => [])
       : Promise.resolve([]),
   ]);
-  return { sites, frameworks, focusAreas, templates, canAccessTemplates };
+  return {
+    sites,
+    frameworks,
+    focusAreas,
+    templates,
+    canAccessTemplates,
+    selectedOrgName: selectedOrg.name,
+    accessDenied: false,
+  };
 }
 
 /* ──────────────────────────── STEPS CONFIG ──────────────────────────── */
@@ -219,8 +260,15 @@ interface AssessmentForm {
 }
 
 export default function NewAssessmentRoute() {
-  const { sites, frameworks, focusAreas, templates, canAccessTemplates } =
-    useLoaderData<typeof loader>();
+  const {
+    sites,
+    frameworks,
+    focusAreas,
+    templates,
+    canAccessTemplates,
+    selectedOrgName,
+    accessDenied,
+  } = useLoaderData<typeof loader>();
   const actionData = useActionData<{ error?: string; success?: boolean }>();
   const submitRemix = useSubmit();
   const navigation = useNavigation();
@@ -358,6 +406,38 @@ export default function NewAssessmentRoute() {
   const fw = fwList.find((f: any) => f.id === framework);
   const fa = faList.find((f: any) => f.id === focusArea);
   const s = siteList.find((s: any) => s.id === site);
+
+  if (accessDenied) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-6">
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink href="/assessments">Assessments</BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>New Assessment</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+
+        <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-6">
+          <h2 className="text-xl font-semibold text-foreground">Access Denied</h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            {selectedOrgName
+              ? `You do not have permission to create assessments in ${selectedOrgName}.`
+              : "Select an organization first before creating an assessment."}
+          </p>
+          <div className="mt-4">
+            <Link to="/assessments">
+              <Button variant="outline">Back to Assessments</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">

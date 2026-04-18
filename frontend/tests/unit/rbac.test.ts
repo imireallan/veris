@@ -31,6 +31,26 @@ describe("RBAC multi-org permissions", () => {
     expect(RBAC.canAccessAssessments(user, "org-2")).toBe(true);
   });
 
+  it("gates assessment creation by the selected organization role", () => {
+    const user = makeUser();
+
+    expect(RBAC.canCreateAssessments(user, "org-1")).toBe(true);
+    expect(RBAC.canCreateAssessments(user, "org-2")).toBe(false);
+  });
+
+  it("treats organization creation as a platform-level permission", () => {
+    const adminUser = makeUser();
+    const superUser = makeUser({
+      fallbackRole: UserRole.SUPERADMIN,
+      role: UserRole.SUPERADMIN,
+      isSuperuser: true,
+      organizations: [],
+    });
+
+    expect(RBAC.canCreateOrganization(adminUser)).toBe(false);
+    expect(RBAC.canCreateOrganization(superUser)).toBe(true);
+  });
+
   it("allows superusers to access all organizations", () => {
     const user = makeUser({
       fallbackRole: UserRole.SUPERADMIN,

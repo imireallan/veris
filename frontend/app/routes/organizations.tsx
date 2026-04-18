@@ -6,23 +6,23 @@ import type { User } from "~/types";
 import { api } from "~/.server/lib/api";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge, Button, SearchBar, Skeleton } from "~/components/ui";
-import { useOrganizationCreationConfig } from "~/hooks/useOrganizationCreationConfig";
-import { UserRole } from "~/types/rbac";
+import { RBAC } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
+  const { getSelectedOrganizationForRequest } = await import("~/.server/organizations");
+  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
 
   // SUPERADMIN: fetch all orgs from API
   if (user.isSuperuser) {
     const response = await api.get<any>("/api/organizations/", token, request).catch(() => []);
     const orgsList = Array.isArray(response) ? response : (response?.results || []);
-    return { orgs: orgsList, token };
+    return { orgs: orgsList, token, selectedOrgId: selectedOrg?.id ?? null };
   }
 
   // Regular users: show all orgs they belong to (from user.organizations)
   if (user.organizations && user.organizations.length > 0) {
-    // Fetch details for each org the user belongs to
     const orgDetails = await Promise.all(
       user.organizations.map(async (org) => {
         try {
@@ -34,17 +34,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
         }
       })
     );
-    return { orgs: orgDetails.filter(Boolean), token };
+    return { orgs: orgDetails.filter(Boolean), token, selectedOrgId: selectedOrg?.id ?? null };
   }
 
-  return { orgs: [], token };
+  return { orgs: [], token, selectedOrgId: selectedOrg?.id ?? null };
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  if (user.fallbackRole !== UserRole.SUPERADMIN) {
+  if (!user.isSuperuser) {
     throw new Response("Forbidden", { status: 403 });
   }
 
@@ -81,7 +81,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function OrganizationsRoute() {
-  const { orgs, token } = useLoaderData<typeof loader>();
+  const { orgs, selectedOrgId } = useLoaderData<typeof loader>();
   const context = useOutletContext<{ user: User | null; organizations?: User["organizations"] }>();
   const user = context?.user;
   const organizationOptions = context?.organizations ?? user?.organizations ?? [];
@@ -89,8 +89,6 @@ export default function OrganizationsRoute() {
   const [currentPage, setCurrentPage] = useState(1);
   const search = searchParams.get("q") || "";
   const [isLoading, setIsLoading] = useState(true);
-
-  const { config, loading: configLoading } = useOrganizationCreationConfig(token ?? undefined);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -165,7 +163,7 @@ export default function OrganizationsRoute() {
     return <div className="p-8 text-center">Please sign in to view your organizations.</div>;
   }
 
-  const canCreate = user.fallbackRole === UserRole.SUPERADMIN || config?.can_create;
+  const canCreate = RBAC.canCreateOrganization(user);
 
   return (
     <div className="space-y-6">
@@ -182,7 +180,15 @@ export default function OrganizationsRoute() {
 
       <SearchBar
         value={search}
-        onChange={(v) => setSearchParams(v ? { q: v } : {})}
+        onChange={(v) => {
+          const next = new URLSearchParams(searchParams);
+          if (v) {
+            next.set("q", v);
+          } else {
+            next.delete("q");
+          }
+          setSearchParams(next);
+        }}
         placeholder="Search organizations..."
       />
 
@@ -210,16 +216,23 @@ export default function OrganizationsRoute() {
             {paginatedItems.map((org: any) => {
               const membership = organizationOptions?.find((item) => item.id === org.id);
               const membershipRole = membership?.fallback_role || membership?.role;
+              const isSelectedOrg = selectedOrgId === org.id;
 
               return (
                 <Link
                   key={`org-${org.id}-${currentPage}`}
                   to={`/organizations/${org.id}`}
-                  className="p-4 border rounded-lg hover:shadow-sm transition-shadow block animate-in slide-in-from-bottom-2 duration-300 fade-in"
+                  className={[
+                    "p-4 border rounded-lg hover:shadow-sm transition-shadow block animate-in slide-in-from-bottom-2 duration-300 fade-in",
+                    isSelectedOrg ? "ring-2 ring-primary/30 border-primary/40 bg-primary/5" : "",
+                  ].join(" ")}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-medium">{org.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-medium">{org.name}</h3>
+                        {isSelectedOrg && <Badge variant="default">Current</Badge>}
+                      </div>
                       <p className="text-sm text-muted-foreground mt-1">
                         {org.status} · {org.subscription_tier}
                       </p>

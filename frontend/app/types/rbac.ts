@@ -166,11 +166,12 @@ export class RBAC {
   }
 
   /**
-   * Can user create new organizations?
+   * Platform-level permission.
+   * Creating organizations is NOT derived from the selected client-org membership.
+   * Today this remains SUPERADMIN/platform-scoped behavior.
    */
   static canCreateOrganization(user: User): boolean {
-    if (user.fallbackRole === "SUPERADMIN") return true;
-    if (user.fallbackRole === "ADMIN") return true;
+    if (user.fallbackRole === UserRole.SUPERADMIN) return true;
     return user.isSuperuser === true;
   }
 

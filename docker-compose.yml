@@ -72,7 +72,7 @@ services:
     environment:
       - POSTGRES_DB=veris
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=***
+      - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
     volumes:

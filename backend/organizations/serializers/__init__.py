@@ -7,6 +7,36 @@ from organizations.models import (
     OrganizationCreationConfig,
     OrganizationMembership,
 )
+from organizations.permissions import DEFAULT_ROLE_PERMISSIONS
+
+
+class OrganizationOptionSerializer(serializers.ModelSerializer):
+    """
+    Lightweight organization option serializer for switchers and bootstrap payloads.
+    """
+
+    role = serializers.SerializerMethodField()
+    fallback_role = serializers.CharField(source="fallback_role", read_only=True)
+    status = serializers.CharField(read_only=True)
+    is_default = serializers.BooleanField(read_only=True)
+    name = serializers.CharField(source="organization.name", read_only=True)
+    slug = serializers.CharField(source="organization.slug", read_only=True)
+    id = serializers.UUIDField(source="organization.id", read_only=True)
+
+    class Meta:
+        model = OrganizationMembership
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "role",
+            "fallback_role",
+            "status",
+            "is_default",
+        ]
+
+    def get_role(self, obj):
+        return obj.role.name if obj.role else None
 
 
 class InvitationSerializer(serializers.ModelSerializer):
@@ -15,7 +45,7 @@ class InvitationSerializer(serializers.ModelSerializer):
     invited_by_email = serializers.EmailField(source="invited_by.email", read_only=True)
     invited_by_name = serializers.CharField(source="invited_by.name", read_only=True)
     role_name = serializers.SerializerMethodField()
-    is_expired = serializers.BooleanField(read_only=True)
+    is_expired = serializers.SerializerMethodField()
 
     class Meta:
         model = Invitation
@@ -23,6 +53,7 @@ class InvitationSerializer(serializers.ModelSerializer):
             "id",
             "organization",
             "email",
+            "invited_name",
             "role",
             "role_name",
             "fallback_role",
@@ -33,8 +64,8 @@ class InvitationSerializer(serializers.ModelSerializer):
             "invited_by_name",
             "expires_at",
             "accepted_at",
-            "is_expired",
             "created_at",
+            "is_expired",
         ]
         read_only_fields = [
             "id",
@@ -44,40 +75,41 @@ class InvitationSerializer(serializers.ModelSerializer):
             "status",
             "expires_at",
             "accepted_at",
-            "is_expired",
             "created_at",
+            "is_expired",
         ]
 
     def get_role_name(self, obj):
-        """Return custom role name or fallback role name."""
         if obj.role:
             return obj.role.name
         return obj.get_fallback_role_display()
 
+    def get_is_expired(self, obj):
+        return obj.is_expired()
+
     def validate_email(self, email):
-        """Check if user already exists or has pending invitation."""
         from users.models import User
 
-        # Check if user already exists
-        if User.objects.filter(email=email).exists():
-            # Check if they already have membership in this org
-            org = self.context.get("organization")
+        org = self.context.get("organization")
+
+        if User.objects.filter(email__iexact=email).exists():
             if (
                 org
                 and OrganizationMembership.objects.filter(
-                    user__email=email, organization=org
+                    user__email__iexact=email,
+                    organization=org,
                 ).exists()
             ):
                 raise serializers.ValidationError(
                     "User is already a member of this organization."
                 )
 
-        # Check for existing pending invitation
-        org = self.context.get("organization")
         if (
             org
             and Invitation.objects.filter(
-                email=email, organization=org, status=Invitation.Status.PENDING
+                email__iexact=email,
+                organization=org,
+                status=Invitation.Status.PENDING,
             ).exists()
         ):
             raise serializers.ValidationError(
@@ -87,12 +119,10 @@ class InvitationSerializer(serializers.ModelSerializer):
         return email
 
     def validate(self, data):
-        """Validate role assignment."""
-        # Ensure role belongs to the same organization
         role = data.get("role")
         org = self.context.get("organization")
 
-        if role and org and role.organization != org:
+        if role and org and role.organization_id != org.id:
             raise serializers.ValidationError(
                 "Role must belong to the same organization."
             )
@@ -109,7 +139,11 @@ class CustomRoleSerializer(serializers.ModelSerializer):
             "id",
             "organization",
             "name",
+            "key",
+            "description",
             "permissions",
+            "is_active",
+            "is_system_role",
             "created_at",
             "updated_at",
         ]
@@ -126,6 +160,8 @@ class OrganizationMembershipSerializer(serializers.ModelSerializer):
     role_permissions = serializers.SerializerMethodField()
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_name = serializers.CharField(source="user.name", read_only=True)
+    organization_name = serializers.CharField(source="organization.name", read_only=True)
+    organization_slug = serializers.CharField(source="organization.slug", read_only=True)
 
     class Meta:
         model = OrganizationMembership
@@ -135,71 +171,45 @@ class OrganizationMembershipSerializer(serializers.ModelSerializer):
             "user_email",
             "user_name",
             "organization",
+            "organization_name",
+            "organization_slug",
             "role",
             "role_name",
             "role_permissions",
             "fallback_role",
+            "status",
+            "is_default",
             "is_lead_assessor",
             "specializations",
             "joined_at",
+            "last_accessed_at",
         ]
-        read_only_fields = ["id", "joined_at", "role_name", "role_permissions"]
+        read_only_fields = [
+            "id",
+            "joined_at",
+            "last_accessed_at",
+            "role_name",
+            "role_permissions",
+            "organization_name",
+            "organization_slug",
+        ]
 
     def get_role_name(self, obj):
-        """Return custom role name or fallback role name."""
         if obj.role:
             return obj.role.name
         return obj.get_fallback_role_display()
 
     def get_role_permissions(self, obj):
-        """Return the permissions for this membership."""
         if obj.role:
             return obj.role.permissions
-        # Return default permissions for fallback role
-        DEFAULT_ROLE_PERMISSIONS = {
-            "ADMIN": [
-                "user:invite",
-                "user:remove",
-                "role:manage",
-                "org:settings",
-                "assessment:create",
-                "assessment:edit",
-                "assessment:delete",
-                "assessment:approve",
-                "report:view",
-                "report:export",
-                "evidence:upload",
-                "evidence:approve",
-            ],
-            "COORDINATOR": [
-                "assessment:create",
-                "assessment:edit",
-                "report:view",
-                "report:export",
-                "evidence:upload",
-                "user:invite",
-            ],
-            "ASSESSOR": [
-                "assessment:view",
-                "assessment:edit",
-                "evidence:upload",
-                "evidence:review",
-                "report:view",
-            ],
-            "CONSULTANT": [
-                "assessment:view",
-                "assessment:edit",
-                "evidence:upload",
-                "report:view",
-            ],
-            "EXECUTIVE": ["assessment:view", "report:view", "report:export"],
-            "OPERATOR": ["assessment:view", "evidence:upload"],
-        }
         return DEFAULT_ROLE_PERMISSIONS.get(obj.fallback_role, [])
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
-    # Write-only fields for organization creation (not model fields)
+    """
+    Full organization serializer for CRUD/detail views.
+    """
+
     client_email = serializers.CharField(write_only=True, required=False)
     framework = serializers.CharField(write_only=True, required=False)
     sector = serializers.CharField(write_only=True, required=False)
@@ -222,11 +232,28 @@ class OrganizationSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at", "updated_at"]
 
     def create(self, validated_data):
-        # Remove write-only fields before creating Organization
         validated_data.pop("client_email", None)
         validated_data.pop("framework", None)
         validated_data.pop("sector", None)
         return super().create(validated_data)
+
+
+class OrganizationDetailSerializer(OrganizationSerializer):
+    """
+    Optional richer org detail serializer for org detail pages.
+    """
+
+    member_count = serializers.SerializerMethodField()
+
+    class Meta(OrganizationSerializer.Meta):
+        fields = OrganizationSerializer.Meta.fields + [
+            "member_count",
+        ]
+
+    def get_member_count(self, obj):
+        return obj.memberships.filter(
+            status=OrganizationMembership.Status.ACTIVE
+        ).count()
 
 
 class OrganizationCreationConfigSerializer(serializers.ModelSerializer):
@@ -242,7 +269,9 @@ class OrganizationCreationConfigSerializer(serializers.ModelSerializer):
             "require_industry_sector",
             "auto_send_invitation",
             "invitation_expiry_days",
-            "allowed_creator_roles",
+            "allow_authenticated_users",
+            "allow_staff_users",
+            "allow_superusers",
             "helper_title",
             "helper_description",
             "prerequisite_warning",

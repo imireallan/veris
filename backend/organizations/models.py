@@ -1,10 +1,62 @@
+import secrets
 import uuid
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 from users.roles import UserRole
+
+
+DEFAULT_ROLE_PERMISSIONS = {
+    UserRole.ADMIN: [
+        "user:invite",
+        "user:remove",
+        "role:manage",
+        "org:settings",
+        "assessment:create",
+        "assessment:view",
+        "assessment:edit",
+        "assessment:delete",
+        "assessment:approve",
+        "report:view",
+        "report:export",
+        "evidence:upload",
+        "evidence:approve",
+    ],
+    UserRole.COORDINATOR: [
+        "assessment:create",
+        "assessment:view",
+        "assessment:edit",
+        "report:view",
+        "report:export",
+        "evidence:upload",
+        "user:invite",
+    ],
+    UserRole.ASSESSOR: [
+        "assessment:view",
+        "assessment:edit",
+        "evidence:upload",
+        "evidence:review",
+        "report:view",
+    ],
+    UserRole.CONSULTANT: [
+        "assessment:view",
+        "assessment:edit",
+        "evidence:upload",
+        "report:view",
+    ],
+    UserRole.EXECUTIVE: [
+        "assessment:view",
+        "report:view",
+        "report:export",
+    ],
+    UserRole.OPERATOR: [
+        "assessment:view",
+        "evidence:upload",
+    ],
+}
 
 
 class Organization(models.Model):
@@ -24,12 +76,17 @@ class Organization(models.Model):
     name = models.CharField(max_length=500)
     slug = models.SlugField(max_length=500, unique=True)
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.TRIAL
+        max_length=20,
+        choices=Status.choices,
+        default=Status.TRIAL,
     )
     subscription_tier = models.CharField(
-        max_length=20, choices=SubscriptionTier.choices, default=SubscriptionTier.FREE
+        max_length=20,
+        choices=SubscriptionTier.choices,
+        default=SubscriptionTier.FREE,
     )
     custom_domain = models.CharField(max_length=500, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -43,24 +100,81 @@ class Organization(models.Model):
         return self.name
 
 
+class OrganizationTerminology(models.Model):
+    """Tenant-specific UI terminology."""
+
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="terminology",
+    )
+    assessment_label = models.CharField(max_length=100, default="Assessment")
+    site_label = models.CharField(max_length=100, default="Site")
+    task_label = models.CharField(max_length=100, default="Task")
+    evidence_label = models.CharField(max_length=100, default="Evidence")
+    report_label = models.CharField(max_length=100, default="Report")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "organization_terminology"
+        verbose_name = "Organization Terminology"
+        verbose_name_plural = "Organization Terminology"
+
+    def __str__(self):
+        return f"Terminology for {self.organization.name}"
+
+
+class OrganizationSettings(models.Model):
+    """Tenant-level feature flags and preferences."""
+
+    organization = models.OneToOneField(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="settings",
+    )
+    features = models.JSONField(default=dict, blank=True)
+    preferences = models.JSONField(default=dict, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "organization_settings"
+        verbose_name = "Organization Settings"
+        verbose_name_plural = "Organization Settings"
+
+    def __str__(self):
+        return f"Settings for {self.organization.name}"
+
+
 class CustomRole(models.Model):
     """Organization-specific roles with custom names and permission sets."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="custom_roles"
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="custom_roles",
     )
     name = models.CharField(max_length=100)
+    key = models.SlugField(max_length=100)
+    description = models.TextField(blank=True, default="")
     permissions = models.JSONField(
         default=list,
-        help_text="List of permission keys, e.g., ['user:invite', 'report:edit']",
+        help_text="List of permission keys, e.g. ['user:invite', 'report:edit']",
     )
+    is_active = models.BooleanField(default=True)
+    is_system_role = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "custom_roles"
-        unique_together = ("organization", "name")
+        unique_together = ("organization", "key")
+        ordering = ["organization__name", "name"]
         verbose_name = "Custom Role"
         verbose_name_plural = "Custom Roles"
 
@@ -68,99 +182,85 @@ class CustomRole(models.Model):
         return f"{self.name} ({self.organization.name})"
 
     def has_permission(self, permission_key: str) -> bool:
-        """Check if this role has a specific permission."""
-        return permission_key in self.permissions
+        return self.is_active and permission_key in self.permissions
 
 
 class OrganizationMembership(models.Model):
-    """Through-table enabling users to belong to multiple organizations with different roles."""
+    """A user's membership in an organization."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        INVITED = "INVITED", "Invited"
+        SUSPENDED = "SUSPENDED", "Suspended"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="memberships"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="memberships",
     )
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="members"
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="memberships",
     )
-    # Link to the custom role for this specific org
     role = models.ForeignKey(
-        CustomRole, on_delete=models.SET_NULL, null=True, blank=True
+        CustomRole,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="memberships",
     )
-    # Fallback to standard roles if no custom role is assigned
     fallback_role = models.CharField(
         max_length=20,
         choices=UserRole.choices,
         default=UserRole.OPERATOR,
     )
 
-    # Membership-specific attributes (Merged from AssessorProfile)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+    is_default = models.BooleanField(default=False)
+
+    # Membership-specific attributes
     is_lead_assessor = models.BooleanField(default=False)
     specializations = models.JSONField(default=list, blank=True)
-    current_organisation_name = models.CharField(max_length=255, blank=True, null=True)
 
     joined_at = models.DateTimeField(auto_now_add=True)
+    last_accessed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "organization_memberships"
         unique_together = ("user", "organization")
+        ordering = ["organization__name", "user__email"]
         verbose_name = "Organization Membership"
         verbose_name_plural = "Organization Memberships"
 
     def __str__(self):
         return f"{self.user.email} @ {self.organization.name}"
 
+    def clean(self):
+        if self.role and self.role.organization_id != self.organization_id:
+            raise ValidationError(
+                {"role": "Selected custom role must belong to the same organization."}
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def has_permission(self, permission_key: str) -> bool:
-        """
-        Check if this membership grants a specific permission.
-        Prioritizes custom role permissions, falls back to fallback_role defaults.
-        """
-        # If custom role exists, use its permissions
+        if self.status != self.Status.ACTIVE:
+            return False
+
         if self.role:
             return self.role.has_permission(permission_key)
 
-        # Fallback: map fallback_role to default permissions
-        DEFAULT_ROLE_PERMISSIONS = {
-            "ADMIN": [
-                "user:invite",
-                "user:remove",
-                "role:manage",
-                "org:settings",
-                "assessment:create",
-                "assessment:edit",
-                "assessment:delete",
-                "assessment:approve",
-                "report:view",
-                "report:export",
-                "evidence:upload",
-                "evidence:approve",
-            ],
-            "COORDINATOR": [
-                "assessment:create",
-                "assessment:edit",
-                "report:view",
-                "report:export",
-                "evidence:upload",
-                "user:invite",
-            ],
-            "ASSESSOR": [
-                "assessment:view",
-                "assessment:edit",
-                "evidence:upload",
-                "evidence:review",
-                "report:view",
-            ],
-            "CONSULTANT": [
-                "assessment:view",
-                "assessment:edit",
-                "evidence:upload",
-                "report:view",
-            ],
-            "EXECUTIVE": ["assessment:view", "report:view", "report:export"],
-            "OPERATOR": ["assessment:view", "evidence:upload"],
-        }
-
-        role_perms = DEFAULT_ROLE_PERMISSIONS.get(self.fallback_role, [])
-        return permission_key in role_perms
+        role_permissions = DEFAULT_ROLE_PERMISSIONS.get(self.fallback_role, [])
+        return permission_key in role_permissions
 
 
 class Invitation(models.Model):
@@ -173,32 +273,43 @@ class Invitation(models.Model):
         EXPIRED = "EXPIRED", "Expired"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="invitations"
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="invitations",
     )
     email = models.EmailField()
-    # Role assignment (custom role or fallback)
+    invited_name = models.CharField(max_length=255, blank=True, default="")
+
     role = models.ForeignKey(
-        CustomRole, on_delete=models.SET_NULL, null=True, blank=True
+        CustomRole,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invitations",
     )
     fallback_role = models.CharField(
         max_length=20,
         choices=UserRole.choices,
         default=UserRole.OPERATOR,
     )
-    # Token for secure acceptance link
+
     token = models.CharField(max_length=64, unique=True, editable=False)
     status = models.CharField(
-        max_length=20, choices=Status.choices, default=Status.PENDING
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
     )
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="sent_invitations",
     )
-    # Timestamps
+
     expires_at = models.DateTimeField()
     accepted_at = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -207,36 +318,41 @@ class Invitation(models.Model):
         ordering = ["-created_at"]
         verbose_name = "Invitation"
         verbose_name_plural = "Invitations"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "email", "status"],
+                condition=models.Q(status="PENDING"),
+                name="unique_pending_invitation_per_org_email",
+            )
+        ]
 
     def __str__(self):
         return f"{self.email} → {self.organization.name} ({self.status})"
 
+    def clean(self):
+        if self.role and self.role.organization_id != self.organization_id:
+            raise ValidationError(
+                {"role": "Selected custom role must belong to the same organization."}
+            )
+
     def save(self, *args, **kwargs):
-        # Generate token on creation
         if not self.token:
             self.token = self._generate_token()
-        # Set default expiry (7 days) if not set
+
         if not self.expires_at:
             self.expires_at = timezone.now() + timezone.timedelta(days=7)
+
+        self.full_clean()
         super().save(*args, **kwargs)
 
     @staticmethod
     def _generate_token() -> str:
-        """Generate a secure random token for invitation acceptance."""
-        import secrets
-
         return secrets.token_urlsafe(32)
 
     def is_expired(self) -> bool:
-        """Check if invitation has expired."""
         return timezone.now() > self.expires_at
 
     def accept(self, user) -> bool:
-        """
-        Accept the invitation for a user.
-        Creates OrganizationMembership and marks invitation as accepted.
-        Returns True if successful, False if invitation is invalid/expired.
-        """
         if self.status != self.Status.PENDING:
             return False
 
@@ -245,24 +361,25 @@ class Invitation(models.Model):
             self.save(update_fields=["status"])
             return False
 
-        # Create membership
+        if user.email.lower() != self.email.lower():
+            return False
+
         OrganizationMembership.objects.get_or_create(
             user=user,
             organization=self.organization,
             defaults={
                 "role": self.role,
                 "fallback_role": self.fallback_role,
+                "status": OrganizationMembership.Status.ACTIVE,
             },
         )
 
-        # Mark as accepted
         self.status = self.Status.ACCEPTED
         self.accepted_at = timezone.now()
         self.save(update_fields=["status", "accepted_at"])
         return True
 
     def decline(self) -> bool:
-        """Decline the invitation. Returns True if successful."""
         if self.status != self.Status.PENDING:
             return False
 
@@ -273,45 +390,43 @@ class Invitation(models.Model):
 
 class OrganizationCreationConfig(models.Model):
     """
-    Admin-configurable settings for organization creation.
-
-    Allows platform admins to manage prerequisites without code changes.
-    Single instance (singleton) — use OrganizationCreationConfig.get_solo() to access.
+    Platform-level config for organization creation.
+    This is not tenant-specific.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
-    # Prerequisite toggles
     require_contract_upload = models.BooleanField(
         default=False,
         help_text="Require signed contract document before creating organizations",
     )
     require_client_email = models.BooleanField(
-        default=True, help_text="Require client admin email for automatic invitation"
+        default=True,
+        help_text="Require client admin email for automatic invitation",
     )
     require_framework_selection = models.BooleanField(
-        default=True, help_text="Require primary framework selection during creation"
+        default=True,
+        help_text="Require primary framework selection during creation",
     )
     require_industry_sector = models.BooleanField(
-        default=True, help_text="Require industry sector selection"
+        default=True,
+        help_text="Require industry sector selection",
     )
 
-    # Invitation settings
     auto_send_invitation = models.BooleanField(
         default=True,
         help_text="Automatically send invitation email after organization creation",
     )
     invitation_expiry_days = models.PositiveIntegerField(
-        default=7, help_text="Number of days before invitation links expire"
+        default=7,
+        help_text="Number of days before invitation links expire",
     )
 
-    # Permission settings
-    allowed_creator_roles = models.JSONField(
-        default=list,
-        help_text="List of roles allowed to create organizations, e.g., ['SUPERADMIN', 'CONSULTANCY_ADMIN']",
-    )
+    # Platform-level creator permissions
+    allow_authenticated_users = models.BooleanField(default=False)
+    allow_staff_users = models.BooleanField(default=True)
+    allow_superusers = models.BooleanField(default=True)
 
-    # Helper content (configurable without code changes)
     helper_title = models.CharField(
         max_length=200,
         default="Create New Organization",
@@ -319,7 +434,7 @@ class OrganizationCreationConfig(models.Model):
     )
     helper_description = models.TextField(
         blank=True,
-        default="Set up a new client organization. They will receive an invitation to join Veris.",
+        default="Set up a new client organization. They will receive an invitation to join the platform.",
         help_text="Description/helper text shown to users",
     )
     prerequisite_warning = models.TextField(
@@ -341,35 +456,24 @@ class OrganizationCreationConfig(models.Model):
 
     @classmethod
     def get_solo(cls):
-        """Get or create the singleton config instance."""
-        config, _ = cls.objects.get_or_create(
-            id=cls.objects.first().id if cls.objects.exists() else uuid.uuid4()
-        )
-        return config
+        instance = cls.objects.first()
+        if instance:
+            return instance
+        return cls.objects.create()
 
-    def can_user_create_organization(self, user) -> tuple:
-        """
-        Check if user has permission to create organizations.
-
-        Returns:
-            Tuple of (can_create: bool, missing_permissions: list)
-        """
-        if not self.allowed_creator_roles:
-            # Empty list means all authenticated users can create
+    def can_user_create_organization(self, user) -> tuple[bool, list[str]]:
+        if self.allow_superusers and user.is_superuser:
             return True, []
 
-        user_role = getattr(user, "role", None)
-
-        if user.is_superuser:
+        if self.allow_staff_users and user.is_staff:
             return True, []
 
-        if user_role in self.allowed_creator_roles:
+        if self.allow_authenticated_users and user.is_authenticated:
             return True, []
 
         return False, ["role_not_allowed"]
 
     def get_prerequisites(self) -> list:
-        """Return list of enabled prerequisites for frontend."""
         prerequisites = []
 
         if self.require_contract_upload:

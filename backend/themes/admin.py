@@ -1,10 +1,10 @@
 from django.contrib import admin
 
-from themes.models import Theme
+from themes.models import OrganizationTheme
 
 
-@admin.register(Theme)
-class ThemeAdmin(admin.ModelAdmin):
+@admin.register(OrganizationTheme)
+class OrganizationThemeAdmin(admin.ModelAdmin):
     list_display = (
         "organization",
         "primary_color",

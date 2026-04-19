@@ -15,13 +15,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!token) throw redirect("/login");
 
   const user = await requireUser(request);
-  const {
-    getAccessibleOrganizations,
-    getSelectedOrganizationForRequest,
-  } = await import("~/.server/organizations");
 
+  const { getAccessibleOrganizations } = await import("~/.server/organizations");
   const organizations = await getAccessibleOrganizations(request, token);
-  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+
+  const selectedOrg =
+    organizations.find((org) => org.id === user.orgId) ?? null;
 
   const navLinks: { to: string; label: string; icon: string }[] = [
     { to: "/", label: "Dashboard", icon: "LayoutDashboard" },
@@ -34,7 +33,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   ];
 
   if (selectedOrg && RBAC.canManageOrg(user, selectedOrg.id)) {
-    navLinks.push({ to: "/settings/theme", label: "Theme", icon: "Paintbrush" });
+    navLinks.push({
+      to: "/settings/theme",
+      label: "Theme",
+      icon: "Paintbrush",
+    });
   }
 
   return {
@@ -46,17 +49,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function DashboardLayoutRoute() {
-  const { navLinks, organizations } = useLoaderData<typeof loader>();
-  const context = useOutletContext<{ user: User | null; organizations?: OrganizationMembership[] }>();
-  const user = context?.user;
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading user...
-      </div>
-    );
-  }
+  const { navLinks, organizations, user } = useLoaderData<typeof loader>();
 
   return (
     <AppLayout user={user} organizations={organizations} navLinks={navLinks}>

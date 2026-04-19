@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   redirect,
   useLoaderData,
@@ -22,8 +22,8 @@ import {
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useWizardForm } from "~/hooks/useWizard";
-import { useOrganizationCreationConfig } from "~/hooks/useOrganizationCreationConfig";
 import { useToast } from "~/hooks/use-toast";
+import { RBAC } from "~/types/rbac";
 
 /* ──────────────────────────── SERVER ──────────────────────────── */
 
@@ -31,7 +31,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  if (user.fallbackRole !== "SUPERADMIN") {
+  if (!RBAC.canCreateOrganization(user)) {
     throw new Response("Forbidden", { status: 403 });
   }
 
@@ -49,14 +49,23 @@ export async function action({ request }: ActionFunctionArgs) {
     if (data.sector) payload.sector = data.sector;
     if (data.clientEmail) payload.client_email = data.clientEmail;
 
-    const result = await api.post<any>("/api/organizations/", payload, token, request);
+    const result = await api.post<any>(
+      "/api/organizations/",
+      payload,
+      token,
+      request,
+    );
+
     return redirect(`/organizations/${result.id}`);
   } catch (err: any) {
     console.error("Create org error:", err);
-    // Backend returns validation errors as { field: ['error message'] }
     const validationErrors = err.body;
+
     return {
-      error: validationErrors?.detail || err.message || "Failed to create organization",
+      error:
+        validationErrors?.detail ||
+        err.message ||
+        "Failed to create organization",
       body: validationErrors,
       success: false,
     };
@@ -67,15 +76,15 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  if (user.fallbackRole !== "SUPERADMIN") {
+  if (!RBAC.canCreateOrganization(user)) {
     return redirect("/organizations");
   }
 
   const config = await api
-    .get<any>("/api/organizations/creation-config/", token, request)
+    .get<any>("/api/creation-config/", token, request)
     .catch(() => null);
 
-  return { config };
+  return { config, canCreate: true };
 }
 
 /* ──────────────────────────── STEPS CONFIG ──────────────────────────── */
@@ -153,32 +162,30 @@ export default function NewOrganizationRoute() {
 
   const { name, slug, framework, sector, clientEmail, contractFile } = form;
 
-  // Show toast feedback from action
   useEffect(() => {
     if (actionData?.error) {
       error("Failed to create organization", actionData.error);
     }
-  }, [actionData, success, error]);
+  }, [actionData, error]);
 
   const [prereqStatus, setPrereqStatus] = useState<
     { key: string; completed: boolean }[]
   >([]);
 
-  // Initialize prerequisites status
   useEffect(() => {
     if (config?.prerequisites) {
       setPrereqStatus(
         config.prerequisites.map((p: any) => ({
           key: p.key,
           completed: false,
-        }))
+        })),
       );
     }
   }, [config]);
 
   const handlePrereqValidate = (key: string, value: any) => {
     setPrereqStatus((prev) =>
-      prev.map((s) => (s.key === key ? { ...s, completed: value } : s))
+      prev.map((s) => (s.key === key ? { ...s, completed: value } : s)),
     );
   };
 
@@ -194,8 +201,9 @@ export default function NewOrganizationRoute() {
       case 1:
         return name.trim().length > 0;
       case 2:
-        if (!config?.prerequisites || config.prerequisites.length === 0)
+        if (!config?.prerequisites || config.prerequisites.length === 0) {
           return true;
+        }
         return allRequiredComplete();
       case 3:
         return clientEmail.includes("@");
@@ -205,56 +213,55 @@ export default function NewOrganizationRoute() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Link to="/organizations" className="p-2 hover:bg-muted rounded-lg">
-          <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+        <Link to="/organizations" className="rounded-lg p-2 hover:bg-muted">
+          <ArrowLeft className="h-5 w-5 text-muted-foreground" />
         </Link>
         <div>
           <h2 className="text-2xl font-semibold text-foreground">
             New Organization
           </h2>
-          <p className="text-muted-foreground text-sm mt-0.5">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Set up a new client organization in 4 steps.
           </p>
         </div>
       </div>
 
-      {/* Stepper */}
-      <div className="bg-card border rounded-xl p-4">
+      <div className="rounded-xl border bg-card p-4">
         <div className="flex items-center justify-between gap-1">
           {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center flex-1 last:flex-none">
+            <div key={s.id} className="flex flex-1 items-center last:flex-none">
               <button
                 type="button"
                 onClick={() => goTo(s.id)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all flex-1",
-                  step > s.id && "text-primary bg-primary/5",
+                  "flex flex-1 items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all",
+                  step > s.id && "bg-primary/5 text-primary",
                   step === s.id &&
-                    "text-primary bg-primary/10 ring-1 ring-primary/30",
-                  step < s.id && "text-muted-foreground hover:text-foreground"
+                    "bg-primary/10 text-primary ring-1 ring-primary/30",
+                  step < s.id && "text-muted-foreground hover:text-foreground",
                 )}
               >
                 <span
                   className={cn(
-                    "w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0",
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px]",
                     step > s.id
                       ? "bg-primary text-primary-foreground"
                       : step === s.id
-                      ? "bg-primary/20 text-primary"
-                      : "border border-border"
+                        ? "bg-primary/20 text-primary"
+                        : "border border-border",
                   )}
                 >
-                  {step > s.id ? <Check className="w-3 h-3" /> : s.id}
+                  {step > s.id ? <Check className="h-3 w-3" /> : s.id}
                 </span>
-                <span className="hidden sm:inline truncate">{s.label}</span>
+                <span className="hidden truncate sm:inline">{s.label}</span>
               </button>
               {i < STEPS.length - 1 && (
                 <div
                   className={cn(
-                    "h-px flex-1 mx-1",
-                    step > s.id ? "bg-primary/40" : "bg-border"
+                    "mx-1 h-px flex-1",
+                    step > s.id ? "bg-primary/40" : "bg-border",
                   )}
                 />
               )}
@@ -264,54 +271,54 @@ export default function NewOrganizationRoute() {
       </div>
 
       {actionData?.error && (
-        <div className="px-4 py-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+        <div className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {actionData.error}
         </div>
       )}
 
-      <div className="bg-card border rounded-xl p-6">
+      <div className="rounded-xl border bg-card p-6">
         <div className="space-y-5">
-          {/* STEP 1: DETAILS */}
           {step === 1 && (
             <StepWrapper title="Organization Details">
               <Field label="Organization Name" required>
                 <input
                   value={name}
                   onChange={(e) => update("name")(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                   placeholder="Acme Corporation"
                   autoFocus
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   This will be the public name of your client organization
                 </p>
               </Field>
+
               <Field label="URL Slug">
                 <input
                   value={slug}
                   onChange={(e) => update("slug")(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                   placeholder="acme-corp"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Auto-generated from name if left empty
                 </p>
               </Field>
             </StepWrapper>
           )}
 
-          {/* STEP 2: PREREQUISITES */}
           {step === 2 && (
             <StepWrapper title="Prerequisites">
               {config?.prerequisites?.map((prereq: any) => (
                 <div key={prereq.key} className="space-y-4">
                   {prereq.key === "contract_upload" && (
                     <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-2">
-                        <Upload className="w-4 h-4" />
+                      <label className="flex items-center gap-2 text-sm font-medium">
+                        <Upload className="h-4 w-4" />
                         {prereq.label}
                       </label>
-                      <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
+
+                      <div className="cursor-pointer rounded-lg border-2 border-dashed border-border p-6 text-center transition-colors hover:border-primary/50">
                         <input
                           type="file"
                           accept=".pdf,.doc,.docx"
@@ -325,8 +332,11 @@ export default function NewOrganizationRoute() {
                           className="hidden"
                           id="contract-upload"
                         />
-                        <label htmlFor="contract-upload" className="cursor-pointer">
-                          <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                        <label
+                          htmlFor="contract-upload"
+                          className="cursor-pointer"
+                        >
+                          <Upload className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                           <p className="text-sm font-medium">
                             {contractFile
                               ? contractFile
@@ -349,13 +359,13 @@ export default function NewOrganizationRoute() {
                           update("clientEmail")(e.target.value);
                           handlePrereqValidate(
                             "client_email",
-                            e.target.value.includes("@")
+                            e.target.value.includes("@"),
                           );
                         }}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                         placeholder="admin@client.com"
                       />
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {prereq.description}
                       </p>
                     </Field>
@@ -369,10 +379,10 @@ export default function NewOrganizationRoute() {
                           update("framework")(e.target.value);
                           handlePrereqValidate(
                             "framework_selection",
-                            e.target.value !== ""
+                            e.target.value !== "",
                           );
                         }}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       >
                         <option value="" disabled>
                           Select framework
@@ -392,10 +402,10 @@ export default function NewOrganizationRoute() {
                           update("sector")(e.target.value);
                           handlePrereqValidate(
                             "industry_sector",
-                            e.target.value !== ""
+                            e.target.value !== "",
                           );
                         }}
-                        className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                        className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                       >
                         <option value="" disabled>
                           Select sector
@@ -412,14 +422,14 @@ export default function NewOrganizationRoute() {
               ))}
 
               {!config?.prerequisites?.length && (
-                <div className="px-4 py-3 rounded-lg bg-muted text-sm text-muted-foreground">
-                  No prerequisites configured. You can proceed to create the organization.
+                <div className="rounded-lg bg-muted px-4 py-3 text-sm text-muted-foreground">
+                  No prerequisites configured. You can proceed to create the
+                  organization.
                 </div>
               )}
             </StepWrapper>
           )}
 
-          {/* STEP 3: INVITATION */}
           {step === 3 && (
             <StepWrapper title="Invitation">
               <Field label="Client Admin Email" required>
@@ -427,36 +437,42 @@ export default function NewOrganizationRoute() {
                   type="email"
                   value={clientEmail}
                   onChange={(e) => update("clientEmail")(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
                   placeholder="admin@client.com"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   An invitation will be sent to this email address
                 </p>
               </Field>
 
-              <div className="p-4 border rounded-lg space-y-2">
+              <div className="space-y-2 rounded-lg border p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold">
-                  <Eye className="w-4 h-4 text-primary" />
+                  <Eye className="h-4 w-4 text-primary" />
                   Quick Summary
                 </div>
+
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Organization:</span>
                     <span className="font-medium">{name || "—"}</span>
                   </div>
+
                   {framework && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Framework:</span>
-                      <span className="font-medium capitalize">{framework}</span>
+                      <span className="font-medium capitalize">
+                        {framework}
+                      </span>
                     </div>
                   )}
+
                   {sector && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Sector:</span>
                       <span className="font-medium capitalize">{sector}</span>
                     </div>
                   )}
+
                   {contractFile && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Contract:</span>
@@ -468,7 +484,6 @@ export default function NewOrganizationRoute() {
             </StepWrapper>
           )}
 
-          {/* STEP 4: REVIEW */}
           {step === 4 && (
             <StepWrapper title="Review & Create">
               <div className="space-y-4">
@@ -481,7 +496,9 @@ export default function NewOrganizationRoute() {
                   {framework && (
                     <ReviewRow
                       label="Framework"
-                      value={framework.charAt(0).toUpperCase() + framework.slice(1)}
+                      value={
+                        framework.charAt(0).toUpperCase() + framework.slice(1)
+                      }
                     />
                   )}
                   {sector && (
@@ -494,7 +511,9 @@ export default function NewOrganizationRoute() {
                     <div className="text-sm">
                       <span className="text-muted-foreground">Contract: </span>
                       <span className="text-green-600">Uploaded ✓</span>
-                      <span className="text-foreground ml-1">({contractFile})</span>
+                      <span className="ml-1 text-foreground">
+                        ({contractFile})
+                      </span>
                     </div>
                   )}
                   {!framework && !sector && !contractFile && (
@@ -506,7 +525,7 @@ export default function NewOrganizationRoute() {
 
                 <ReviewSection title="Invitation" icon={Mail}>
                   <ReviewRow label="Admin Email" value={clientEmail || "—"} />
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="mt-1 text-xs text-muted-foreground">
                     An invitation email will be sent upon creation
                   </div>
                 </ReviewSection>
@@ -514,38 +533,38 @@ export default function NewOrganizationRoute() {
             </StepWrapper>
           )}
 
-          {/* Navigation Actions */}
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center justify-between border-t pt-4">
             <button
               type="button"
               onClick={back}
               className={cn(
-                "px-4 py-2 border rounded-lg",
-                step === 1 && "invisible"
+                "rounded-lg border px-4 py-2",
+                step === 1 && "invisible",
               )}
             >
               Back
             </button>
+
             {!isLastStep ? (
               <button
                 type="button"
                 onClick={next}
                 disabled={!canNext()}
                 className={cn(
-                  "px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2",
+                  "flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-medium transition-all",
                   canNext()
-                    ? "bg-primary text-white hover:opacity-90 shadow-sm"
-                    : "bg-muted text-muted-foreground cursor-not-allowed opacity-50 grayscale-[0.5]"
+                    ? "bg-primary text-white shadow-sm hover:opacity-90"
+                    : "cursor-not-allowed bg-muted text-muted-foreground opacity-50 grayscale-[0.5]",
                 )}
               >
-                Continue <ArrowRight className="w-4 h-4" />
+                Continue <ArrowRight className="h-4 w-4" />
               </button>
             ) : (
               <button
                 type="button"
                 onClick={submit}
                 disabled={isSubmittingRemix || isHookSubmitting}
-                className="px-6 py-2 bg-primary text-white rounded-lg"
+                className="rounded-lg bg-primary px-6 py-2 text-white"
               >
                 {isSubmittingRemix ? "Creating..." : "Create Organization"}
               </button>
@@ -573,7 +592,7 @@ function StepWrapper({
       <div>
         <h3 className="text-lg font-semibold">{title}</h3>
         {description && (
-          <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
         )}
       </div>
       <div className="space-y-4">{children}</div>
@@ -592,9 +611,9 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-sm font-medium text-foreground mb-1.5 block">
+      <label className="mb-1.5 block text-sm font-medium text-foreground">
         {label}
-        {required && <span className="text-destructive ml-0.5">*</span>}
+        {required && <span className="ml-0.5 text-destructive">*</span>}
       </label>
       {children}
     </div>
@@ -611,9 +630,9 @@ function ReviewSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="p-4 border rounded-lg space-y-2">
+    <div className="space-y-2 rounded-lg border p-4">
       <div className="flex items-center gap-2 text-sm font-semibold">
-        {Icon && <Icon className="w-4 h-4 text-primary" />}
+        {Icon && <Icon className="h-4 w-4 text-primary" />}
         {title}
       </div>
       {children}
@@ -621,13 +640,7 @@ function ReviewSection({
   );
 }
 
-function ReviewRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-muted-foreground">{label}</span>

@@ -5,6 +5,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from users.serializers import MeSerializer
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -13,13 +14,12 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from organizations.models import OrganizationMembership
 from users.models import User
-from users.roles import UserRole
 
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):
-    """Authenticate user with email and password, return JWT tokens."""
+    """Authenticate user with email and password, return JWT tokens and org bootstrap."""
     email = request.data.get("email")
     password = request.data.get("password")
 
@@ -39,11 +39,43 @@ def login_view(request):
 
     refresh = RefreshToken.for_user(user)
 
+    memberships = (
+        OrganizationMembership.objects.select_related("organization", "role")
+        .filter(
+            user=user,
+            status=OrganizationMembership.Status.ACTIVE,
+        )
+        .order_by("-is_default", "-last_accessed_at", "joined_at")
+    )
+
+    organization_count = memberships.count()
+    active_membership = memberships.first()
+
+    active_organization = None
+    active_membership_payload = None
+
+    if active_membership:
+        active_organization = {
+            "id": str(active_membership.organization.id),
+            "name": active_membership.organization.name,
+            "slug": active_membership.organization.slug,
+        }
+        active_membership_payload = {
+            "role": active_membership.role.name if active_membership.role else None,
+            "fallback_role": active_membership.fallback_role,
+            "is_default": active_membership.is_default,
+            "status": active_membership.status,
+        }
+
     return Response(
         {
             "access_token": str(refresh.access_token),
             "refresh_token": str(refresh),
             "user_id": str(user.id),
+            "active_organization": active_organization,
+            "active_membership": active_membership_payload,
+            "organization_count": organization_count,
+            "requires_org_selection": False,
         }
     )
 
@@ -51,62 +83,8 @@ def login_view(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def me_view(request):
-    """Return the authenticated user's profile with organization and role details."""
-    user = request.user
-
-    # Get all memberships for this user
-    memberships = OrganizationMembership.objects.filter(user=user).select_related(
-        "organization"
-    )
-
-    # Get user's primary organization (first membership or none)
-    primary_membership = memberships.first()
-    org_id = str(primary_membership.organization_id) if primary_membership else None
-    org_name = primary_membership.organization.name if primary_membership else None
-
-    # Get user's primary role (from first membership or superuser status)
-    role = None
-    fallback_role = None
-    if user.is_superuser:
-        role = UserRole.SUPERADMIN
-        fallback_role = UserRole.SUPERADMIN
-    elif primary_membership and primary_membership.role:
-        role = primary_membership.role.name
-        fallback_role = primary_membership.fallback_role
-    elif primary_membership:
-        role = primary_membership.fallback_role
-        fallback_role = primary_membership.fallback_role
-
-    # Build organization list for multi-org users
-    orgs = [
-        {
-            "id": str(m.organization_id),
-            "name": m.organization.name,
-            "role": m.role.name if m.role else m.fallback_role,
-            "fallback_role": m.fallback_role,  # Durable permission level
-        }
-        for m in memberships
-    ]
-
-    return Response(
-        {
-            "id": str(user.id),
-            "email": user.email,
-            "full_name": user.name,
-            "first_name": None,
-            "last_name": None,
-            "org_id": org_id,
-            "org_name": org_name,
-            "role": role,  # Display name (custom role or fallback)
-            "fallback_role": fallback_role,  # Durable permission level for RBAC
-            "organizations": orgs,
-            "picture_url": None,
-            "is_superuser": user.is_superuser,
-            "is_staff": user.is_staff,
-            "timezone": user.timezone,
-            "country": user.country,
-        }
-    )
+    serializer = MeSerializer(request.user, context={"request": request})
+    return Response(serializer.data)
 
 
 @api_view(["POST"])

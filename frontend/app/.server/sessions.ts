@@ -1,9 +1,6 @@
 /** Session management for JWT-based auth with cookie sessions. */
 
-import {
-  createCookieSessionStorage,
-  redirect,
-} from "react-router";
+import { createCookieSessionStorage, redirect } from "react-router";
 import type { User } from "~/types";
 
 const isProd = process.env.NODE_ENV === "production";
@@ -29,6 +26,36 @@ export async function getSession(request: Request) {
   return getSessionFromCookie(cookie);
 }
 
+/** Get the access token from a request (returns null if not authenticated). */
+export async function getUserToken(request: Request): Promise<string | null> {
+  const session = await getSession(request);
+  return (session.get("accessToken") as string) ?? null;
+}
+
+/** Get the currently selected organization id from the session. */
+export async function getSelectedOrganizationId(
+  request: Request,
+): Promise<string | null> {
+  const session = await getSession(request);
+  return (session.get("selectedOrganizationId") as string) ?? null;
+}
+
+/** Store/update the selected organization id in the session and return the cookie header value. */
+export async function setSelectedOrganizationId(
+  request: Request,
+  organizationId: string | null,
+): Promise<string> {
+  const session = await getSession(request);
+
+  if (organizationId) {
+    session.set("selectedOrganizationId", organizationId);
+  } else {
+    session.unset("selectedOrganizationId");
+  }
+
+  return sessionStorage.commitSession(session);
+}
+
 /**
  * Require authentication and fetch the full user profile from /api/auth/me/.
  * Returns a normalized User object. Throws redirect to /login if unauthenticated.
@@ -39,13 +66,19 @@ export async function requireUser(request: Request): Promise<User> {
     throw redirect("/login");
   }
 
+  const selectedOrganizationId = await getSelectedOrganizationId(request);
   const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
+
   const response = await fetch(`${backendUrl}/api/auth/me/`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(selectedOrganizationId
+        ? { "X-Organization-Id": selectedOrganizationId }
+        : {}),
+    },
   });
 
   if (!response.ok) {
-    // Token is invalid/expired — destroy session and redirect to login
     const session = await getSession(request);
     throw redirect("/login", {
       headers: {
@@ -60,37 +93,48 @@ export async function requireUser(request: Request): Promise<User> {
     id: data.id ?? "",
     email: data.email ?? "",
     fullName: data.full_name ?? data.email ?? "",
-    firstName: data.first_name ?? data.full_name?.split(" ")[0] ?? data.email?.split("@")[0] ?? "",
+    firstName:
+      data.first_name ??
+      data.full_name?.split(" ")?.[0] ??
+      data.email?.split("@")?.[0] ??
+      "",
     lastName: data.last_name ?? "",
-    orgId: data.org_id ?? null,
-    orgName: data.org_name ?? undefined,
-    role: (data.role ?? "VIEWER").toUpperCase() as User["role"],
-    fallbackRole: data.fallback_role ?? undefined,
+    orgId: data.active_organization?.id ?? null,
+    orgName: data.active_organization?.name ?? undefined,
+    role: (
+      data.active_membership?.role ??
+      data.active_membership?.fallback_role ??
+      "VIEWER"
+    ).toUpperCase() as User["role"],
+    fallbackRole: data.active_membership?.fallback_role ?? undefined,
     pictureUrl: data.picture_url ?? undefined,
-    organizations: data.organizations ?? [],
+    organizations: [], // Load separately from a dedicated memberships endpoint when needed
     isSuperuser: data.is_superuser ?? false,
     isStaff: data.is_staff ?? false,
     timezone: data.timezone ?? undefined,
     country: data.country ?? undefined,
+    activePermissions: data.active_permissions ?? [],
   };
 }
 
-/** Get the access token from a request (returns null if not authenticated). */
-export async function getUserToken(request: Request): Promise<string | null> {
-  const session = await getSession(request);
-  return (session.get("accessToken") as string) ?? null;
-}
-
-/** Create a session with the given access token and redirect. */
+/** Create a session with the given access token and optional selected organization, then redirect. */
 export async function createTokenSession({
   accessToken,
   redirectTo,
+  selectedOrganizationId,
 }: {
   accessToken: string;
   redirectTo: string;
+  selectedOrganizationId?: string | null;
 }) {
   const session = await sessionStorage.getSession();
   session.set("accessToken", accessToken);
+
+  if (selectedOrganizationId) {
+    session.set("selectedOrganizationId", selectedOrganizationId);
+  } else {
+    session.unset("selectedOrganizationId");
+  }
 
   return redirect(redirectTo, {
     headers: {
@@ -109,11 +153,23 @@ export async function destroySession(request: Request) {
   });
 }
 
-/** Login against the backend API and return token or error. */
+type LoginSuccess = {
+  accessToken: string;
+  activeOrganization: {
+    id: string;
+    name: string;
+    slug?: string;
+  } | null;
+  organizationCount: number;
+};
+
+type LoginError = { error: string };
+
+/** Login against the backend API and return token plus minimal org bootstrap. */
 export async function loginUser(
   email: string,
-  password: string
-): Promise<{ accessToken: string } | { error: string }> {
+  password: string,
+): Promise<LoginSuccess | LoginError> {
   try {
     const backendUrl = process.env.BACKEND_URL || "http://localhost:8000";
     const response = await fetch(`${backendUrl}/api/auth/login/`, {
@@ -123,31 +179,38 @@ export async function loginUser(
     });
 
     if (!response.ok) {
-      const err = await response.json().catch(() => ({ detail: "Invalid credentials" }));
+      const err = await response.json().catch(() => ({
+        detail: "Invalid credentials",
+      }));
       return { error: err.detail ?? "Login failed" };
     }
 
     const data = await response.json();
     const token = data.access_token ?? data.access;
+
     if (!token || typeof token !== "string") {
       return { error: "No token received from server" };
     }
-    return { accessToken: token };
+
+    return {
+      accessToken: token,
+      activeOrganization: data.active_organization ?? null,
+      organizationCount: data.organization_count ?? 0,
+    };
   } catch {
     return { error: "Network error — is the backend running?" };
   }
 }
 
-/** Delete the session cookie (for 401 handling). Call this in API client when auth fails. */
+/** Delete the session cookie (for client-side 401 handling). */
 export async function deleteSessionCookie() {
-  // Note: This only works in client-side context via document.cookie
-  // In server-side loaders/actions, use destroySession() with redirect instead
   if (typeof document !== "undefined") {
-    document.cookie = "__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    document.cookie =
+      "__session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT";
   }
 }
 
-/** Destroy session cookie and return redirect to login. Use this in server-side loaders/actions for 401 handling. */
+/** Destroy session cookie and return redirect to login. */
 export async function destroySessionCookie(request: Request) {
   const session = await getSession(request);
   return redirect("/login", {

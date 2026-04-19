@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from organizations.models import Organization
-from themes.models import Theme
+from themes.models import OrganizationTheme
 from themes.serializers import ThemeSerializer
 
 
@@ -27,8 +27,8 @@ class ThemeViewSet(viewsets.ModelViewSet):
         """Filter themes by organization from URL kwarg."""
         org_id = self.kwargs.get("org_id") or self.kwargs.get("organization__id")
         if org_id:
-            return Theme.objects.filter(organization_id=org_id)
-        return Theme.objects.none()
+            return OrganizationTheme.objects.filter(organization_id=org_id)
+        return OrganizationTheme.objects.none()
 
     def _get_org_id_from_request(self):
         """Extract org_id from URL - handles 'pk', 'org_id', and 'organization__id' kwargs."""
@@ -66,7 +66,7 @@ class ThemeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        theme, created = Theme.objects.get_or_create(organization_id=org_id)
+        theme, created = OrganizationTheme.objects.get_or_create(organization_id=org_id)
         serializer = self.get_serializer(theme)
         return Response(serializer.data)
 
@@ -85,8 +85,8 @@ class ThemeViewSet(viewsets.ModelViewSet):
                 ),
             )
 
-        theme, created = Theme.objects.get_or_create(organization_id=org_id)
-        serializer = self.get_serializer(theme, data=request.data, partial=False)
+        theme, created = OrganizationTheme.objects.get_or_create(organization_id=org_id)
+        serializer = self.get_serializer(OrganizationTheme, data=request.data, partial=False)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -106,7 +106,7 @@ class ThemeViewSet(viewsets.ModelViewSet):
                 ),
             )
 
-        theme, created = Theme.objects.get_or_create(organization_id=org_id)
+        theme, created = OrganizationTheme.objects.get_or_create(organization_id=org_id)
         serializer = self.get_serializer(theme, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
@@ -140,7 +140,7 @@ class ThemeViewSet(viewsets.ModelViewSet):
                     ),
                 )
 
-        theme, created = Theme.objects.get_or_create(organization_id=org_id)
+        theme, created = OrganizationTheme.objects.get_or_create(organization_id=org_id)
 
         if request.method == "GET":
             serializer = self.get_serializer(theme)

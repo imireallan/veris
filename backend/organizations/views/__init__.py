@@ -1,6 +1,8 @@
+from uuid import UUID
+
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -15,17 +17,33 @@ from organizations.serializers import (
     CustomRoleSerializer,
     InvitationSerializer,
     OrganizationCreationConfigSerializer,
+    OrganizationDetailSerializer,
     OrganizationMembershipSerializer,
     OrganizationSerializer,
 )
 from users.permissions import IsOrganizationMember, IsOrganizationOwnerOrAdmin
 
 
-class OrganizationViewSet(viewsets.ModelViewSet):
-    """Organization routes — /api/organizations/.
+def get_request_organization(request):
+    organization = getattr(request, "organization", None)
+    if not organization:
+        raise PermissionDenied("Organization context is required.")
+    return organization
 
-    - SUPERADMIN / Django superuser: can see all organizations.
-    - All other users (including org ADMIN): only their own organization.
+
+def get_request_membership(request):
+    membership = getattr(request, "membership", None)
+    if not membership:
+        raise PermissionDenied("Valid organization membership is required.")
+    return membership
+
+
+class OrganizationViewSet(viewsets.ModelViewSet):
+    """
+    Organization routes — /api/organizations/
+
+    - Platform superusers can see all organizations.
+    - Other users can only see organizations they belong to.
     """
 
     queryset = Organization.objects.all()
@@ -36,68 +54,48 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # Platform-level admins: can see all orgs
         if user.is_superuser:
-            return Organization.objects.all()
+            return Organization.objects.all().order_by("name")
 
-        # All other users: return ALL organizations they have memberships in
-        from organizations.models import OrganizationMembership
-
-        # Get all organization IDs from user's memberships
         membership_org_ids = OrganizationMembership.objects.filter(
-            user=user
+            user=user,
+            status=OrganizationMembership.Status.ACTIVE,
         ).values_list("organization_id", flat=True)
 
-        if membership_org_ids.exists():
-            return Organization.objects.filter(id__in=membership_org_ids)
-
-        return Organization.objects.none()
+        return Organization.objects.filter(id__in=membership_org_ids).order_by("name")
 
     def get_object(self):
-        """Override to provide better error handling for 404s."""
-        from uuid import UUID
-
-        from rest_framework.exceptions import NotFound
-
         queryset = self.get_queryset()
-
-        # Get the lookup value
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
         lookup_value = self.kwargs[lookup_url_kwarg]
 
-        # Validate UUID format first
         try:
-            UUID(lookup_value)
+            UUID(str(lookup_value))
         except (ValueError, AttributeError):
             raise NotFound(detail="Invalid organization ID format.")
 
-        filter_kwargs = {self.lookup_field: lookup_value}
-
         try:
-            obj = queryset.get(**filter_kwargs)
+            obj = queryset.get(**{self.lookup_field: lookup_value})
         except queryset.model.DoesNotExist:
-            # Check if user has any memberships
             membership_exists = OrganizationMembership.objects.filter(
-                user=self.request.user
+                user=self.request.user,
+                status=OrganizationMembership.Status.ACTIVE,
             ).exists()
 
             if not membership_exists:
-                # User has no org memberships at all
                 raise NotFound(
                     detail="You don't have access to any organizations. Please contact your administrator."
                 )
 
-            # User has memberships but not this specific org
             raise NotFound(detail="You don't have access to this organization.")
-        except Exception as e:
-            # Handle UUID validation errors and other exceptions
-            if "UUID" in str(e):
-                raise NotFound(detail="Invalid organization ID format.")
-            raise
 
-        # May raise a permission denied
         self.check_object_permissions(self.request, obj)
         return obj
+    
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return OrganizationDetailSerializer
+        return OrganizationSerializer
 
     @action(detail=False, methods=["get"], url_path="accessible")
     def accessible(self, request):
@@ -109,6 +107,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 {
                     "id": str(org.id),
                     "name": org.name,
+                    "slug": org.slug,
                     "role": "SUPERADMIN",
                     "fallback_role": "SUPERADMIN",
                 }
@@ -117,43 +116,35 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             return Response(data)
 
         memberships = (
-            OrganizationMembership.objects.filter(user=user)
+            OrganizationMembership.objects.filter(
+                user=user,
+                status=OrganizationMembership.Status.ACTIVE,
+            )
             .select_related("organization", "role")
             .order_by("organization__name")
         )
+
         data = [
             {
-                "id": str(membership.organization_id),
-                "name": membership.organization.name,
-                "role": (
-                    membership.role.name
-                    if membership.role
-                    else membership.fallback_role
-                ),
-                "fallback_role": membership.fallback_role,
+                "id": str(m.organization_id),
+                "name": m.organization.name,
+                "slug": m.organization.slug,
+                "role": m.role.name if m.role else None,
+                "fallback_role": m.fallback_role,
+                "status": m.status,
+                "is_default": m.is_default,
             }
-            for membership in memberships
+            for m in memberships
         ]
         return Response(data)
 
     def perform_create(self, serializer):
-        """
-        Create organization and optionally send invitation to client admin.
-
-        Expects additional context from request data:
-        - client_email: Email for sending invitation
-        - framework: Primary framework selection
-        - sector: Industry sector
-        """
         organization = serializer.save()
 
-        # Handle invitation if client_email provided
         client_email = self.request.data.get("client_email")
         if client_email:
             from organizations.email_service import send_invitation_email
-            from organizations.models import Invitation
 
-            # Create invitation with ADMIN role
             invitation = Invitation.objects.create(
                 organization=organization,
                 email=client_email,
@@ -161,17 +152,14 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 invited_by=self.request.user,
             )
 
-            # Send invitation email
             config = OrganizationCreationConfig.get_solo()
             if config.auto_send_invitation:
                 send_invitation_email(invitation)
 
 
 class CustomRoleViewSet(viewsets.ModelViewSet):
-    """Custom role management — /api/organizations/:org_pk/roles/.
-
-    Allows organizations to create and manage custom roles with specific permissions.
-    Only ADMIN users can manage roles.
+    """
+    Custom role management — /api/organizations/:org_pk/roles/
     """
 
     serializer_class = CustomRoleSerializer
@@ -179,18 +167,17 @@ class CustomRoleViewSet(viewsets.ModelViewSet):
     lookup_field = "pk"
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk")
-        return CustomRole.objects.filter(organization_id=org_pk)
+        organization = get_request_organization(self.request)
+        return CustomRole.objects.filter(organization=organization).order_by("name")
 
     def perform_create(self, serializer):
-        org_pk = self.kwargs.get("org_pk")
-        serializer.save(organization_id=org_pk)
+        organization = get_request_organization(self.request)
+        serializer.save(organization=organization)
 
 
 class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
-    """Organization membership routes — /api/organizations/:org_pk/members/.
-
-    Lists members of an organization with their roles and permissions.
+    """
+    Organization membership routes — /api/organizations/:org_pk/members/
     """
 
     serializer_class = OrganizationMembershipSerializer
@@ -198,47 +185,44 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = "pk"
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk")
+        organization = get_request_organization(self.request)
         return (
-            OrganizationMembership.objects.filter(organization_id=org_pk)
+            OrganizationMembership.objects.filter(
+                organization=organization,
+                status=OrganizationMembership.Status.ACTIVE,
+            )
             .select_related("user", "role")
             .order_by("user__email")
         )
 
     @action(detail=True, methods=["post"])
     def update_role(self, request, pk=None, org_pk=None):
-        """Update a member's role (custom role or fallback role)."""
         membership = self.get_object()
+        requesting_membership = get_request_membership(request)
 
-        # Check if user has permission to update roles
-        if not membership.has_permission("role:manage"):
-            # Check if requesting user is admin of this org
-            requesting_membership = OrganizationMembership.objects.filter(
-                user=request.user, organization_id=org_pk
-            ).first()
-            if not requesting_membership or not requesting_membership.has_permission(
-                "role:manage"
-            ):
-                return Response(
-                    {"detail": "You do not have permission to manage roles."},
-                    status=403,
-                )
+        if not requesting_membership.has_permission("role:manage"):
+            return Response(
+                {"detail": "You do not have permission to manage roles."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         role_id = request.data.get("role")
         fallback_role = request.data.get("fallback_role")
+        organization = get_request_organization(request)
 
         if role_id:
-            # Validate role belongs to same org
-            role = CustomRole.objects.filter(id=role_id, organization_id=org_pk).first()
+            role = CustomRole.objects.filter(
+                id=role_id,
+                organization=organization,
+                is_active=True,
+            ).first()
             if not role:
                 return Response(
-                    {
-                        "detail": "Invalid role or role does not belong to this organization."
-                    },
-                    status=400,
+                    {"detail": "Invalid role or role does not belong to this organization."},
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             membership.role = role
-            membership.fallback_role = None
+
         elif fallback_role:
             valid_fallback_roles = [
                 "ADMIN",
@@ -253,14 +237,15 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
                     {
                         "detail": f"Invalid fallback role. Must be one of: {valid_fallback_roles}"
                     },
-                    status=400,
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
             membership.role = None
             membership.fallback_role = fallback_role
+
         else:
             return Response(
                 {"detail": "Either 'role' or 'fallback_role' must be provided."},
-                status=400,
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         membership.save()
@@ -268,32 +253,21 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"])
     def remove(self, request, pk=None, org_pk=None):
-        """Remove a member from the organization."""
         membership = self.get_object()
+        requesting_membership = get_request_membership(request)
 
-        # Check if requesting user has permission to remove members
-        requesting_membership = OrganizationMembership.objects.filter(
-            user=request.user, organization_id=org_pk
-        ).first()
-
-        if not requesting_membership or not requesting_membership.has_permission(
-            "user:remove"
-        ):
+        if not requesting_membership.has_permission("user:remove"):
             return Response(
                 {"detail": "You do not have permission to remove members."},
-                status=403,
+                status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Prevent self-removal
         if membership.user == request.user:
             return Response(
-                {
-                    "detail": "Cannot remove yourself. Transfer ownership first if needed."
-                },
-                status=400,
+                {"detail": "Cannot remove yourself. Transfer ownership first if needed."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Delete the membership
         membership.delete()
         return Response(
             {"detail": "Member removed successfully."},
@@ -302,9 +276,8 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class InvitationViewSet(viewsets.ModelViewSet):
-    """Organization invitation routes — /api/organizations/:org_pk/invitations/.
-
-    Allows ADMIN users to invite new members via email.
+    """
+    Organization invitation routes — /api/organizations/:org_pk/invitations/
     """
 
     serializer_class = InvitationSerializer
@@ -312,23 +285,21 @@ class InvitationViewSet(viewsets.ModelViewSet):
     lookup_field = "pk"
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk")
+        organization = get_request_organization(self.request)
         return (
-            Invitation.objects.filter(organization_id=org_pk)
+            Invitation.objects.filter(organization=organization)
             .select_related("invited_by", "role")
             .order_by("-created_at")
         )
 
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        org_pk = self.kwargs.get("org_pk")
-        if org_pk:
-            context["organization"] = Organization.objects.get(id=org_pk)
+        context["organization"] = get_request_organization(self.request)
         return context
 
     def perform_create(self, serializer):
-        org_pk = self.kwargs.get("org_pk")
-        organization = Organization.objects.get(id=org_pk)
+        organization = get_request_organization(self.request)
+        inviter_membership = get_request_membership(self.request)
         fallback_role = self.request.data.get("fallback_role", "OPERATOR")
 
         role_hierarchy = {
@@ -345,17 +316,7 @@ class InvitationViewSet(viewsets.ModelViewSet):
             raise ValidationError("Cannot invite SUPERADMIN role.")
 
         if not self.request.user.is_superuser:
-            inviter_membership = OrganizationMembership.objects.filter(
-                user=self.request.user,
-                organization_id=org_pk,
-            ).first()
-
-            if not inviter_membership:
-                raise ValidationError("You do not belong to this organization.")
-
-            inviter_priority = role_hierarchy.get(
-                inviter_membership.fallback_role or "", 0
-            )
+            inviter_priority = role_hierarchy.get(inviter_membership.fallback_role or "", 0)
             invitee_priority = role_hierarchy.get(fallback_role, 0)
 
             if invitee_priority > inviter_priority:
@@ -367,28 +328,17 @@ class InvitationViewSet(viewsets.ModelViewSet):
             organization=organization,
             invited_by=self.request.user,
         )
-        # Send invitation email
-        from organizations.email_service import send_invitation_email
 
+        from organizations.email_service import send_invitation_email
         send_invitation_email(invitation)
 
     @action(detail=True, methods=["post"])
     def resend(self, request, pk=None, org_pk=None):
-        """Resend an invitation email."""
-        try:
-            invitation = self.get_object()
-        except Exception as e:
-            print(f"Error getting invitation: {e}")
-            return Response(
-                {"detail": f"Invitation not found: {str(e)}"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        invitation = self.get_object()
 
         if invitation.status != Invitation.Status.PENDING:
             return Response(
-                {
-                    "detail": "Cannot resend invitation. It has been accepted or declined."
-                },
+                {"detail": "Cannot resend invitation. It has been accepted or declined."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -400,20 +350,13 @@ class InvitationViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Send invitation email
         from django.conf import settings
-
         from organizations.email_service import send_invitation_email
 
         try:
             email_sent = send_invitation_email(invitation)
             if not email_sent:
-                # In development, log warning but still return success
-                is_debug = getattr(settings, "DEBUG", False)
-                if is_debug:
-                    print(
-                        f"⚠️  Email not sent (development mode). Invitation would be sent to: {invitation.email}"
-                    )
+                if getattr(settings, "DEBUG", False):
                     return Response(
                         {
                             "detail": f"Invitation resend processed (email logging in development). Would send to: {invitation.email}"
@@ -421,18 +364,11 @@ class InvitationViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_200_OK,
                     )
                 return Response(
-                    {
-                        "detail": "Failed to send invitation email. Please check email configuration or contact support."
-                    },
+                    {"detail": "Failed to send invitation email. Please check email configuration or contact support."},
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         except Exception as e:
-            print(f"Exception in resend: {e}")
-            is_debug = getattr(settings, "DEBUG", False)
-            if is_debug:
-                print(
-                    f"⚠️  Email exception in development mode. Would send to: {invitation.email}"
-                )
+            if getattr(settings, "DEBUG", False):
                 return Response(
                     {
                         "detail": f"Invitation resend processed (email error in dev). Would send to: {invitation.email}"
@@ -451,7 +387,6 @@ class InvitationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def revoke(self, request, pk=None, org_pk=None):
-        """Revoke a pending invitation."""
         invitation = self.get_object()
 
         if invitation.status != Invitation.Status.PENDING:
@@ -469,25 +404,15 @@ class InvitationViewSet(viewsets.ModelViewSet):
         )
 
 
-# ─────────────────────────────────────────────────────
-# Standalone invitation acceptance (no auth required)
-# ─────────────────────────────────────────────────────
-
-
 class InvitationAcceptView(APIView):
     """
     Accept or decline an invitation using token.
-    No authentication required - token-based access.
-
-    GET /api/invitations/{token}/ — Check invitation status
-    POST /api/invitations/{token}/accept/ — Accept invitation (requires auth)
-    POST /api/invitations/{token}/decline/ — Decline invitation
+    No authentication required for checking.
     """
 
-    permission_classes = []  # No auth required for checking
+    permission_classes = []
 
     def get(self, request, token):
-        """Check invitation validity and return details."""
         try:
             invitation = Invitation.objects.select_related(
                 "organization", "role", "invited_by"
@@ -498,7 +423,6 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Check if expired
         if invitation.is_expired():
             invitation.status = Invitation.Status.EXPIRED
             invitation.save(update_fields=["status"])
@@ -507,15 +431,9 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_410_GONE,
             )
 
-        # Allow PENDING and ACCEPTED status (ACCEPTED means password was just set)
-        if invitation.status not in [
-            Invitation.Status.PENDING,
-            Invitation.Status.ACCEPTED,
-        ]:
+        if invitation.status not in [Invitation.Status.PENDING, Invitation.Status.ACCEPTED]:
             return Response(
-                {
-                    "detail": f"This invitation has already been {invitation.status.lower()}."
-                },
+                {"detail": f"This invitation has already been {invitation.status.lower()}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -523,12 +441,9 @@ class InvitationAcceptView(APIView):
 
         invited_user = User.objects.filter(email__iexact=invitation.email).first()
         has_existing_account = bool(
-            invited_user
-            and invited_user.password
-            and invited_user.has_usable_password()
+            invited_user and invited_user.password and invited_user.has_usable_password()
         )
 
-        # Return invitation details
         return Response(
             {
                 "status": invitation.status,
@@ -550,7 +465,6 @@ class InvitationAcceptView(APIView):
         )
 
     def post(self, request, token, action):
-        """Accept or decline invitation."""
         if action not in ["accept", "decline"]:
             return Response(
                 {"detail": "Invalid action. Use 'accept' or 'decline'."},
@@ -565,7 +479,6 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Check if expired
         if invitation.is_expired():
             invitation.status = Invitation.Status.EXPIRED
             invitation.save(update_fields=["status"])
@@ -574,12 +487,9 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_410_GONE,
             )
 
-        # Check if already processed
         if invitation.status != Invitation.Status.PENDING:
             return Response(
-                {
-                    "detail": f"This invitation has already been {invitation.status.lower()}."
-                },
+                {"detail": f"This invitation has already been {invitation.status.lower()}."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -590,14 +500,12 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        # Accept action
         if not request.user or not request.user.is_authenticated:
             return Response(
                 {"detail": "Authentication required to accept invitation."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        # Verify email matches
         if request.user.email.lower() != invitation.email.lower():
             return Response(
                 {
@@ -606,14 +514,10 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Accept the invitation
         if invitation.accept(request.user):
-            # Send welcome email
             from organizations.email_service import send_welcome_email
 
             send_welcome_email(request.user, invitation.organization)
-
-            # Check if user needs to set password (onboarding required)
             needs_onboarding = not request.user.has_usable_password()
 
             return Response(
@@ -624,21 +528,16 @@ class InvitationAcceptView(APIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        else:
-            return Response(
-                {
-                    "detail": "Failed to accept invitation. It may have expired or been revoked."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+
+        return Response(
+            {"detail": "Failed to accept invitation. It may have expired or been revoked."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
 
 class OrganizationCreationConfigViewSet(viewsets.ModelViewSet):
     """
-    Organization creation configuration — admin-configurable prerequisites.
-
-    GET /api/creation-config/ — Get current configuration
-    PATCH /api/creation-config/{id}/ — Update configuration (SUPERADMIN only)
+    Organization creation configuration — platform-level singleton config.
     """
 
     serializer_class = OrganizationCreationConfigSerializer
@@ -646,23 +545,36 @@ class OrganizationCreationConfigViewSet(viewsets.ModelViewSet):
     lookup_field = "pk"
 
     def get_queryset(self):
-        # Only one config exists (singleton)
         return OrganizationCreationConfig.objects.all()
 
     def get_permissions(self):
-        """Only SUPERADMIN can modify config."""
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated(), IsOrganizationOwnerOrAdmin()]
+
+        if not self.request.user.is_superuser:
+            raise PermissionDenied(
+                "Only platform superusers can modify creation config."
+            )
+
+        return [permissions.IsAuthenticated()]
+
+    def list(self, request, *args, **kwargs):
+        """
+        Return the singleton config directly instead of a list.
+        """
+        config = OrganizationCreationConfig.get_solo()
+        serializer = self.get_serializer(config)
+        return Response(serializer.data)
 
     @action(detail=False, methods=["get"])
     def prerequisites(self, request):
-        """Get enabled prerequisites for frontend."""
         config = OrganizationCreationConfig.get_solo()
+        can_create, _ = config.can_user_create_organization(request.user)
+
         return Response(
             {
                 "prerequisites": config.get_prerequisites(),
-                "can_create": config.can_user_create_organization(request.user)[0],
+                "can_create": can_create,
                 "helper_text": {
                     "title": config.helper_title,
                     "description": config.helper_description,

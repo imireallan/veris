@@ -8,7 +8,6 @@ import {
   type MetaFunction,
   type LoaderFunctionArgs,
   data,
-  redirect,
   useLoaderData,
 } from "react-router";
 import { useRouteError } from "react-router";
@@ -47,25 +46,22 @@ export const meta: MetaFunction = () => [
 export async function loader({ request }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   let user: User | null = null;
-  let organizations: User["organizations"] = [];
+  let theme = null;
 
   if (token) {
     try {
       user = await requireUser(request);
-      const { getAccessibleOrganizations, getSelectedOrganizationForRequest } = await import(
-        "~/.server/organizations"
-      );
-      organizations = await getAccessibleOrganizations(request, token);
-      const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
-      const theme = await fetchThemeConfig(selectedOrg?.id ?? user?.orgId ?? "", token);
-      return data({ user, organizations, theme });
+      theme = await fetchThemeConfig(user?.orgId ?? "", token);
     } catch {
-      // Not authenticated or token expired — continue without user
+      user = null;
     }
   }
 
-  const theme = await fetchThemeConfig("", token);
-  return data({ user, organizations, theme });
+  if (!theme) {
+    theme = await fetchThemeConfig("", token);
+  }
+
+  return data({ user, theme });
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -112,21 +108,23 @@ export function HydrateFallback() {
 export default function App() {
   const data = useLoaderData<typeof loader>();
   const user = data?.user || null;
-  const organizations = data?.organizations || [];
   const theme = data?.theme;
 
   return (
     <ThemeProvider initialTheme={theme}>
       <TooltipProvider delay={0}>
-        {/* Inject favicon from theme */}
         {theme?.favicon_url && (
           <link rel="icon" href={theme.favicon_url} key="theme-favicon" />
         )}
-        {/* Inject custom CSS from theme */}
+
         {theme?.custom_css && (
-          <style id="custom-theme-css" dangerouslySetInnerHTML={{ __html: theme.custom_css }} />
+          <style
+            id="custom-theme-css"
+            dangerouslySetInnerHTML={{ __html: theme.custom_css }}
+          />
         )}
-        <Outlet context={{ user, organizations }} />
+
+        <Outlet context={{ user }} />
         <Toaster position="top-right" richColors closeButton />
       </TooltipProvider>
     </ThemeProvider>
@@ -140,7 +138,6 @@ export function ErrorBoundary() {
   let stack: string | undefined;
 
   if (error instanceof Response) {
-    // Handle HTTP errors gracefully
     if (error.status === 403) {
       message = "Access Denied";
       details = "You don't have permission to access this resource.";
@@ -155,7 +152,6 @@ export function ErrorBoundary() {
       details = error.statusText || details;
     }
   } else if (error instanceof Error) {
-    // Check if it's an API error with status
     const apiError = error as any;
     if (apiError.status === 403) {
       message = "Access Denied";

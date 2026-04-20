@@ -9,7 +9,7 @@ const isTest =
 const enableRouterDevTools =
   typeof process !== "undefined" && process.env.ENABLE_ROUTER_DEVTOOLS === "true";
 
-const plugins = [tailwindcss(), reactRouter(), tsconfigPaths()];
+const plugins = [reactRouterDevTools(),tailwindcss(), reactRouter(), tsconfigPaths()];
 
 if (enableRouterDevTools) {
   plugins.unshift(reactRouterDevTools());

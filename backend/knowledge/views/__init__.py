@@ -1,12 +1,12 @@
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from knowledge.models import KnowledgeDocument
 from knowledge.serializers import KnowledgeDocumentSerializer
 from knowledge.services import delete_from_pinecone, process_document
-from organizations.models import OrganizationMembership
 
 
 class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
@@ -14,52 +14,45 @@ class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user = self.request.user
-        # Scope to all organizations the user is a member of
-        memberships = OrganizationMembership.objects.filter(user=user).values_list(
-            "organization_id", flat=True
-        )
-        if memberships:
-            return KnowledgeDocument.objects.filter(organization_id__in=memberships)
-        return KnowledgeDocument.objects.none()
+        if self.request.user.is_superuser and not getattr(
+            self.request, "organization", None
+        ):
+            return KnowledgeDocument.objects.all()
+
+        organization = getattr(self.request, "organization", None)
+        if not organization:
+            return KnowledgeDocument.objects.none()
+
+        return KnowledgeDocument.objects.filter(organization=organization)
 
     def perform_create(self, serializer):
-        user = self.request.user
-        # Use the organization ID from the request or default to the user's first membership
-        org_id = self.request.query_params.get("organization")
-        if not org_id:
-            membership = OrganizationMembership.objects.filter(user=user).first()
-            org_id = membership.organization_id if membership else None
+        organization = getattr(self.request, "organization", None)
+        if not organization:
+            raise PermissionDenied(
+                "Organization context is required to create documents."
+            )
 
         serializer.save(
-            organization_id=org_id,
-            created_by=user,
+            organization=organization,
+            created_by=self.request.user,
         )
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def process(self, request, pk=None):
-        """
-        Trigger AI processing pipeline for a document.
-        Extract text → Chunk → Embed → Store in Pinecone
-        """
         from django.conf import settings
 
         document = self.get_object()
 
-        # Check if already processed
         if document.embeddings_indexed:
             return Response(
                 {"error": "Document already processed"},
                 status=400,
             )
 
-        # Build file path from URL
         file_path = document.file_url
         if file_path.startswith("/"):
-            # Local storage path
             file_path = f"{settings.BASE_DIR}{file_path}"
 
-        # Run the pipeline
         result = process_document(
             file_path=file_path,
             file_type=document.file_type,
@@ -70,7 +63,6 @@ class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
         )
 
         if not result.success:
-            # Update document with error state
             document.embeddings_indexed = False
             document.description = f"Processing failed: {result.error}"
             document.save(update_fields=["embeddings_indexed", "description"])
@@ -80,7 +72,6 @@ class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
                 status=500,
             )
 
-        # Update document with results
         document.embeddings_indexed = True
         document.chunk_count = result.chunk_count
         document.vector_ids = result.vector_ids
@@ -96,23 +87,17 @@ class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def reprocess(self, request, pk=None):
-        """
-        Reprocess a document (delete old vectors and re-embed).
-        """
         from django.conf import settings
 
         document = self.get_object()
         index_name = settings.PINECONE_INDEX_NAME
 
-        # Delete existing vectors
         if document.vector_ids:
             delete_from_pinecone(document.vector_ids, index_name)
 
-        # Reset state
         document.embeddings_indexed = False
         document.vector_ids = []
         document.chunk_count = 0
         document.save(update_fields=["embeddings_indexed", "vector_ids", "chunk_count"])
 
-        # Trigger processing
         return self.process(request, pk=pk)

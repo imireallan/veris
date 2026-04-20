@@ -63,13 +63,44 @@ export class RBAC {
     return this.isPlatformAdmin(user);
   }
 
+  static isOrgMember(user: User | null, orgId: string): boolean {
+    if (!user || !orgId) return false;
+    if (this.isPlatformAdmin(user)) return true;
+    if (String(user.orgId) === String(orgId)) return true;
+    return (
+      user.recentOrganizations?.some(
+        (organization) => String(organization.id) === String(orgId),
+      ) ?? false
+    );
+  }
+
+  static getOrgRole(user: User | null, orgId: string): string | null {
+    if (!user || !orgId) return null;
+    if (this.isPlatformAdmin(user)) return UserRole.SUPERADMIN;
+    if (String(user.orgId) === String(orgId)) {
+      return this.getActiveRole(user);
+    }
+
+    const match = user.recentOrganizations?.find(
+      (organization) => String(organization.id) === String(orgId),
+    );
+    return match?.fallback_role ?? match?.role ?? null;
+  }
+
   /**
    * Tenant-level checks below this point.
    * These should rely on activePermissions from /me.
    */
 
-  static canManageOrg(user: User | null): boolean {
+  static canManageOrg(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
     return this.hasPermission(user, "org:settings");
+  }
+
+  static canManageOrgSettings(user: User | null, orgId?: string): boolean {
+    if (orgId && !this.isOrgMember(user, orgId)) return false;
+    return this.canManageOrg(user);
   }
 
   static canManageOrgUsers(user: User | null): boolean {
@@ -80,7 +111,9 @@ export class RBAC {
     );
   }
 
-  static canManageTemplates(user: User | null): boolean {
+  static canManageTemplates(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
     return (
       this.hasPermission(user, "template:create") ||
       this.hasPermission(user, "template:edit") ||
@@ -92,7 +125,15 @@ export class RBAC {
     return this.hasPermission(user, "assessment:view");
   }
 
-  static canCreateAssessments(user: User | null): boolean {
+  static canAccessAssessments(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    return this.canViewAssessments(user);
+  }
+
+  static canCreateAssessments(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
     return this.hasPermission(user, "assessment:create");
   }
 

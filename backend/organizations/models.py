@@ -8,7 +8,6 @@ from django.utils import timezone
 
 from users.roles import UserRole
 
-
 DEFAULT_ROLE_PERMISSIONS = {
     UserRole.ADMIN: [
         "user:invite",
@@ -20,6 +19,18 @@ DEFAULT_ROLE_PERMISSIONS = {
         "assessment:edit",
         "assessment:delete",
         "assessment:approve",
+        "template:create",
+        "template:edit",
+        "template:delete",
+        "site:create",
+        "site:edit",
+        "site:delete",
+        "task:create",
+        "task:edit",
+        "task:delete",
+        "finding:create",
+        "finding:edit",
+        "finding:delete",
         "report:view",
         "report:export",
         "evidence:upload",
@@ -29,6 +40,17 @@ DEFAULT_ROLE_PERMISSIONS = {
         "assessment:create",
         "assessment:view",
         "assessment:edit",
+        "template:create",
+        "template:edit",
+        "template:delete",
+        "site:create",
+        "site:edit",
+        "site:delete",
+        "task:create",
+        "task:edit",
+        "task:delete",
+        "finding:create",
+        "finding:edit",
         "report:view",
         "report:export",
         "evidence:upload",
@@ -54,6 +76,10 @@ DEFAULT_ROLE_PERMISSIONS = {
     ],
     UserRole.OPERATOR: [
         "assessment:view",
+        "site:create",
+        "site:edit",
+        "task:create",
+        "task:edit",
         "evidence:upload",
     ],
 }

@@ -26,13 +26,49 @@ from users.permissions import IsOrganizationMember, IsOrganizationOwnerOrAdmin
 
 def get_request_organization(request):
     organization = getattr(request, "organization", None)
-    if not organization:
+    if organization:
+        return organization
+
+    org_id = None
+    parser_context = getattr(request, "parser_context", None) or {}
+    kwargs = parser_context.get("kwargs") or {}
+    org_id = kwargs.get("org_pk") or kwargs.get("organization_pk")
+
+    if not org_id:
+        resolver_match = getattr(request, "resolver_match", None)
+        if resolver_match:
+            org_id = resolver_match.kwargs.get("org_pk") or resolver_match.kwargs.get(
+                "organization_pk"
+            )
+
+    if not org_id:
         raise PermissionDenied("Organization context is required.")
+
+    organization = Organization.objects.filter(id=org_id).first()
+    if not organization:
+        raise PermissionDenied("Invalid organization context.")
+
     return organization
 
 
 def get_request_membership(request):
     membership = getattr(request, "membership", None)
+    if membership:
+        return membership
+
+    if request.user.is_superuser:
+        return None
+
+    organization = get_request_organization(request)
+    membership = (
+        OrganizationMembership.objects.select_related("organization", "role")
+        .filter(
+            user=request.user,
+            organization=organization,
+            status=OrganizationMembership.Status.ACTIVE,
+        )
+        .first()
+    )
     if not membership:
         raise PermissionDenied("Valid organization membership is required.")
     return membership
@@ -91,7 +127,7 @@ class OrganizationViewSet(viewsets.ModelViewSet):
 
         self.check_object_permissions(self.request, obj)
         return obj
-    
+
     def get_serializer_class(self):
         if self.action == "retrieve":
             return OrganizationDetailSerializer
@@ -218,7 +254,9 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
             ).first()
             if not role:
                 return Response(
-                    {"detail": "Invalid role or role does not belong to this organization."},
+                    {
+                        "detail": "Invalid role or role does not belong to this organization."
+                    },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             membership.role = role
@@ -264,7 +302,9 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
 
         if membership.user == request.user:
             return Response(
-                {"detail": "Cannot remove yourself. Transfer ownership first if needed."},
+                {
+                    "detail": "Cannot remove yourself. Transfer ownership first if needed."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -299,7 +339,11 @@ class InvitationViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         organization = get_request_organization(self.request)
-        inviter_membership = get_request_membership(self.request)
+        inviter_membership = (
+            None
+            if self.request.user.is_superuser
+            else get_request_membership(self.request)
+        )
         fallback_role = self.request.data.get("fallback_role", "OPERATOR")
 
         role_hierarchy = {
@@ -316,7 +360,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
             raise ValidationError("Cannot invite SUPERADMIN role.")
 
         if not self.request.user.is_superuser:
-            inviter_priority = role_hierarchy.get(inviter_membership.fallback_role or "", 0)
+            inviter_priority = role_hierarchy.get(
+                inviter_membership.fallback_role or "", 0
+            )
             invitee_priority = role_hierarchy.get(fallback_role, 0)
 
             if invitee_priority > inviter_priority:
@@ -330,6 +376,7 @@ class InvitationViewSet(viewsets.ModelViewSet):
         )
 
         from organizations.email_service import send_invitation_email
+
         send_invitation_email(invitation)
 
     @action(detail=True, methods=["post"])
@@ -338,7 +385,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
 
         if invitation.status != Invitation.Status.PENDING:
             return Response(
-                {"detail": "Cannot resend invitation. It has been accepted or declined."},
+                {
+                    "detail": "Cannot resend invitation. It has been accepted or declined."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -351,6 +400,7 @@ class InvitationViewSet(viewsets.ModelViewSet):
             )
 
         from django.conf import settings
+
         from organizations.email_service import send_invitation_email
 
         try:
@@ -364,7 +414,9 @@ class InvitationViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_200_OK,
                     )
                 return Response(
-                    {"detail": "Failed to send invitation email. Please check email configuration or contact support."},
+                    {
+                        "detail": "Failed to send invitation email. Please check email configuration or contact support."
+                    },
                     status=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 )
         except Exception as e:
@@ -431,9 +483,14 @@ class InvitationAcceptView(APIView):
                 status=status.HTTP_410_GONE,
             )
 
-        if invitation.status not in [Invitation.Status.PENDING, Invitation.Status.ACCEPTED]:
+        if invitation.status not in [
+            Invitation.Status.PENDING,
+            Invitation.Status.ACCEPTED,
+        ]:
             return Response(
-                {"detail": f"This invitation has already been {invitation.status.lower()}."},
+                {
+                    "detail": f"This invitation has already been {invitation.status.lower()}."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -441,7 +498,9 @@ class InvitationAcceptView(APIView):
 
         invited_user = User.objects.filter(email__iexact=invitation.email).first()
         has_existing_account = bool(
-            invited_user and invited_user.password and invited_user.has_usable_password()
+            invited_user
+            and invited_user.password
+            and invited_user.has_usable_password()
         )
 
         return Response(
@@ -489,7 +548,9 @@ class InvitationAcceptView(APIView):
 
         if invitation.status != Invitation.Status.PENDING:
             return Response(
-                {"detail": f"This invitation has already been {invitation.status.lower()}."},
+                {
+                    "detail": f"This invitation has already been {invitation.status.lower()}."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -530,7 +591,9 @@ class InvitationAcceptView(APIView):
             )
 
         return Response(
-            {"detail": "Failed to accept invitation. It may have expired or been revoked."},
+            {
+                "detail": "Failed to accept invitation. It may have expired or been revoked."
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 

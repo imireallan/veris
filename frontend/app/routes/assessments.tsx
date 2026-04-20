@@ -13,7 +13,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const url = new URL(request.url);
   const scope = url.searchParams.get("scope") === "all" ? "all" : "current";
-  const { getAccessibleOrganizations, getSelectedOrganizationForRequest } = await import("~/.server/organizations");
+  const { getAccessibleOrganizations } = await import("~/.server/organizations");
 
   const fetchWithLog = async (path: string, label: string) => {
     try {
@@ -36,14 +36,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   };
 
   const organizations = await getAccessibleOrganizations(request, token);
-  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+  const selectedOrg = user.activeOrganization ?? null;
 
   const assessmentsPath =
     scope === "all"
       ? "/api/assessments/aggregate/"
-      : selectedOrg
-        ? `/api/assessments?organization=${selectedOrg.id}`
-        : "/api/assessments/aggregate/";
+      : "/api/assessments/";
 
   const [assessments, frameworks, focusAreas] =
     await Promise.all([
@@ -100,9 +98,7 @@ export default function AssessmentsListRoute() {
   );
 
   const currentOrgName = selectedOrg?.name ?? "Current Organization";
-  const canCreateInSelectedOrg = selectedOrg
-    ? RBAC.canCreateAssessments(user, selectedOrg.id)
-    : false;
+  const canCreateInSelectedOrg = RBAC.canCreateAssessments(user);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {

@@ -44,7 +44,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const orgId = params.orgId!;
 
   // Only ADMIN and SUPERADMIN can manage members
-  if (!RBAC.canManageOrg(user, orgId)) {
+  if (!user.isSuperuser && !RBAC.canManageOrg(user, orgId)) {
     // Return accessDenied instead of throwing - consistent with other routes
     return { 
       members: [], 
@@ -56,18 +56,33 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     };
   }
 
-  const [membersResponse, invitationsResponse] = await Promise.all([
-    api.get<any>(`/api/organizations/${orgId}/members/`, token, request).catch(() => ({})),
-    api.get<any>(`/api/organizations/${orgId}/invitations/`, token, request).catch(() => ({})),
-  ]);
-  
-  const members = Array.isArray(membersResponse) ? membersResponse : (membersResponse?.results || []);
-  const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : (invitationsResponse?.results || []);
+  try {
+    const [membersResponse, invitationsResponse] = await Promise.all([
+      api.withOrganization.get<any>(`/api/organizations/${orgId}/members/`, orgId, token, request),
+      api.withOrganization.get<any>(`/api/organizations/${orgId}/invitations/`, orgId, token, request),
+    ]);
 
-  const orgRole = RBAC.getOrgRole(user, orgId) || "OPERATOR";
-  const availableInviteRoles = getAvailableRolesForInviter(orgRole);
+    const members = Array.isArray(membersResponse) ? membersResponse : (membersResponse?.results || []);
+    const invitations = Array.isArray(invitationsResponse) ? invitationsResponse : (invitationsResponse?.results || []);
 
-  return { members, invitations, orgId, availableInviteRoles, userRole: orgRole, accessDenied: false };
+    const orgRole = RBAC.getOrgRole(user, orgId) || "OPERATOR";
+    const availableInviteRoles = getAvailableRolesForInviter(orgRole);
+
+    return { members, invitations, orgId, availableInviteRoles, userRole: orgRole, accessDenied: false };
+  } catch (error: any) {
+    if (error.status === 403) {
+      return {
+        members: [],
+        invitations: [],
+        orgId,
+        availableInviteRoles: [],
+        userRole: user.fallbackRole || "OPERATOR",
+        accessDenied: true,
+      };
+    }
+
+    throw error;
+  }
 }
 
 export async function action({ request, params }: ActionFunctionArgs) {
@@ -76,7 +91,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const orgId = params.orgId!;
 
   // Only ADMIN and SUPERADMIN can manage members
-  if (!RBAC.canManageOrg(user, orgId)) {
+  if (!user.isSuperuser && !RBAC.canManageOrg(user, orgId)) {
     return data({ error: "Insufficient permissions" }, { status: 403 });
   }
 
@@ -105,9 +120,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
         );
       }
 
-      const result = await api.post(
+      await api.withOrganization.post(
         `/api/organizations/${orgId}/invitations/`,
         { email, fallback_role: fallbackRole },
+        orgId,
         token,
         request
       );
@@ -123,9 +139,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
       if (role) payload.role = role;
       if (fallbackRole) payload.fallback_role = fallbackRole;
 
-      await api.post(
+      await api.withOrganization.post(
         `/api/organizations/${orgId}/members/${membershipId}/update_role/`,
         payload,
+        orgId,
         token,
         request
       );
@@ -134,9 +151,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     if (actionType === "remove_member") {
       const membershipId = formData.get("membershipId") as string;
-      await api.post(
+      await api.withOrganization.post(
         `/api/organizations/${orgId}/members/${membershipId}/remove/`,
         {},
+        orgId,
         token,
         request
       );
@@ -145,9 +163,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     if (actionType === "resend_invitation") {
       const invitationId = formData.get("invitationId") as string;
-      await api.post(
+      await api.withOrganization.post(
         `/api/organizations/${orgId}/invitations/${invitationId}/resend/`,
         {},
+        orgId,
         token,
         request
       );
@@ -156,9 +175,10 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
     if (actionType === "revoke_invitation") {
       const invitationId = formData.get("invitationId") as string;
-      await api.post(
+      await api.withOrganization.post(
         `/api/organizations/${orgId}/invitations/${invitationId}/revoke/`,
         {},
+        orgId,
         token,
         request
       );

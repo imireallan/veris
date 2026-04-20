@@ -4,15 +4,12 @@ import uuid
 from django.core.exceptions import ValidationError
 from django.db import models
 
-
 HSL_TRIPLE_RE = re.compile(r"^\d{1,3}\s+\d{1,3}\s+\d{1,3}$")
 
 
 def validate_hsl_triplet(value):
     if not HSL_TRIPLE_RE.match(value):
-        raise ValidationError(
-            "Color must be in 'H S L' format, e.g. '217 89 51'."
-        )
+        raise ValidationError("Color must be in 'H S L' format, e.g. '217 89 51'.")
 
 
 class OrganizationTheme(models.Model):

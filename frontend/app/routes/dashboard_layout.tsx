@@ -1,13 +1,9 @@
-import {
-  Outlet,
-  useLoaderData,
-  redirect,
-  useOutletContext,
-} from "react-router";
+import { Outlet, redirect, useLoaderData } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
+
 import { getUserToken, requireUser } from "~/.server/sessions";
 import { AppLayout } from "~/components/AppLayout";
-import type { User, OrganizationMembership } from "~/types";
+import { getAccessibleOrganizations } from "~/.server/organizations";
 import { RBAC } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -15,12 +11,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!token) throw redirect("/login");
 
   const user = await requireUser(request);
-
-  const { getAccessibleOrganizations } = await import("~/.server/organizations");
   const organizations = await getAccessibleOrganizations(request, token);
-
-  const selectedOrg =
-    organizations.find((org) => org.id === user.orgId) ?? null;
 
   const navLinks: { to: string; label: string; icon: string }[] = [
     { to: "/", label: "Dashboard", icon: "LayoutDashboard" },
@@ -32,7 +23,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     { to: "/data", label: "Data", icon: "Database" },
   ];
 
-  if (selectedOrg && RBAC.canManageOrg(user, selectedOrg.id)) {
+  if (RBAC.canManageOrg(user)) {
     navLinks.push({
       to: "/settings/theme",
       label: "Theme",
@@ -44,7 +35,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     navLinks,
     user,
     organizations,
-    selectedOrg,
   };
 }
 
@@ -53,7 +43,7 @@ export default function DashboardLayoutRoute() {
 
   return (
     <AppLayout user={user} organizations={organizations} navLinks={navLinks}>
-      <Outlet context={{ user, organizations }} />
+      <Outlet context={{ user }} />
     </AppLayout>
   );
 }

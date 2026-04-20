@@ -5,6 +5,7 @@ These are org-scoped via permission checks and query params, not URL kwargs.
 
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
 from assessments.models import (
@@ -32,8 +33,18 @@ from assessments.serializers import (
 from assessments.services.access import AssessmentAccessService
 from assessments.views.base import BaseAssessmentScopedViewSet
 from assessments.views.mixins import ReportExportMixin, ResponseValidationMixin
-from organizations.models import Organization, OrganizationMembership
-from users.roles import UserRole
+from organizations.models import OrganizationMembership
+
+
+def get_request_organization_id(request):
+    organization = getattr(request, "organization", None)
+    if organization:
+        return str(organization.id)
+    if hasattr(request, "query_params"):
+        return request.query_params.get("organization") or request.query_params.get(
+            "org"
+        )
+    return None
 
 
 class FlatAssessmentViewSet(viewsets.ModelViewSet):
@@ -49,32 +60,26 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = AssessmentAccessService.get_accessible_assessments(self.request.user)
+        org_id = get_request_organization_id(self.request)
 
-        # Support single or comma‑separated list of org IDs
-        org_param = self.request.query_params.get(
-            "org"
-        ) or self.request.query_params.get("organization")
-        if org_param:
-            org_ids = [oid.strip() for oid in org_param.split(",") if oid.strip()]
-            if len(org_ids) == 1:
-                qs = qs.filter(organization_id=org_ids[0])
-            else:
-                # For superadmins we allow filtering across multiple orgs
-                qs = qs.filter(organization_id__in=org_ids)
+        if org_id:
+            return qs.filter(organization_id=org_id)
+
+        if self.request.user.is_superuser:
+            return qs
 
         return qs
 
     @action(detail=False, methods=["GET"])
     def aggregate(self, request):
-        """
-        Return assessments from *all* organizations the user belongs to.
-        Optional query param: ?org_ids=uuid1,uuid2
-        """
+        """Return assessments scoped to the active organization, unless platform superuser."""
         user = request.user
         requested_org_ids = request.query_params.get("org_ids")
+        active_org_id = get_request_organization_id(request)
 
-        # For superusers, return all assessments by default.
-        if user.is_superuser:
+        if active_org_id:
+            qs = Assessment.objects.filter(organization_id=active_org_id)
+        elif user.is_superuser:
             qs = Assessment.objects.all()
             if requested_org_ids:
                 org_ids = [
@@ -82,9 +87,6 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
                 ]
                 qs = qs.filter(organization_id__in=org_ids)
         else:
-            # Regular users are always restricted to assessments in organizations
-            # they already belong to. Query params may further narrow that set, but
-            # can never expand it.
             qs = AssessmentAccessService.get_accessible_assessments(user)
             if requested_org_ids:
                 org_ids = [
@@ -97,31 +99,12 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         user = self.request.user
+        organization = getattr(self.request, "organization", None)
 
-        # 1. Determine the organization object
-        # If it's already in validated_data, the serializer keeps it.
-        # We only need to provide it if it's missing.
-        org = serializer.validated_data.get("organization")
+        if not organization and not user.is_superuser:
+            raise PermissionDenied("Organization context is required.")
 
-        if not org:
-            # Check query params for an override
-            org_id = self.request.query_params.get(
-                "org"
-            ) or self.request.query_params.get("organization")
-
-            if org_id:
-                # You can assign the ID directly to organization_id
-                # OR fetch the object to be safe:
-                org = Organization.objects.filter(id=org_id).first()
-            else:
-                # Default to membership
-                membership = OrganizationMembership.objects.filter(user=user).first()
-                if membership:
-                    org = membership.organization
-
-        # 2. Save with the organization object (or ID)
-        # The serializer's create() method expects an object for the 'organization' field
-        serializer.save(organization=org, created_by=user)
+        serializer.save(organization=organization, created_by=user)
 
 
 class FlatFindingViewSet(BaseAssessmentScopedViewSet):
@@ -237,16 +220,16 @@ class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         template_id = self.request.query_params.get("template")
-        organization_id = self.request.query_params.get(
-            "org"
-        ) or self.request.query_params.get("organization")
+        organization_id = get_request_organization_id(self.request)
         queryset = AssessmentQuestion.objects.select_related("assessment_template")
         if template_id:
             queryset = queryset.filter(assessment_template_id=template_id)
         if organization_id:
             queryset = queryset.filter(
-                assessment_template__organization_id=organization_id
+                assessment_template__owner_org_id=organization_id
             )
+        elif not self.request.user.is_superuser:
+            return AssessmentQuestion.objects.none()
         return queryset
 
     @action(detail=True, methods=["get"], url_path="mappings")
@@ -351,29 +334,12 @@ class FlatSiteViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        org_id = self.request.query_params.get("org") or self.request.query_params.get(
-            "organization"
-        )
+        org_id = get_request_organization_id(self.request)
 
         if org_id:
-            if (
-                OrganizationMembership.objects.filter(
-                    user=user, organization_id=org_id
-                ).exists()
-                or user.is_superuser
-            ):
-                return Site.objects.filter(organization_id=org_id)
-            return Site.objects.none()
+            return Site.objects.filter(organization_id=org_id)
 
-        # Platform-level admins: can see all orgs
-        if user.is_superuser or getattr(user, "role", None) == UserRole.SUPERADMIN:
+        if user.is_superuser:
             return Site.objects.all()
-
-        # All other users: scoped to their memberships
-        memberships = OrganizationMembership.objects.filter(user=user).values_list(
-            "organization_id", flat=True
-        )
-        if memberships:
-            return Site.objects.filter(organization_id__in=memberships)
 
         return Site.objects.none()

@@ -1,5 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
+export const STORAGE_STATE = "playwright/.auth/user.json";
+
 export default defineConfig({
   testDir: "./tests/e2e",
   timeout: 60000,
@@ -17,12 +19,20 @@ export default defineConfig({
   },
   projects: [
     {
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
+    },
+    {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: STORAGE_STATE,
+      },
+      dependencies: ["setup"],
     },
   ],
   webServer: {
-    command: "npm run dev",
+    command: "npm run dev:devtools -- --host 0.0.0.0",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
   },

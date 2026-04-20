@@ -160,8 +160,12 @@ class OrganizationMembershipSerializer(serializers.ModelSerializer):
     role_permissions = serializers.SerializerMethodField()
     user_email = serializers.EmailField(source="user.email", read_only=True)
     user_name = serializers.CharField(source="user.name", read_only=True)
-    organization_name = serializers.CharField(source="organization.name", read_only=True)
-    organization_slug = serializers.CharField(source="organization.slug", read_only=True)
+    organization_name = serializers.CharField(
+        source="organization.name", read_only=True
+    )
+    organization_slug = serializers.CharField(
+        source="organization.slug", read_only=True
+    )
 
     class Meta:
         model = OrganizationMembership

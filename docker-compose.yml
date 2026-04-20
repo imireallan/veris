@@ -8,7 +8,7 @@ services:
       - "5173:5173"
     env_file:
       - .env
-    command: npm run dev -- --host 0.0.0.0
+    command: npm run dev:devtools -- --host 0.0.0.0
     volumes:
       - ./frontend:/app
       - /app/node_modules
@@ -17,6 +17,8 @@ services:
       - BACKEND_URL=http://backend:8000
       - VITE_AI_API_URL=http://localhost:8001
       - AI_BACKEND_URL=http://ai_engine:8001
+      - VITE_ENABLE_ROUTER_DEVTOOLS=true
+      - ENABLE_ROUTER_DEVTOOLS=true
     depends_on:
       backend:
         condition: service_started

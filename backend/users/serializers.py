@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from organizations.models import OrganizationMembership
+
 from .models import User
 
 
@@ -111,6 +112,7 @@ class MeSerializer(serializers.ModelSerializer):
     active_membership = serializers.SerializerMethodField()
     active_permissions = serializers.SerializerMethodField()
     recent_organizations = serializers.SerializerMethodField()
+    organizations = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -130,6 +132,7 @@ class MeSerializer(serializers.ModelSerializer):
             "active_membership",
             "active_permissions",
             "recent_organizations",
+            "organizations",
         )
 
     def _get_memberships(self, obj):
@@ -212,6 +215,18 @@ class MeSerializer(serializers.ModelSerializer):
             "assessment:edit",
             "assessment:delete",
             "assessment:approve",
+            "template:create",
+            "template:edit",
+            "template:delete",
+            "site:create",
+            "site:edit",
+            "site:delete",
+            "task:create",
+            "task:edit",
+            "task:delete",
+            "finding:create",
+            "finding:edit",
+            "finding:delete",
             "report:view",
             "report:export",
             "evidence:upload",
@@ -240,3 +255,6 @@ class MeSerializer(serializers.ModelSerializer):
             }
             for membership in memberships
         ]
+
+    def get_organizations(self, obj):
+        return self.get_recent_organizations(obj)

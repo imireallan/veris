@@ -1,7 +1,7 @@
 /** Session management for JWT-based auth with cookie sessions. */
 
 import { createCookieSessionStorage, redirect } from "react-router";
-import type { User } from "~/types";
+import type { MeResponse, User } from "~/types";
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -87,7 +87,11 @@ export async function requireUser(request: Request): Promise<User> {
     });
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as MeResponse;
+
+  const activeOrganization = data.active_organization ?? null;
+  const activeMembership = data.active_membership ?? null;
+  const recentOrganizations = data.recent_organizations ?? [];
 
   return {
     id: data.id ?? "",
@@ -99,21 +103,23 @@ export async function requireUser(request: Request): Promise<User> {
       data.email?.split("@")?.[0] ??
       "",
     lastName: data.last_name ?? "",
-    orgId: data.active_organization?.id ?? null,
-    orgName: data.active_organization?.name ?? undefined,
-    role: (
-      data.active_membership?.role ??
-      data.active_membership?.fallback_role ??
-      "VIEWER"
-    ).toUpperCase() as User["role"],
-    fallbackRole: data.active_membership?.fallback_role ?? undefined,
     pictureUrl: data.picture_url ?? undefined,
-    organizations: [], // Load separately from a dedicated memberships endpoint when needed
+    orgId: activeOrganization?.id ?? null,
+    orgName: activeOrganization?.name ?? undefined,
+    role: (
+      activeMembership?.role ?? activeMembership?.fallback_role ?? "VIEWER"
+    ).toUpperCase() as User["role"],
+    fallbackRole: activeMembership?.fallback_role ?? undefined,
+    activeOrganization,
+    activeMembership,
+    activePermissions: data.active_permissions ?? [],
+    organizationCount: data.organization_count ?? recentOrganizations.length,
+    recentOrganizations,
+    organizations: recentOrganizations,
     isSuperuser: data.is_superuser ?? false,
     isStaff: data.is_staff ?? false,
     timezone: data.timezone ?? undefined,
     country: data.country ?? undefined,
-    activePermissions: data.active_permissions ?? [],
   };
 }
 

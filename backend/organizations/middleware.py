@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.core.exceptions import PermissionDenied
 from django.utils.deprecation import MiddlewareMixin
 
-from organizations.models import OrganizationMembership
+from organizations.models import Organization, OrganizationMembership
 
 
 class OrganizationContextMiddleware(MiddlewareMixin):
@@ -35,6 +35,15 @@ class OrganizationContextMiddleware(MiddlewareMixin):
 
         org_id = request.META.get(self.HEADER_NAME)
         if not org_id:
+            return None
+
+        if user.is_superuser:
+            organization = Organization.objects.filter(id=org_id).first()
+            if not organization:
+                raise PermissionDenied("Invalid organization context.")
+
+            request.organization = organization
+            request.membership = None
             return None
 
         membership = (

@@ -2,12 +2,21 @@
 
 import type { ThemeConfig } from "~/types";
 import { api } from "./lib/api";
+import { getSelectedOrganizationId } from "./sessions";
 
-export async function fetchThemeConfig(orgId: string, token?: string | null): Promise<ThemeConfig> {
+export async function fetchThemeConfig(
+  request: Request,
+  token?: string | null,
+): Promise<ThemeConfig> {
+  const orgId = await getSelectedOrganizationId(request);
   if (!orgId) return getDefaultTheme();
 
   try {
-    const data = await api.get<ThemeConfig>(`/api/themes/${orgId}`, token ?? undefined);
+    const data = await api.get<ThemeConfig>(
+      `/api/themes/${orgId}`,
+      token ?? undefined,
+      request,
+    );
     return data;
   } catch {
     return getDefaultTheme();
@@ -15,12 +24,18 @@ export async function fetchThemeConfig(orgId: string, token?: string | null): Pr
 }
 
 export async function updateThemeConfig(
-  orgId: string,
+  request: Request,
   theme: Partial<ThemeConfig>,
+  token?: string | null,
 ): Promise<ThemeConfig> {
-  const existing = await fetchThemeConfig(orgId);
+  const orgId = await getSelectedOrganizationId(request);
+  if (!orgId) {
+    return getDefaultTheme();
+  }
+
+  const existing = await fetchThemeConfig(request, token);
   const merged = { ...existing, ...theme };
-  await api.put(`/api/themes/${orgId}`, merged);
+  await api.put(`/api/themes/${orgId}`, merged, token, request);
   return merged;
 }
 

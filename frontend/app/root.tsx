@@ -51,14 +51,14 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (token) {
     try {
       user = await requireUser(request);
-      theme = await fetchThemeConfig(user?.orgId ?? "", token);
+      theme = await fetchThemeConfig(request, token);
     } catch {
       user = null;
     }
   }
 
   if (!theme) {
-    theme = await fetchThemeConfig("", token);
+    theme = await fetchThemeConfig(request, token);
   }
 
   return data({ user, theme });

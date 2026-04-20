@@ -23,7 +23,6 @@ from assessments.serializers import (
     AssessmentTemplateSerializer,
 )
 from users.permissions import CanManageTemplates
-from users.roles import UserRole
 
 
 class AssessmentTemplateViewSet(viewsets.ModelViewSet):
@@ -44,26 +43,32 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """
-        Filter templates based on user role:
-        - SUPERADMIN: All templates
-        - ORG_ADMIN: Public templates + templates owned by their org
+        Filter templates based on active tenant context.
+        - SUPERADMIN: all templates
+        - Org users: public templates + templates owned by request.organization
         """
         user = self.request.user
+        organization = getattr(self.request, "organization", None)
 
-        if user.fallback_role == UserRole.SUPERADMIN:
+        if user.is_superuser:
             return AssessmentTemplate.objects.all().select_related(
                 "framework", "owner_org", "created_by", "published_by"
             )
 
-        # ORG_ADMIN and below: Only public or org-owned templates
+        if not organization:
+            return AssessmentTemplate.objects.filter(
+                is_public=True,
+                status=AssessmentTemplate.Status.PUBLISHED,
+            ).select_related("framework", "owner_org")
+
         return AssessmentTemplate.objects.filter(
-            Q(is_public=True) | Q(owner_org=user.organization),
+            Q(is_public=True) | Q(owner_org=organization),
             status=AssessmentTemplate.Status.PUBLISHED,
         ).select_related("framework", "owner_org")
 
     def perform_create(self, serializer):
         """SUPERADMIN creates template."""
-        if self.request.user.fallback_role != UserRole.SUPERADMIN:
+        if not self.request.user.is_superuser:
             raise PermissionDenied("Only SUPERADMIN can create templates")
 
         # Auto-generate slug from name if not provided
@@ -144,6 +149,7 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
             for question in source.assessment_questions.all():
                 AssessmentQuestion.objects.create(
                     template=new_template,
+                    organization=new_template.organization or new_template.owner_org,
                     text=question.text,
                     order=question.order,
                     category=question.category,
@@ -181,26 +187,31 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
             )
 
         org_id = request.data.get("organization_id")
-        if not org_id:
-            # Use user's organization if not specified
-            if hasattr(request.user, "organization"):
-                org_id = str(request.user.organization.id)
-            else:
+        active_organization = getattr(request, "organization", None)
+
+        if request.user.is_superuser:
+            if not org_id:
                 return Response(
                     {"error": "organization_id is required"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+        else:
+            if not active_organization:
+                return Response(
+                    {"error": "Active organization context is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            org_id = str(active_organization.id)
 
         # Validate organization access
         from organizations.models import Organization
 
         org = get_object_or_404(Organization, id=org_id)
 
-        if request.user.fallback_role != UserRole.SUPERADMIN:
-            if str(org.id) != str(request.user.organization.id):
-                raise PermissionDenied(
-                    "Cannot instantiate template for other organizations"
-                )
+        if not request.user.is_superuser and str(org.id) != str(active_organization.id):
+            raise PermissionDenied(
+                "Cannot instantiate template for other organizations"
+            )
 
         # Create assessment instance
         with transaction.atomic():
@@ -221,6 +232,7 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
                     assessment=assessment,
                     # Link to template question for tracking
                     # (questions can be customized after instantiation)
+                    organization=assessment.organization,
                     text=template_question.text,
                     order=template_question.order,
                     category=template_question.category,
@@ -299,7 +311,11 @@ class TemplateQuestionViewSet(viewsets.ModelViewSet):
             template.assessment_questions.aggregate(Max("order"))["order__max"] or 0
         )
 
-        serializer.save(template=template, order=max_order + 1)
+        serializer.save(
+            template=template,
+            organization=template.organization or template.owner_org,
+            order=max_order + 1,
+        )
 
     def perform_update(self, serializer):
         if not serializer.instance.template.can_edit():

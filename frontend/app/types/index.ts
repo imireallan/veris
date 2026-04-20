@@ -94,6 +94,8 @@ export interface OrganizationListItem {
   is_default?: boolean;
 }
 
+export type OrganizationMembership = OrganizationListItem;
+
 export type User = {
   id: string;
   email: string;

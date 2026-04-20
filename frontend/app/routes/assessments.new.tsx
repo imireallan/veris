@@ -52,25 +52,19 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const formData = await request.formData();
-  const { getSelectedOrganizationForRequest } =
-    await import("~/.server/organizations");
-
-  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+  const selectedOrg = user.activeOrganization ?? null;
   if (!selectedOrg) {
     return {
       error: "Organization required. Please select an organization first.",
     };
   }
 
-  if (!RBAC.canCreateAssessments(user, selectedOrg.id)) {
+  if (!RBAC.canCreateAssessments(user)) {
     return {
       error: `You do not have permission to create assessments in ${selectedOrg.name}.`,
       success: false,
     };
   }
-
-  // Force organization ID from server-side (don't trust client)
-  const organizationId = selectedOrg.id;
 
   // Handle site creation inline (hidden field with JSON payload)
   const siteJson = formData.get("__new_site");
@@ -85,12 +79,12 @@ export async function action({ request }: ActionFunctionArgs) {
           name,
           type,
           country_code,
-          organization: organizationId,
           operational_status: "ACTIVE",
           risk_profile: "MEDIUM",
           coordinates: {},
         },
         token,
+        request,
       );
       siteId = site.id;
     } catch (err: any) {
@@ -104,7 +98,6 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   const data: Record<string, any> = {
-    organization: organizationId,
     status: formData.get("status") || "DRAFT",
     risk_level: formData.get("risk_level") || "LOW",
     overall_score: 0,
@@ -148,9 +141,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  const { getSelectedOrganizationForRequest } =
-    await import("~/.server/organizations");
-  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+  const selectedOrg = user.activeOrganization ?? null;
 
   if (!selectedOrg) {
     return {
@@ -164,7 +155,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     };
   }
 
-  if (!RBAC.canCreateAssessments(user, selectedOrg.id)) {
+  if (!RBAC.canCreateAssessments(user)) {
     return {
       sites: [],
       frameworks: [],
@@ -176,26 +167,25 @@ export async function loader({ request }: LoaderFunctionArgs) {
     };
   }
 
-  const canAccessTemplates =
-    selectedOrg && RBAC.canManageTemplates(user, selectedOrg.id);
+  const canAccessTemplates = RBAC.canManageTemplates(user);
 
   const [sites, frameworks, focusAreas, templates] = await Promise.all([
     api
-      .get<any>("/api/sites/", token)
+      .get<any>("/api/sites/", token, request)
       .then(unwrap)
       .catch(() => []),
     api
-      .get<any>("/api/frameworks/", token)
+      .get<any>("/api/frameworks/", token, request)
       .then(unwrap)
       .catch(() => []),
     api
-      .get<any>("/api/focus-areas/", token)
+      .get<any>("/api/focus-areas/", token, request)
       .then(unwrap)
       .catch(() => []),
     // Fetch available templates if user has permission
     canAccessTemplates
       ? api
-          .get<any>("/api/templates/public/", token)
+          .get<any>("/api/templates/public/", token, request)
           .then(unwrap)
           .catch(() => [])
       : Promise.resolve([]),

@@ -36,7 +36,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   );
   const assessmentList = Array.isArray(allAssessments)
     ? allAssessments
-    : allAssessments?.results || [];
+    : ((allAssessments as { results?: any[] } | null)?.results ?? []);
 
   const assessments = assessmentList.filter(
     (a: any) =>

@@ -9,14 +9,21 @@ from organizations.models import Organization, OrganizationMembership
 class OrganizationContextMiddleware(MiddlewareMixin):
     """
     Attaches the active organization and membership to the request.
-
+    
+    For JWT-authenticated requests:
+        - Organization context is resolved by JWTOrganizationAuthentication
+        - This middleware skips processing (request.organization already set)
+    
+    For session-authenticated requests:
+        - This middleware resolves org context from X-Organization-Id header
+    
     Expected request header:
         X-Organization-Id: <organization_uuid>
-
+    
     Sets:
         request.organization
         request.membership
-
+    
     Behavior:
     - If user is anonymous, leaves both as None
     - If header is missing, leaves both as None
@@ -26,6 +33,10 @@ class OrganizationContextMiddleware(MiddlewareMixin):
     HEADER_NAME = "HTTP_X_ORGANIZATION_ID"
 
     def process_request(self, request):
+        # If already set by JWTOrganizationAuthentication, skip
+        if hasattr(request, "organization") and request.organization is not None:
+            return None
+        
         request.organization = None
         request.membership = None
 

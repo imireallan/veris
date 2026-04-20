@@ -3,8 +3,6 @@ from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from organizations.models import OrganizationMembership
-
 
 class ResponseValidationMixin:
     @action(detail=True, methods=["post"])
@@ -51,9 +49,22 @@ class ReportExportMixin:
         report = self.get_object()
 
         if not request.user.is_superuser:
-            if not OrganizationMembership.objects.filter(
-                user=request.user, organization_id=report.organization_id
-            ).exists():
+            organization = getattr(request, "organization", None)
+            membership = getattr(request, "membership", None)
+
+            if not organization or not membership:
+                return Response(
+                    {"error": "Organization context required"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if str(report.organization_id) != str(organization.id):
+                return Response(
+                    {"error": "Access denied"},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if not membership.has_permission("report:export"):
                 return Response(
                     {"error": "Access denied"},
                     status=status.HTTP_403_FORBIDDEN,

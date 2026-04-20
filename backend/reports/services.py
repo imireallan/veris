@@ -9,6 +9,8 @@ from pathlib import Path
 from django.conf import settings
 from django.template.loader import render_to_string
 
+from themes.models import OrganizationTheme
+
 try:
     from weasyprint import CSS, HTML
 
@@ -96,6 +98,12 @@ class ReportGenerator:
         """Build template context from report and assessment data."""
         report = self.report
         assessment = self.assessment
+        organization = getattr(report, "organization", None) or getattr(
+            assessment, "organization", None
+        )
+        theme = None
+        if organization:
+            theme = OrganizationTheme.objects.filter(organization=organization).first()
 
         # Get findings for this assessment
         findings = list(assessment.findings.all()[:10])  # Limit to 10 for summary
@@ -145,6 +153,36 @@ class ReportGenerator:
                 }
             )
 
+        branding = {
+            "brand_app_name": theme.app_name if theme and theme.app_name else "Veris",
+            "brand_logo_url": theme.logo_url if theme else "",
+            "brand_favicon_url": theme.favicon_url if theme else "",
+            "brand_font_family": (
+                theme.font_family
+                if theme and theme.font_family
+                else "Inter, system-ui, sans-serif"
+            ),
+            "brand_primary": theme.primary_color if theme else "160 84 39",
+            "brand_primary_foreground": (
+                theme.primary_foreground_color if theme else "0 0 100"
+            ),
+            "brand_secondary": theme.secondary_color if theme else "210 40 96",
+            "brand_secondary_foreground": (
+                theme.secondary_foreground_color if theme else "222 47 11"
+            ),
+            "brand_accent": theme.accent_color if theme else "38 92 50",
+            "brand_accent_foreground": (
+                theme.accent_foreground_color if theme else "0 0 0"
+            ),
+            "brand_background": theme.background_color if theme else "0 0 100",
+            "brand_foreground": theme.text_color if theme else "222 84 5",
+            "brand_muted": theme.muted_color if theme else "210 40 96",
+            "brand_muted_foreground": (
+                theme.muted_foreground_color if theme else "215 16 47"
+            ),
+            "brand_border": theme.border_color if theme else "214 32 91",
+        }
+
         # Build context
         context = {
             # Report metadata
@@ -160,11 +198,9 @@ class ReportGenerator:
             "assessment_start_date": getattr(assessment, "start_date", "N/A"),
             "assessment_due_date": getattr(assessment, "due_date", "N/A"),
             # Organization
-            "organization_name": (
-                assessment.organization.name
-                if hasattr(assessment, "organization")
-                else "Organization"
-            ),
+            "organization_name": organization.name if organization else "Organization",
+            # Branding
+            **branding,
             # Report sections
             "executive_summary": report.executive_summary
             or "No executive summary provided.",

@@ -428,7 +428,7 @@ class Command(BaseCommand):
             name="Energy Certification Standard"
         ).first()
 
-        # Demo assessment with full Bettercoal-style flow
+        # Demo assessment with a full multi-step assurance flow
         demo_assessment = None
         if mining_org and mining_org.focus_areas.exists():
             focus_area = mining_org.focus_areas.first()

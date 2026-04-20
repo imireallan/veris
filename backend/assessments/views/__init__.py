@@ -38,7 +38,6 @@ from assessments.serializers import (
 )
 from assessments.services.access import AssessmentAccessService
 from assessments.views.mixins import ReportExportMixin, ResponseValidationMixin
-from organizations.models import OrganizationMembership
 from users.permissions import (
     CanManageAssessments,
     CanManageFindings,
@@ -48,6 +47,22 @@ from users.permissions import (
     IsAssessmentOwner,
     IsOrganizationMember,
 )
+
+
+def get_request_organization_id(request, kwargs=None):
+    organization = getattr(request, "organization", None)
+    if organization:
+        return str(organization.id)
+
+    if kwargs and kwargs.get("org_pk"):
+        return str(kwargs.get("org_pk"))
+
+    if hasattr(request, "query_params"):
+        return request.query_params.get("organization") or request.query_params.get(
+            "org"
+        )
+
+    return None
 
 
 class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
@@ -63,7 +78,10 @@ class ESGFocusAreaViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return ESGFocusArea.objects.filter(organization_id=self.kwargs.get("org_pk"))
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        if not org_id:
+            return ESGFocusArea.objects.none()
+        return ESGFocusArea.objects.filter(organization_id=org_id)
 
 
 class ExternalRatingViewSet(viewsets.ModelViewSet):
@@ -71,10 +89,15 @@ class ExternalRatingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return ExternalRating.objects.filter(organization_id=self.kwargs.get("org_pk"))
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        if not org_id:
+            return ExternalRating.objects.none()
+        return ExternalRating.objects.filter(organization_id=org_id)
 
     def perform_create(self, serializer):
-        org_id = self.kwargs.get("org_pk")
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        if not org_id:
+            raise PermissionDenied("Organization context is required.")
         serializer.save(organization_id=org_id)
 
 
@@ -87,34 +110,24 @@ class AssessmentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = AssessmentAccessService.get_accessible_assessments(self.request.user)
 
-        org_id = (
-            self.kwargs.get("org_pk")
-            or self.request.query_params.get("org")
-            or self.request.query_params.get("organization")
-        )
-
+        org_id = get_request_organization_id(self.request, self.kwargs)
         if org_id:
             qs = qs.filter(organization_id=org_id)
+        elif not self.request.user.is_superuser:
+            qs = qs.none()
 
         return qs.select_related(
             "site", "focus_area", "framework", "created_by", "assigned_to"
         )
 
     def perform_create(self, serializer):
-        user = self.request.user
+        organization = getattr(self.request, "organization", None)
+        if not organization and not self.request.user.is_superuser:
+            raise PermissionDenied(
+                "You must select an active organization to create assessments"
+            )
 
-        # Auto-set organization from user's membership if not provided
-        if not serializer.validated_data.get("organization"):
-            # Get user's primary organization membership
-            membership = OrganizationMembership.objects.filter(user=user).first()
-            if membership:
-                serializer.validated_data["organization"] = membership.organization
-            else:
-                raise PermissionDenied(
-                    "You must belong to an organization to create assessments"
-                )
-
-        serializer.save(created_by=user)
+        serializer.save(created_by=self.request.user, organization=organization)
 
 
 class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
@@ -128,25 +141,19 @@ class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        org_id = get_request_organization_id(self.request, self.kwargs)
 
-        # Superusers can see all assessments
-        if user.is_superuser:
-            return Assessment.objects.select_related(
-                "site", "focus_area", "framework", "created_by", "assigned_to"
-            )
-
-        # Get all organizations the user belongs to
-        memberships = OrganizationMembership.objects.filter(user=user).values_list(
-            "organization_id", flat=True
+        queryset = Assessment.objects.select_related(
+            "site", "focus_area", "framework", "created_by", "assigned_to"
         )
 
-        if not memberships:
+        if user.is_superuser and not org_id:
+            return queryset
+
+        if not org_id:
             return Assessment.objects.none()
 
-        # Filter assessments by user's organizations
-        return Assessment.objects.filter(
-            organization_id__in=memberships
-        ).select_related("site", "focus_area", "framework", "created_by", "assigned_to")
+        return queryset.filter(organization_id=org_id)
 
     @action(detail=True, methods=["get"])
     def full_detail(self, request, pk=None):
@@ -187,9 +194,13 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageTemplates]
 
     def get_queryset(self):
-        return AssessmentTemplate.objects.filter(
-            organization_id=self.kwargs.get("org_pk")
-        )
+        organization = getattr(self.request, "organization", None)
+        if not organization:
+            if self.request.user.is_superuser:
+                return AssessmentTemplate.objects.all()
+            return AssessmentTemplate.objects.none()
+
+        return AssessmentTemplate.objects.filter(owner_org=organization)
 
 
 class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
@@ -215,7 +226,11 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
         # Fallback: Filter questions by organization if assessment_pk is missing
         if org_pk:
-            return AssessmentQuestion.objects.filter(template__organization_id=org_pk)
+            organization = getattr(self.request, "organization", None)
+            if organization and str(organization.id) == str(org_pk):
+                return AssessmentQuestion.objects.filter(
+                    template__owner_org=organization
+                )
         return AssessmentQuestion.objects.none()
 
 
@@ -229,6 +244,15 @@ class AssessmentResponseViewSet(ResponseValidationMixin, viewsets.ModelViewSet):
             return AssessmentResponse.objects.none()
 
         return AssessmentResponse.objects.filter(assessment_id=assessment_pk)
+
+    def perform_create(self, serializer):
+        assessment = serializer.validated_data.get("assessment")
+        if not assessment:
+            raise PermissionDenied("Assessment is required.")
+        serializer.save(
+            organization_id=assessment.organization_id,
+            created_by=self.request.user,
+        )
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def validate(self, request, pk=None):
@@ -289,7 +313,10 @@ class AIInsightViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        return AIInsight.objects.filter(organization_id=self.kwargs.get("org_pk"))
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        if not org_id:
+            return AIInsight.objects.none()
+        return AIInsight.objects.filter(organization_id=org_id)
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -297,7 +324,10 @@ class TaskViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageTasks]
 
     def get_queryset(self):
-        return Task.objects.filter(organization_id=self.kwargs.get("org_pk"))
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        if not org_id:
+            return Task.objects.none()
+        return Task.objects.filter(organization_id=org_id)
 
 
 class SiteViewSet(viewsets.ModelViewSet):
@@ -305,29 +335,27 @@ class SiteViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageSites]
 
     def get_queryset(self):
-        org_id = (
-            self.kwargs.get("org_pk")
-            or self.request.query_params.get("org")
-            or self.request.query_params.get("organization")
-        )
+        org_id = get_request_organization_id(self.request, self.kwargs)
         qs = Site.objects.all()
         if org_id:
-            qs = qs.filter(organization_id=org_id)
-        return qs
+            return qs.filter(organization_id=org_id)
+        if self.request.user.is_superuser:
+            return qs
+        return qs.none()
 
 
 class AssessmentReportViewSet(ReportExportMixin, viewsets.ModelViewSet):
     serializer_class = AssessmentReportSerializer
-    permission_classes = [IsAuthenticated, CanManageTemplates]
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
         qs = AssessmentReport.objects.select_related("assessment", "organization")
 
-        org_id = self.kwargs.get("org_pk") or self.request.query_params.get(
-            "organization"
-        )
+        org_id = get_request_organization_id(self.request, self.kwargs)
         if org_id:
             qs = qs.filter(organization_id=org_id)
+        elif not self.request.user.is_superuser:
+            qs = qs.none()
 
         return qs
 
@@ -337,12 +365,12 @@ class FindingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanManageFindings]
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
-            "organization"
-        )
+        org_pk = get_request_organization_id(self.request, self.kwargs)
         qs = Finding.objects.select_related("assessment", "site", "provision")
         if org_pk:
             qs = qs.filter(assessment__organization_id=org_pk)
+        elif not self.request.user.is_superuser:
+            qs = qs.none()
         return qs
 
 
@@ -351,12 +379,12 @@ class CIPCycleViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
-            "organization"
-        )
+        org_pk = get_request_organization_id(self.request, self.kwargs)
         qs = CIPCycle.objects.select_related("assessment")
         if org_pk:
             qs = qs.filter(assessment__organization_id=org_pk)
+        elif not self.request.user.is_superuser:
+            qs = qs.none()
         return qs
 
 
@@ -365,10 +393,10 @@ class AssessmentPlanViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        org_pk = self.kwargs.get("org_pk") or self.request.query_params.get(
-            "organization"
-        )
+        org_pk = get_request_organization_id(self.request, self.kwargs)
         qs = AssessmentPlan.objects.select_related("assessment")
         if org_pk:
             qs = qs.filter(assessment__organization_id=org_pk)
+        elif not self.request.user.is_superuser:
+            qs = qs.none()
         return qs

@@ -11,188 +11,210 @@ export enum UserRole {
 }
 
 export class RBAC {
-  static getOrgMembership(user: User, orgId: string) {
-    if (!orgId) return null;
-
-    return user.organizations?.find((org) => String(org.id) === String(orgId)) ?? null;
+  /**
+   * Platform-scoped only.
+   * Do not use this for tenant membership checks.
+   */
+  static isPlatformAdmin(user: User | null): boolean {
+    return !!user?.isSuperuser;
   }
 
-  static getOrgRole(user: User, orgId: string): string | null {
-    if (user.fallbackRole === UserRole.SUPERADMIN || user.isSuperuser) {
+  /**
+   * Returns the active org id from the normalized user object.
+   */
+  static getActiveOrgId(user: User | null): string | null {
+    return user?.orgId ?? null;
+  }
+
+  /**
+   * Returns the active fallback role from the normalized user object.
+   * Useful for display only, not as the primary source of authorization.
+   */
+  static getActiveRole(user: User | null): string | null {
+    if (!user) return null;
+
+    if (user.isSuperuser && !user.orgId) {
       return UserRole.SUPERADMIN;
     }
 
-    const membership = RBAC.getOrgMembership(user, orgId);
-    if (membership) {
-      return membership.fallback_role ?? membership.role ?? null;
-    }
-
-    if (String(user.orgId) === String(orgId)) {
-      return user.fallbackRole ?? user.role ?? null;
-    }
-
-    return null;
+    return user.fallbackRole ?? user.role ?? null;
   }
 
   /**
-   * Global platform admin or member of the specific organization.
+   * Checks whether the user is currently inside an active tenant context.
    */
-  static isOrgMember(user: User, orgId: string): boolean {
-    if (user.fallbackRole === UserRole.SUPERADMIN || user.isSuperuser) return true;
+  static hasActiveOrganization(user: User | null): boolean {
+    return !!user?.orgId;
+  }
 
+  /**
+   * Active-org permission check.
+   * This should be the primary authorization mechanism for UI logic.
+   */
+  static hasPermission(user: User | null, permission: string): boolean {
+    if (!user) return false;
+    return user.activePermissions?.includes(permission) ?? false;
+  }
+
+  /**
+   * Platform-level action.
+   */
+  static canCreateOrganization(user: User | null): boolean {
+    return this.isPlatformAdmin(user);
+  }
+
+  static isOrgMember(user: User | null, orgId: string): boolean {
+    if (!user || !orgId) return false;
+    if (this.isPlatformAdmin(user)) return true;
     if (String(user.orgId) === String(orgId)) return true;
-
-    return Boolean(RBAC.getOrgMembership(user, orgId));
+    return (
+      user.recentOrganizations?.some(
+        (organization) => String(organization.id) === String(orgId),
+      ) ?? false
+    );
   }
 
-  /**
-   * Can manage organization-level settings and user access.
-   * Note: Full org settings (name, slug, status, subscription) require SUPERADMIN.
-   * Org ADMIN can manage members and invitations only.
-   */
-  static canManageOrg(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === "OWNER";
-  }
-
-  /**
-   * Can manage org settings (name, slug, status, subscription tier) - SUPERADMIN only.
-   */
-  static canManageOrgSettings(user: User, orgId: string): boolean {
-    return RBAC.getOrgRole(user, orgId) === UserRole.SUPERADMIN;
-  }
-
-  /**
-   * Can manage templates and high-level assessment configuration.
-   * SUPERADMIN can manage any org's templates.
-   * ADMIN, COORDINATOR can manage their org's templates.
-   */
-  static canManageTemplates(user: User, orgId: string): boolean {
-    if (!orgId) {
-      return user.fallbackRole === UserRole.SUPERADMIN || user.isSuperuser === true;
+  static getOrgRole(user: User | null, orgId: string): string | null {
+    if (!user || !orgId) return null;
+    if (this.isPlatformAdmin(user)) return UserRole.SUPERADMIN;
+    if (String(user.orgId) === String(orgId)) {
+      return this.getActiveRole(user);
     }
 
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === "OWNER" || role === UserRole.COORDINATOR;
+    const match = user.recentOrganizations?.find(
+      (organization) => String(organization.id) === String(orgId),
+    );
+    return match?.fallback_role ?? match?.role ?? null;
   }
 
   /**
-   * Can create new assessments for the organization.
+   * Tenant-level checks below this point.
+   * These should rely on activePermissions from /me.
    */
-  static canCreateAssessments(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === "OWNER" || role === UserRole.COORDINATOR || role === UserRole.OPERATOR;
+
+  static canManageOrg(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    return this.hasPermission(user, "org:settings");
+  }
+
+  static canManageOrgSettings(user: User | null, orgId?: string): boolean {
+    if (orgId && !this.isOrgMember(user, orgId)) return false;
+    return this.canManageOrg(user);
+  }
+
+  static canManageOrgUsers(user: User | null): boolean {
+    return (
+      this.hasPermission(user, "user:invite") ||
+      this.hasPermission(user, "user:remove") ||
+      this.hasPermission(user, "role:manage")
+    );
+  }
+
+  static canManageTemplates(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    return (
+      this.hasPermission(user, "template:create") ||
+      this.hasPermission(user, "template:edit") ||
+      this.hasPermission(user, "template:delete")
+    );
+  }
+
+  static canViewAssessments(user: User | null): boolean {
+    return this.hasPermission(user, "assessment:view");
+  }
+
+  static canAccessAssessments(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    return this.canViewAssessments(user);
+  }
+
+  static canCreateAssessments(user: User | null, orgId?: string): boolean {
+    if (this.isPlatformAdmin(user)) return true;
+    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    return this.hasPermission(user, "assessment:create");
+  }
+
+  static canEditAssessment(user: User | null): boolean {
+    return this.hasPermission(user, "assessment:edit");
+  }
+
+  static canDeleteAssessments(user: User | null): boolean {
+    return this.hasPermission(user, "assessment:delete");
+  }
+
+  static canApproveAssessments(user: User | null): boolean {
+    return this.hasPermission(user, "assessment:approve");
+  }
+
+  static canManageFindings(user: User | null): boolean {
+    return (
+      this.hasPermission(user, "finding:edit") || this.canEditAssessment(user)
+    );
+  }
+
+  static canDeleteFindings(user: User | null): boolean {
+    return this.hasPermission(user, "finding:delete");
+  }
+
+  static canManageSites(user: User | null): boolean {
+    return (
+      this.hasPermission(user, "site:create") ||
+      this.hasPermission(user, "site:edit")
+    );
+  }
+
+  static canDeleteSites(user: User | null): boolean {
+    return this.hasPermission(user, "site:delete");
+  }
+
+  static canManageTasks(user: User | null): boolean {
+    return (
+      this.hasPermission(user, "task:create") ||
+      this.hasPermission(user, "task:edit")
+    );
+  }
+
+  static canDeleteTasks(user: User | null): boolean {
+    return this.hasPermission(user, "task:delete");
+  }
+
+  static canViewReports(user: User | null): boolean {
+    return this.hasPermission(user, "report:view");
+  }
+
+  static canExportReports(user: User | null): boolean {
+    return this.hasPermission(user, "report:export");
+  }
+
+  static canUploadEvidence(user: User | null): boolean {
+    return this.hasPermission(user, "evidence:upload");
+  }
+
+  static canReviewEvidence(user: User | null): boolean {
+    return this.hasPermission(user, "evidence:review");
+  }
+
+  static canApproveEvidence(user: User | null): boolean {
+    return this.hasPermission(user, "evidence:approve");
   }
 
   /**
-   * Can user VIEW assessments (read-only access).
-   * OPERATOR, ASSESSOR, CONSULTANT, EXECUTIVE can view but not create.
+   * Display helper only.
    */
-  static canAccessAssessments(user: User, orgId: string): boolean {
-    return RBAC.getOrgRole(user, orgId) !== null;
-  }
-
-  /**
-   * Can edit assessment metadata, status, and AI summaries.
-   */
-  static canEditAssessment(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
-  }
-
-  /**
-   * Can create and edit findings.
-   */
-  static canManageFindings(user: User, orgId: string): boolean {
-    return this.canEditAssessment(user, orgId);
-  }
-
-  /**
-   * Can delete findings (High privilege).
-   */
-  static canDeleteFindings(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN;
-  }
-
-  /**
-   * Can manage sites (create, edit).
-   * OPERATOR can create/edit but not delete.
-   */
-  static canManageSites(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.OPERATOR;
-  }
-
-  /**
-   * Can delete sites (ADMIN, COORDINATOR only).
-   */
-  static canDeleteSites(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
-  }
-
-  /**
-   * Can manage tasks (create, update).
-   * OPERATOR can create/update but not delete.
-   */
-  static canManageTasks(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR || role === UserRole.OPERATOR;
-  }
-
-  /**
-   * Can delete tasks (ADMIN, COORDINATOR only).
-   */
-  static canDeleteTasks(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
-  }
-
-  /**
-   * Can delete assessments (ADMIN, COORDINATOR only).
-   */
-  static canDeleteAssessments(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
-  }
-
-  /**
-   * Can delete templates (ADMIN, COORDINATOR only).
-   */
-  static canDeleteTemplates(user: User, orgId: string): boolean {
-    const role = RBAC.getOrgRole(user, orgId);
-    return role === UserRole.SUPERADMIN || role === UserRole.ADMIN || role === UserRole.COORDINATOR;
-  }
-
-  /**
-   * Platform-level permission.
-   * Creating organizations is NOT derived from the selected client-org membership.
-   * Today this remains SUPERADMIN/platform-scoped behavior.
-   */
-  static canCreateOrganization(user: User): boolean {
-    if (user.fallbackRole === UserRole.SUPERADMIN) return true;
-    return user.isSuperuser === true;
-  }
-
-  /**
-   * Check if user has access to a specific organization.
-   */
-  static hasOrgAccess(user: User, orgId: string): boolean {
-    return RBAC.isOrgMember(user, orgId);
-  }
-
-  /**
-   * Get display-friendly role label.
-   */
-  static getRoleLabel(role: UserRole | string): string {
+  static getRoleLabel(role: UserRole | string | null | undefined): string {
+    if (!role) return "Unknown";
     return role.charAt(0) + role.slice(1).toLowerCase().replace("_", " ");
   }
 
   /**
-   * Get role priority for sorting (higher = more permissions).
+   * Display/sorting helper only.
    */
-  static getRolePriority(role: UserRole | string): number {
+  static getRolePriority(role: UserRole | string | null | undefined): number {
+    if (!role) return 0;
+
     const priority: Record<string, number> = {
       SUPERADMIN: 100,
       ADMIN: 80,
@@ -202,6 +224,7 @@ export class RBAC {
       ASSESSOR: 30,
       OPERATOR: 20,
     };
+
     return priority[role] || 0;
   }
 }

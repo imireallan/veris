@@ -1,9 +1,11 @@
 import { useLoaderData, Link, Outlet } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import type { User } from "~/types";
 import { RBAC } from "~/types/rbac";
-import { api } from "~/.server/lib/api";
+import {
+  getOrganization,
+  getOrganizationAssessments,
+} from "~/.server/organizations";
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -18,47 +20,38 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId!;
 
-  // Fetch organization with error handling
-  let org;
-  try {
-    org = await api.get<any>(`/api/organizations/${orgId}/`, token, request);
-  } catch (error: any) {
-    const status = error.status || 500;
-    const message = error.message || "An error occurred";
-    
-    const errorObj = new Error(message);
-    (errorObj as any).status = status;
-    (errorObj as any).statusCode = status;
+  const org = await getOrganization(orgId, request, token);
+
+  if (!org) {
+    const errorObj = new Error("Organization not found or access denied.");
+    (errorObj as any).status = 404;
+    (errorObj as any).statusCode = 404;
     throw errorObj;
   }
 
-  const allAssessments = await api.get<any>(`/api/assessments/`, token, request).catch(() => []);
-  const assessmentList = Array.isArray(allAssessments) 
-    ? allAssessments 
-    : (allAssessments?.results || []);
-  
-  const assessments = assessmentList.filter((a: any) => a.organization === orgId || a.organization_id === orgId);
+  const allAssessments = await getOrganizationAssessments(
+    orgId,
+    request,
+    token,
+  );
+  const assessmentList = Array.isArray(allAssessments)
+    ? allAssessments
+    : ((allAssessments as { results?: any[] } | null)?.results ?? []);
 
-  return { org, assessments, user, accessDenied: !RBAC.isOrgMember(user, orgId) };
+  const assessments = assessmentList.filter(
+    (a: any) =>
+      String(a.organization) === String(orgId) ||
+      String(a.organization_id) === String(orgId),
+  );
+
+  return { org, assessments, user };
 }
 
 export default function OrganizationDetailRoute() {
-  const { org, assessments, user, accessDenied } = useLoaderData<typeof loader>();
+  const { org, assessments, user } = useLoaderData<typeof loader>();
 
   if (!user) {
     return <div className="p-8 text-center">Loading user profile...</div>;
-  }
-
-  if (accessDenied) {
-    return (
-      <div className="p-8 text-center space-y-4">
-        <h2 className="text-xl font-medium">Access Denied</h2>
-        <p className="text-muted-foreground">You don't have access to this organization.</p>
-        <Link to="/organizations" className="text-primary hover:underline">
-          ← Back to organizations
-        </Link>
-      </div>
-    );
   }
 
   return (
@@ -78,13 +71,13 @@ export default function OrganizationDetailRoute() {
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <h1 className="text-2xl font-semibold tracking-tight">{org.name}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {org.status} · {org.subscription_tier}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard
           title="Assessments"
           value={assessments.length}
@@ -110,29 +103,29 @@ export default function OrganizationDetailRoute() {
           >
             View Assessments →
           </Link>
-          
-          {RBAC.canManageTemplates(user, org.id) && (
+
+          {RBAC.canManageTemplates(user) && (
             <>
               <Link
                 to={`/organizations/${org.id}/templates`}
-                className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
                 Manage Templates →
               </Link>
-              
-              {RBAC.canManageOrg(user, org.id) && (
+
+              {RBAC.canManageOrg(user) && (
                 <Link
                   to={`/organizations/${org.id}/members`}
-                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                 >
                   Members & Invites →
                 </Link>
               )}
-              
-              {user.fallbackRole === "SUPERADMIN" && (
+
+              {RBAC.isPlatformAdmin(user) && (
                 <Link
                   to={`/organizations/${org.id}/settings`}
-                  className="inline-flex items-center gap-1.5 text-sm text-primary font-medium hover:underline"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                 >
                   Settings →
                 </Link>
@@ -142,34 +135,37 @@ export default function OrganizationDetailRoute() {
         </div>
       </div>
 
-      <Outlet />
+      <Outlet context={{ user, org, assessments }} />
     </div>
   );
 }
 
 export function ErrorBoundary({ error }: { error: Error }) {
-  // Check if error has status property (from loader)
-  const errorWithStatus = error as Error & { status?: number; statusCode?: number };
+  const errorWithStatus = error as Error & {
+    status?: number;
+    statusCode?: number;
+  };
   const status = errorWithStatus.status || errorWithStatus.statusCode;
   const isNotFound = status === 404;
   const isForbidden = status === 403;
-  
-  // Try to get error message
+
   const errorMessage = error.message || "An unexpected error occurred.";
-  const isInvalidOrg = errorMessage.toLowerCase().includes("organization") || 
-                       errorMessage.toLowerCase().includes("access") ||
-                       errorMessage.toLowerCase().includes("uuid") ||
-                       errorMessage.toLowerCase().includes("invalid");
+  const isInvalidOrg =
+    errorMessage.toLowerCase().includes("organization") ||
+    errorMessage.toLowerCase().includes("access") ||
+    errorMessage.toLowerCase().includes("uuid") ||
+    errorMessage.toLowerCase().includes("invalid");
 
   return (
-    <div className="min-h-[400px] flex items-center justify-center p-8">
-      <div className="text-center space-y-4 max-w-md">
+    <div className="flex min-h-[400px] items-center justify-center p-8">
+      <div className="max-w-md space-y-4 text-center">
         {isNotFound || isInvalidOrg ? (
           <>
             <div className="text-6xl">🔍</div>
             <h2 className="text-2xl font-semibold">Organization Not Found</h2>
             <p className="text-muted-foreground">
-              {errorMessage.toLowerCase().includes("uuid") || errorMessage.toLowerCase().includes("format")
+              {errorMessage.toLowerCase().includes("uuid") ||
+              errorMessage.toLowerCase().includes("format")
                 ? "The organization ID format is invalid."
                 : "This organization doesn't exist or you don't have access to it. The organization ID may be invalid or your access may have been removed."}
             </p>
@@ -179,22 +175,21 @@ export function ErrorBoundary({ error }: { error: Error }) {
             <div className="text-6xl">🔒</div>
             <h2 className="text-2xl font-semibold">Access Denied</h2>
             <p className="text-muted-foreground">
-              You don't have permission to view this organization.
-              Contact your administrator if you believe this is an error.
+              You don't have permission to view this organization. Contact your
+              administrator if you believe this is an error.
             </p>
           </>
         ) : (
           <>
             <div className="text-6xl">⚠️</div>
             <h2 className="text-2xl font-semibold">Something went wrong</h2>
-            <p className="text-muted-foreground">
-              {errorMessage}
-            </p>
+            <p className="text-muted-foreground">{errorMessage}</p>
           </>
         )}
+
         <Link
           to="/organizations"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
         >
           ← Back to Organizations
         </Link>
@@ -203,12 +198,20 @@ export function ErrorBoundary({ error }: { error: Error }) {
   );
 }
 
-function StatCard({ title, value, subtitle }: { title: string; value: string | number; subtitle: string }) {
+function StatCard({
+  title,
+  value,
+  subtitle,
+}: {
+  title: string;
+  value: string | number;
+  subtitle: string;
+}) {
   return (
-    <div className="p-4 border rounded-lg">
+    <div className="rounded-lg border p-4">
       <div className="text-sm text-muted-foreground">{title}</div>
-      <div className="text-3xl font-bold mt-1">{value}</div>
-      <div className="text-xs text-muted-foreground mt-1">{subtitle}</div>
+      <div className="mt-1 text-3xl font-bold">{value}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{subtitle}</div>
     </div>
   );
 }

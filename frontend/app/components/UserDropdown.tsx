@@ -1,16 +1,7 @@
 import * as React from "react";
 import { useNavigate, useSubmit } from "react-router";
-import { cn } from "~/lib/utils";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "./ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Badge } from "./ui/badge";
-import {
+  Briefcase,
   Building2,
   ChevronDown,
   Crown,
@@ -19,14 +10,25 @@ import {
   Shield,
   User,
   Users,
-  Briefcase,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import type { User as UserType, OrganizationMembership } from "~/types";
-import { UserRole, RBAC } from "~/types/rbac";
-import { getSelectedOrganization } from "~/components/OrganizationSwitcher";
 
-function getRoleBadgeVariant(role: UserRole | string): "destructive" | "default" | "secondary" | "outline" {
+import { cn } from "~/lib/utils";
+import type { OrganizationListItem, User as UserType } from "~/types";
+import { RBAC, UserRole } from "~/types/rbac";
+import { Avatar, AvatarFallback } from "./ui/avatar";
+import { Badge } from "./ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+
+function getRoleBadgeVariant(
+  role: UserRole | string,
+): "destructive" | "default" | "secondary" | "outline" {
   const priority = RBAC.getRolePriority(role);
   if (priority >= 80) return "destructive";
   if (priority >= 60) return "default";
@@ -44,53 +46,64 @@ function getRoleIconComponent(role: UserRole | string): LucideIcon {
 
 interface UserDropdownProps {
   user: UserType;
-  organizations: OrganizationMembership[];
+  organizations: OrganizationListItem[];
   className?: string;
 }
 
-export function UserDropdown({ user, organizations, className }: UserDropdownProps) {
+export function UserDropdown({
+  user,
+  organizations,
+  className,
+}: UserDropdownProps) {
   const navigate = useNavigate();
   const submit = useSubmit();
 
   const initials = user.fullName
     ? user.fullName
         .split(" ")
-        .map((n) => n[0])
+        .map((name) => name[0])
         .join("")
         .toUpperCase()
         .slice(0, 2)
     : user.email.slice(0, 2).toUpperCase();
 
   const RoleIcon = getRoleIconComponent(user.role);
-  const selectedOrg = getSelectedOrganization(organizations);
-  const isValidSelectedOrg =
-    selectedOrg && organizations.some((org) => org.id === selectedOrg.id);
+  const selectedOrg =
+    organizations.find((organization) => organization.id === user.orgId) ??
+    user.activeOrganization ??
+    null;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "flex items-center gap-2 rounded-full hover:bg-primary/10 p-1 pr-3 transition-colors cursor-pointer",
+          "flex cursor-pointer items-center gap-2 rounded-full p-1 pr-3 transition-colors hover:bg-primary/10",
           className,
         )}
       >
-        <Avatar className="w-8 h-8 ring-1 ring-border bg-background">
+        <Avatar className="h-8 w-8 bg-background ring-1 ring-border">
           <AvatarFallback className="text-xs font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>
-        <div className="text-left hidden sm:block">
-          <p className="text-sm font-medium leading-none">{user.fullName || "User"}</p>
-          {isValidSelectedOrg && (
-            <p className="text-xs text-muted-foreground mt-0.5">{selectedOrg.name}</p>
-          )}
+        <div className="hidden text-left sm:block">
+          <p className="text-sm font-medium leading-none">
+            {user.fullName || "User"}
+          </p>
+          {selectedOrg ? (
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {selectedOrg.name}
+            </p>
+          ) : null}
         </div>
-        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <div className="px-2 py-1.5">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium text-foreground">{user.fullName}</p>
+            <p className="text-sm font-medium text-foreground">
+              {user.fullName}
+            </p>
             <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         </div>
@@ -98,59 +111,79 @@ export function UserDropdown({ user, organizations, className }: UserDropdownPro
 
         <div className="px-2 py-1.5">
           <div className="flex flex-wrap gap-1">
-            {user.role && (
-              <Badge variant={getRoleBadgeVariant(user.role)} className="gap-1 h-5 text-xs">
-                <RoleIcon className="w-3 h-3" />
+            {user.role ? (
+              <Badge
+                variant={getRoleBadgeVariant(user.role)}
+                className="h-5 gap-1 text-xs"
+              >
+                <RoleIcon className="h-3 w-3" />
                 {RBAC.getRoleLabel(user.role)}
               </Badge>
-            )}
-            {user.isSuperuser && (
-              <Badge variant="default" className="gap-1 h-5 text-xs">
-                <Crown className="w-3 h-3" />
+            ) : null}
+            {user.isSuperuser ? (
+              <Badge variant="default" className="h-5 gap-1 text-xs">
+                <Crown className="h-3 w-3" />
                 Superuser
               </Badge>
-            )}
+            ) : null}
           </div>
         </div>
 
-        {isValidSelectedOrg && (
+        {selectedOrg ? (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1.5">
               <div className="flex items-center gap-2 text-xs">
-                <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-muted-foreground">Current:</span>
-                <span className="font-medium text-foreground">{selectedOrg.name}</span>
+                <span className="font-medium text-foreground">
+                  {selectedOrg.name}
+                </span>
               </div>
-              <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground">
-                <Shield className="w-2.5 h-2.5" />
-                <span>{RBAC.getRoleLabel(selectedOrg.role)}</span>
+              <div className="mt-1 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <Shield className="h-2.5 w-2.5" />
+                <span>
+                  {RBAC.getRoleLabel(
+                    user.activeMembership?.fallback_role ??
+                      user.activeMembership?.role ??
+                      user.role,
+                  )}
+                </span>
               </div>
             </div>
           </>
-        )}
+        ) : null}
 
-        {organizations.length > 1 && (
+        {organizations.length > 1 ? (
           <>
             <DropdownMenuSeparator />
             <div className="px-2 py-1">
-              <p className="text-xs font-medium text-muted-foreground mb-1.5">
-                All Organizations
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Accessible Organizations
               </p>
-              <div className="space-y-1 max-h-32 overflow-y-auto">
-                {organizations.map((org) => {
-                  const isSelected = isValidSelectedOrg && selectedOrg.id === org.id;
+              <div className="max-h-32 space-y-1 overflow-y-auto">
+                {organizations.map((organization) => {
+                  const isSelected = selectedOrg?.id === organization.id;
                   return (
                     <div
-                      key={org.id}
+                      key={organization.id}
                       className={cn(
-                        "flex items-center justify-between p-1.5 rounded-md text-xs transition-colors",
-                        isSelected ? "bg-primary/10 text-primary" : "hover:bg-primary/10",
+                        "flex items-center justify-between rounded-md p-1.5 text-xs transition-colors",
+                        isSelected
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-primary/10",
                       )}
                     >
-                      <span className="text-foreground truncate">{org.name}</span>
-                      <Badge variant={isSelected ? "default" : "outline"} className="h-4 text-[10px]">
-                        {RBAC.getRoleLabel(org.role)}
+                      <span className="truncate text-foreground">
+                        {organization.name}
+                      </span>
+                      <Badge
+                        variant={isSelected ? "default" : "outline"}
+                        className="h-4 text-[10px]"
+                      >
+                        {RBAC.getRoleLabel(
+                          organization.fallback_role ?? organization.role,
+                        )}
                       </Badge>
                     </div>
                   );
@@ -158,12 +191,12 @@ export function UserDropdown({ user, organizations, className }: UserDropdownPro
               </div>
             </div>
           </>
-        )}
+        ) : null}
 
         <DropdownMenuSeparator />
 
         <DropdownMenuItem onClick={() => navigate("/settings/profile")}>
-          <Settings className="w-4 h-4" />
+          <Settings className="h-4 w-4" />
           Settings
         </DropdownMenuItem>
 
@@ -175,7 +208,7 @@ export function UserDropdown({ user, organizations, className }: UserDropdownPro
             })
           }
         >
-          <LogOut className="w-4 h-4" />
+          <LogOut className="h-4 w-4" />
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

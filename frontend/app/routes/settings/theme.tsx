@@ -13,16 +13,14 @@ import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 export async function loader({ request }: LoaderFunctionArgs) {
   const { requireUser } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
-  const { getSelectedOrganizationForRequest } = await import("~/.server/organizations");
-  
   const user = await requireUser(request);
-  const selectedOrg = await getSelectedOrganizationForRequest(request, user);
+  const selectedOrg = user.activeOrganization ?? null;
   if (!selectedOrg) {
     throw redirect("/organizations");
   }
   
   // Only ADMIN and SUPERADMIN can manage theme settings
-  if (!RBAC.canManageOrg(user, selectedOrg.id)) {
+  if (!RBAC.canManageOrg(user)) {
     throw redirect("/");
   }
   
@@ -37,17 +35,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   const { requireUser, getUserToken } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
-  const { getSelectedOrganizationForRequest } = await import("~/.server/organizations");
   
   const token = await getUserToken(request);
   const user = await requireUser(request);
-  const selectedOrg = await getSelectedOrganizationForRequest(request, user, token);
+  const selectedOrg = user.activeOrganization ?? null;
   if (!selectedOrg) {
     return data({ error: "Organization required" }, { status: 400 });
   }
   
   // Only ADMIN and SUPERADMIN can manage theme settings
-  if (!RBAC.canManageOrg(user, selectedOrg.id)) {
+  if (!RBAC.canManageOrg(user)) {
     return data({ error: "Insufficient permissions" }, { status: 403 });
   }
   

@@ -67,7 +67,7 @@ export default function DataRoute() {
       <div>
         <h2 className="text-2xl font-semibold text-foreground">Data Browser</h2>
         <p className="text-muted-foreground text-sm mt-1">
-          Browse all database records — seed data + Bettercoal import.
+          Browse all database records across sample and imported datasets.
         </p>
       </div>
 

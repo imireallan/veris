@@ -80,7 +80,7 @@ See also:
 - Multi-tenant isolation: Any consultancy's data is completely separated
 - White-label theming: Each consultancy can rebrand for their clients
 - Framework-agnostic AI: RAG pipeline works for any uploaded standards document
-- Configurable roles: Not hardcoded to TDi-specific role names
+- Configurable roles: Not hardcoded to consultancy-specific role names
 
 ## 2. Access Control Matrix (RBAC)
 

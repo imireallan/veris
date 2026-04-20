@@ -55,7 +55,7 @@ Across onboarding docs and repo docs, the stable product goals are:
 
 1. **Generic white-label B2B SaaS**
    - Veris sells to consultancies, not directly to one end client.
-   - TDi is the first customer, but the architecture must work for competitors too.
+   - A first customer may shape priorities, but the architecture must work for the broader market too.
 
 2. **Multi-tenant consultancy hierarchy**
    - Veris → consultancy tenant → client organization → sites/facilities.
@@ -80,7 +80,7 @@ Across onboarding docs and repo docs, the stable product goals are:
 
 | Goal | Expected by docs | Current implementation | Alignment |
 |------|------------------|------------------------|-----------|
-| Generic white-label consultancy platform | Multi-tenant, consultancy-first, not TDi-hardcoded | OrganizationMembership + accessible orgs + theming support this | ✅ Strong |
+| Generic white-label consultancy platform | Multi-tenant, consultancy-first, not hardcoded to a specific consultancy | OrganizationMembership + accessible orgs + theming support this | ✅ Strong |
 | Multi-org user identity | Users operate across many orgs with org-scoped roles | Implemented in backend and frontend | ✅ Strong |
 | Invitation-based onboarding | Consultancy/client admin onboarding via invitation | Implemented with resend/revoke/token flows | ✅ Strong |
 | Org switching + selected org context | Browser + SSR-safe selected org behavior | Implemented with localStorage + cookie + server helper | ✅ Strong |
@@ -180,7 +180,7 @@ Verdict:
 ### 2. Cross-framework mapping
 What docs expect:
 - answer once, map to many
-- map evidence/answers across Bettercoal, OECD, RBA, etc.
+- map evidence/answers across multiple frameworks such as OECD, RBA, and client-specific standards.
 - downstream value in reports, dashboards, and workflow reduction
 
 What exists:

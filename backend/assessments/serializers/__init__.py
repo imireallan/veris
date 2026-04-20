@@ -101,6 +101,7 @@ class AssessmentTemplateSerializer(serializers.ModelSerializer):
             "version",
             "status",
             "is_public",
+            "organization",
             "owner_org",
             "question_count",
             "version_notes",
@@ -145,6 +146,7 @@ class AssessmentTemplateDetailSerializer(serializers.ModelSerializer):
             "version_notes",
             "status",
             "is_public",
+            "organization",
             "owner_org",
             "questions",
             "instance_count",
@@ -172,6 +174,7 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "template",
+            "organization",
             "text",
             "order",
             "category",
@@ -179,9 +182,10 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
             "is_required",
             "framework_mappings",
         ]
-        read_only_fields = ["id", "template", "order"]
+        read_only_fields = ["id", "template", "organization", "order"]
         extra_kwargs = {
             "template": {"required": False},
+            "organization": {"required": False},
             "order": {"required": False},
         }
 
@@ -252,17 +256,12 @@ class AssessmentSerializer(serializers.ModelSerializer):
         return f"Assessment {str(obj.id)[:8]}"
 
     def create(self, validated_data):
-        """Auto-set organization from user's membership if not provided."""
-        from organizations.models import OrganizationMembership
+        """Auto-set organization from request context if not provided."""
+        request = self.context.get("request")
+        organization = getattr(request, "organization", None) if request else None
 
-        user = self.context.get("request").user if self.context.get("request") else None
-
-        if not validated_data.get("organization"):
-            if user:
-                # Get user's primary organization membership
-                membership = OrganizationMembership.objects.filter(user=user).first()
-                if membership:
-                    validated_data["organization"] = membership.organization
+        if not validated_data.get("organization") and organization is not None:
+            validated_data["organization"] = organization
 
         return super().create(validated_data)
 
@@ -273,6 +272,7 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "assessment",
+            "organization",
             "focus_area",
             "question",
             "answer_text",
@@ -289,7 +289,7 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "organization", "created_at", "updated_at"]
 
 
 class AIInsightSerializer(serializers.ModelSerializer):

@@ -261,6 +261,14 @@ class AssessmentTemplate(models.Model):
         related_name="owned_templates",
         help_text="If set, template is scoped to this organization (client-specific).",
     )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="assessment_templates",
+        help_text="Canonical tenant organization reference.",
+    )
 
     # Lifecycle
     status = models.CharField(
@@ -301,6 +309,13 @@ class AssessmentTemplate(models.Model):
     def __str__(self):
         return f"{self.name} (v{self.version})"
 
+    def save(self, *args, **kwargs):
+        if not self.organization_id and self.owner_org_id:
+            self.organization_id = self.owner_org_id
+        elif not self.owner_org_id and self.organization_id and not self.is_public:
+            self.owner_org_id = self.organization_id
+        super().save(*args, **kwargs)
+
     def can_edit(self):
         """Published templates are immutable."""
         return self.status == self.Status.DRAFT
@@ -319,6 +334,13 @@ class AssessmentQuestion(models.Model):
         on_delete=models.CASCADE,
         related_name="assessment_questions",
     )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="assessment_questions",
+    )
     text = models.TextField()
     order = models.PositiveIntegerField(default=0)
     category = models.CharField(max_length=200, blank=True, default="")
@@ -333,6 +355,13 @@ class AssessmentQuestion(models.Model):
         db_table = "assessment_questions"
         ordering = ["order"]
 
+    def save(self, *args, **kwargs):
+        if not self.organization_id and self.template_id:
+            self.organization_id = (
+                self.template.organization_id or self.template.owner_org_id
+            )
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.text[:100]
 
@@ -343,6 +372,13 @@ class AssessmentResponse(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     assessment = models.ForeignKey(
         "assessments.Assessment", on_delete=models.CASCADE, related_name="responses"
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="assessment_responses",
     )
     focus_area = models.ForeignKey(
         "assessments.ESGFocusArea",
@@ -397,6 +433,11 @@ class AssessmentResponse(models.Model):
     class Meta:
         db_table = "assessment_responses"
         ordering = ["-created_at"]
+
+    def save(self, *args, **kwargs):
+        if not self.organization_id and self.assessment_id:
+            self.organization_id = self.assessment.organization_id
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Response {self.id} - Assessment {self.assessment_id}"
@@ -605,13 +646,13 @@ class Site(models.Model):
 
 
 # ─────────────────────────────────────────────────────────────
-# Assessment Reports & Findings (Bettercoal-compatible)
+# Assessment Reports & Findings (legacy-compatible)
 # ─────────────────────────────────────────────────────────────
 
 
 class AssessmentReport(models.Model):
     """Structured assessment report with multiple sections.
-    Mirrors Bettercoal's multi-section report model but simplified.
+    Mirrors a legacy multi-section report model but simplified.
     """
 
     class ReportStatus(models.TextChoices):
@@ -668,7 +709,7 @@ class AssessmentReport(models.Model):
 
 class Finding(models.Model):
     """Assessment finding linked to a framework provision.
-    Equivalent to Bettercoal's assessment_report_finding + cip_cipfinding.
+    Equivalent to a legacy assessment finding + improvement-plan finding model.
     """
 
     class Severity(models.TextChoices):
@@ -740,7 +781,7 @@ class Finding(models.Model):
 
 class CIPCycle(models.Model):
     """Continuous Improvement Plan monitoring cycle.
-    Equivalent to Bettercoal's cip_cipmonitoringcycle.
+    Equivalent to a legacy improvement-plan monitoring cycle.
     Tracks recurring compliance checks over time.
     """
 
@@ -787,7 +828,7 @@ class CIPCycle(models.Model):
 
 class AssessmentPlan(models.Model):
     """Assessment planning — schedules, deadlines, site visit windows.
-    Equivalent to Bettercoal's assessment_planning_assessmentplan.
+    Equivalent to a legacy assessment planning model.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -823,6 +864,13 @@ class UploadedImage(models.Model):
     """Images uploaded via the rich-text editor for assessments."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="uploaded_images",
+    )
     file = models.ImageField(upload_to="assessment_images/")
     uploaded_by = models.ForeignKey(
         "users.User",

@@ -1,12 +1,12 @@
 -- Migrate Bettercoal data into Veris schema
--- Run this after loading bettercoal.sql into a temporary schema,
+-- Run this after loading framework.sql into a temporary schema,
 -- or as part of a script that extracts and transforms the data.
 -- 
 -- Since Bettercoal uses integer IDs and Veris uses UUIDs,
 -- we'll create a mapping table and generate UUIDs.
 
 -- Step 1: Create temp schema with bettercoal data
--- psql -U postgres -d veris -f bettercoal.sql  -- load raw dump
+-- psql -U postgres -d veris -f framework.sql  -- load raw dump
 -- Then run the migration queries below:
 
 BEGIN;

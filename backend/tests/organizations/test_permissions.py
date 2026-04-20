@@ -91,3 +91,15 @@ class TestOrganizationPermissions:
         view = type("View", (), {"kwargs": {"org_pk": org.id}})()
 
         assert IsOrganizationOwnerOrAdmin().has_permission(request, view) is True
+
+    def test_is_org_owner_or_admin_superuser_bypass(
+        self, superuser, make_org, request_factory
+    ):
+        """Superuser should be allowed to perform org-admin actions without membership."""
+        org = make_org()
+
+        request = request_factory.get(f"/api/organizations/{org.id}/")
+        request.user = superuser
+        view = type("View", (), {"kwargs": {"org_pk": org.id}})()
+
+        assert IsOrganizationOwnerOrAdmin().has_permission(request, view) is True

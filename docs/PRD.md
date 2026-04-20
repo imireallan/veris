@@ -4,10 +4,10 @@
 
 **Veris** is a generic, white-label, AI-first, multi-tenant sustainability assessment and intelligence platform. It enables sustainability consultancies to navigate sustainability compliance, generate reports, implement continuous improvement workflows, and build knowledge bases through AI-guided assistance.
 
-**Primary Target Customer**: TDi Sustainability  
+**Primary Target Customer**: Sustainability consultancies  
 **Also Suitable For**: Any ESG/sustainability consultancy
 
-**Key Design Principle**: TDi-First, Not TDi-Specific — The platform is generic and configurable. TDi is the primary target, but any consultancy can use it with minimal customization.
+**Key Design Principle**: Generic and configurable — the platform must work for any sustainability consultancy without hardcoded client names, workflows, or branding.
 
 ### Current Maturity Snapshot
 
@@ -21,13 +21,13 @@ See also:
 
 ### Core Problem
 
-**For Consultancies **(e.g., TDi)
+**For Consultancies**
 - Fragmented digital tools (5+ separate platforms)
 - Manual report generation and data collection
 - Lack of AI capabilities to scale consulting services
 - Inability to white-label for multiple clients
 
-**For Their Clients **(e.g., Bettercoal, EO100, mining companies)
+**For Their Clients**
 - Complex sustainability frameworks and changing regulations
 - Duplicate data entry across multiple frameworks
 - Siloed knowledge that isn't easily searchable or actionable
@@ -43,12 +43,12 @@ See also:
 
 ### Generic Platform Requirements
 
-| Requirement | TDi Use Case | Competitor Use Case |
+| Requirement | Example Consultancy Use Case | Other Consultancy Use Case |
 |-------------|--------------|---------------------|
-| White-label | TDi branding for Bettercoal | Competitor branding for their clients |
-| Frameworks | Bettercoal, OECD, RBA | Any framework (configurable) |
+| White-label | Consultancy branding for a mining assurance client | Competitor branding for their clients |
+| Frameworks | Mining assurance standard, OECD, RBA | Any framework (configurable) |
 | Sectors | Mining, Energy, Automotive | Any of 11 sectors |
-| Roles | ADMIN, COORDINATOR, ASSESSOR | Generic roles (not TDi-specific) |
+| Roles | ADMIN, COORDINATOR, ASSESSOR | Generic roles (not client-specific) |
 | AI Features | RAG, validation, reports | Same features, different content |
 
 ---

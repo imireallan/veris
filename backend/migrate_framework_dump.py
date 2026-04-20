@@ -1,8 +1,8 @@
 """
-Migrate Bettercoal data into Veris database.
+Migrate framework-import data into the Veris database.
 
-Reads from bettercoal_temp database (where SQL dump was loaded)
-and inserts into Veris tables with correct column names + UUIDs.
+Reads from framework_import_temp (where a legacy SQL dump was loaded)
+and inserts into Veris tables with correct column names and UUIDs.
 """
 
 import json
@@ -10,17 +10,17 @@ import os
 import uuid
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-import django
+import django  # noqa: E402
 
 django.setup()
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse  # noqa: E402
 
-import psycopg2
-import psycopg2.extras
-from django.utils import timezone
+import psycopg2  # noqa: E402
+import psycopg2.extras  # noqa: E402
+from django.utils import timezone  # noqa: E402
 
-_db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:db@db:5432/veris")
+_db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:***@db:5432/veris")
 _parsed = urlparse(_db_url)
 _PG = {
     "host": _parsed.hostname or "db",
@@ -29,7 +29,7 @@ _PG = {
     "password": _parsed.password or "db",
 }
 VERIS_DB = _parsed.path.lstrip("/")
-TEMP_DB = "bettercoal_temp"
+TEMP_DB = "framework_import"
 
 
 def c(dbname):
@@ -38,7 +38,7 @@ def c(dbname):
 
 def main():
     print("=" * 50)
-    print("Bettercoal → Veris Migration")
+    print("Framework Import → Veris Migration")
     print("=" * 50)
 
     t = c(TEMP_DB)
@@ -48,7 +48,7 @@ def main():
     vc.execute("SET session_replication_role = 'replica';")
     total = 0
 
-    # ── 1. Framework: Bettercoal Standard (+ 144 provisions as questions) ──
+    # ── 1. Framework import (+ provisions as questions) ──
     print("\n1. Framework + Provisions → Questions...")
     fw_id = uuid.uuid4()
     vc.execute(
@@ -59,9 +59,9 @@ def main():
         ON CONFLICT (id) DO NOTHING""",
         (
             fw_id,
-            "Bettercoal Standard",
+            "Imported Framework Standard",
             "2023.1",
-            "Bettercoal Sustainable Coal Mining Assurance Standard",
+            "Imported legacy framework standard",
             "{}",
             "{}",
             "",
@@ -80,15 +80,15 @@ def main():
             """
             INSERT INTO organizations (id, name, slug, status, created_at, updated_at)
             VALUES (%s, %s, %s, %s, NOW(), NOW())""",
-            (default_org, "Bettercoal Mining Corp", "bettercoal-mining", "active"),
+            (default_org, "Framework Import Org", "framework-import-org", "active"),
         )
         v.commit()
-        print(f"  Created default org: Bettercoal Mining Corp")
+        print("  Created default org: Framework Import Org")
 
-    # Create a template for Bettercoal questions (skip if exists)
+    # Create a template for imported framework questions (skip if exists)
     vc.execute(
         "SELECT id FROM assessment_templates WHERE name = %s LIMIT 1",
-        ("Bettercoal Standard Template",),
+        ("Imported Framework Standard Template",),
     )
     existing_tmpl = vc.fetchone()
     if existing_tmpl:
@@ -98,17 +98,34 @@ def main():
         tmpl_id = uuid.uuid4()
         vc.execute(
             """
-            INSERT INTO assessment_templates (id, organization_id, name, description,
-                                              framework_id, questions, is_system,
-                                              created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, true, NOW(), NOW())""",
+            INSERT INTO assessment_templates (
+                id,
+                organization_id,
+                owner_org_id,
+                name,
+                slug,
+                description,
+                framework_id,
+                version,
+                version_notes,
+                is_public,
+                status,
+                created_at,
+                updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())""",
             (
                 tmpl_id,
                 default_org,
-                "Bettercoal Standard Template",
-                "Auto-migrated from Bettercoal CIP provisions",
+                default_org,
+                "Imported Framework Standard Template",
+                "imported-framework-standard-template",
+                "Auto-migrated from framework import provisions",
                 fw_id,
-                "[]",
+                "1.0.0",
+                "Imported from framework dump",
+                False,
+                "DRAFT",
             ),
         )
         total += 1
@@ -298,8 +315,6 @@ def main():
         fatal = s.get("number_of_fatalities_in_the_last_12_months") or 0
         injuries = s.get("number_of_severe_injuries_in_the_last_12_months") or 0
         risk = "CRITICAL" if fatal > 0 else "HIGH" if injuries > 2 else "MEDIUM"
-        lat = float(s["latitude"]) if s.get("latitude") else None
-        coords = json.dumps({"lat": lat, "lng": float(s["longitude"])}) if lat else "{}"
 
         insert_site(
             sid,
@@ -407,7 +422,7 @@ def main():
 
     tc.execute(
         """
-        SELECT id, lead_assessor_id, created, bettercoal_claim
+        SELECT id, lead_assessor_id, created, legacy_mining_assurance_claim
         FROM assurance_process_assuranceprocess
     """
     )
@@ -435,7 +450,9 @@ def main():
             if pp:
                 first_site = site_map.get(("port", pp["id"]))
 
-        summary = f"BetterCoal assessment. Claim: {p.get('bettercoal_claim', '')}"
+        summary = (
+            f"Imported assessment. Claim: {p.get('legacy_mining_assurance_claim', '')}"
+        )
         vc.execute(
             """
             INSERT INTO assessments (id, status, start_date, due_date,

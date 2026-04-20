@@ -1,14 +1,14 @@
-# Veris - Product Roadmap (Generic Platform, TDi-First)
+# Veris - Product Roadmap (Generic White-Label Platform)
 
 ## Overview
 
-We're building a **generic, white-label AI sustainability platform**. **TDi Sustainability is the primary target customer**, but the platform is designed so any sustainability consultancy can use it with minimal customization.
+We're building a **generic, white-label AI sustainability platform** for consultancies that manage multiple client organizations and frameworks.
 
 **Key insight**: Consultancies don't need the full feature set initially — they need to be impressed by AI capabilities they can't build internally while seeing familiar functionality they already serve clients with.
 
-**Build priority**: Demo-first, generic foundation. We build what impresses TDi first, but keep everything configurable for competitors.
+**Build priority**: Demo-first, generic foundation. Build the highest-leverage consultancy workflow first, but keep everything configurable for any customer.
 
-**AI Status**: Framework-agnostic RAG — works for any uploaded standards document (Bettercoal, OECD, EO100, etc.)
+**AI Status**: Framework-agnostic RAG — works for any uploaded standards document.
 
 ---
 
@@ -26,22 +26,22 @@ Detailed review:
 
 ## Phase 1: Core Platform (Weeks 1-3)
 
-### Focus: "Generic platform with TDi demo ready"
+### Focus: "Generic platform with a strong consultancy demo"
 
 ### Deliverables
 - [ ] **Monorepo setup**: FastAPI AI + React Router v7 + Django Core
 - [x] **Multi-tenant architecture**: Organizations, users, roles (generic) — foundation implemented
 - [x] **Auth system**: JWT with role-based access — foundation implemented
 - [x] **White-label theme engine**: CSS variables with UI builder — foundation implemented
-- [ ] **3 sample tenant configs**: TDi, Bettercoal, EO100 (demo ready)
+- [ ] **3 sample tenant configs**: consultancy, mining assurance client, supplier questionnaire client
 - [x] **Basic dashboard**: Role-based views with org switcher — implemented
-- [ ] **Generic demo site**: Configurable branding (TDi-branded for pitch)
+- [ ] **Generic demo site**: Configurable branding for consultancy pitches
 
 ### Why This Matters
-- Shows TDi their platform's future
+- Shows consultancies what their white-labeled platform can become
 - Multi-tenant architecture proves scalability for ANY consultancy
-- Theme engine = white-label capability for TDi AND competitors
-- 3 demo configs = immediate conversation with TDi's actual clients
+- Theme engine = white-label capability for any consultancy
+- 3 demo configs = immediate conversation with multiple client archetypes
 
 ---
 
@@ -54,11 +54,11 @@ Detailed review:
 - [x] **Vector embedding pipeline**: Chunking, OpenAI embeddings, Pinecone — groundwork exists
 - [x] **Knowledge base UI**: Document browser, search, categories — basic UI exists
 - [ ] **AI Chat assistant**: Context-aware responses with source citations
-- [ ] **Pre-loaded knowledge**: Bettercoal Code, EO100 Standard, OECD Guidelines
+- [ ] **Pre-loaded knowledge**: example industry standards, guidance documents, and client policies
 - [ ] **RAG pipeline working end-to-end** (framework-agnostic)
 
 ### Why This Matters
-- Replaces TDi's ICAT + Search360 + tedd (and competitor equivalents)
+- Replaces fragmented knowledge, risk, and assessment tools (plus competitor equivalents)
 - AI chatbot = something NO consultancy can build in-house
 - Works for ANY uploaded standards document (competitive advantage)
 

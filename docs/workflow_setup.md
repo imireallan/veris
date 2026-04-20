@@ -25,7 +25,7 @@ Veris operates on a hierarchical data model to ensure multi-tenant isolation and
 *Goal: Establish the organizational boundary.*
 1. **Org Creation**: A new `Organization` is created.
 2. **User Onboarding**: Users are created and linked to the Organization with specific roles (`OrganizationOwner`, `OrganizationMember`).
-3. **Framework Mapping**: The Global Admin ensures the required ESG Frameworks (e.g., Bettercoal) are synced in the system.
+3. **Framework Mapping**: The Global Admin ensures the required ESG frameworks are synced in the system.
 
 ### Phase 2: Assessment Design (Org Admin)
 *Goal: Define "What" needs to be measured.*

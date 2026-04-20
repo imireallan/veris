@@ -2,39 +2,39 @@
 
 **Generic, white-label AI sustainability platform for consultancies.**
 
-**Primary Target**: TDi Sustainability  
+**Primary Target**: Sustainability consultancies  
 **Also Suitable For**: Any ESG/sustainability consultancy
 
 ## What This Is
 
-A generic, multi-tenant SaaS platform that any sustainability consultancy can white-label and deploy for their clients. TDi Sustainability is the primary target customer, but the platform is designed so competitors can use it with minimal customization.
+A generic, multi-tenant SaaS platform that sustainability consultancies can white-label and deploy for their clients across multiple industries and frameworks.
 
 ## Value Chain
 
 ```
-You (freelancer) → Veris Platform → Consultancy (TDi or competitor) → Their Clients
-                                                          ├─ Bettercoal (coal mining standard)
-                                                          ├─ EO100 (energy certification)
-                                                          ├─ CGWG (gemstones supply chain)
-                                                          └─ 11 industry sectors
+You (builder) → Veris Platform → Consultancy → Client Organizations
+                                         ├─ Mining assurance programs
+                                         ├─ Energy transition programs
+                                         ├─ Supplier questionnaires
+                                         └─ Multi-sector compliance workflows
 ```
 
 ## Quick Stats
 
-- **Target customer**: TDi Sustainability (primary), any ESG consultancy (generic)
+- **Target customer**: Sustainability consultancies managing multiple client organizations
 - **Replaces**: 5+ separate digital tools (TEDD, ICAT, Country Risk, Commodity Risk, Search360)
 - **Key differentiator**: AI capabilities consultancies can't build in-house
 - **Deployment model**: White-label per consultancy, configurable per client
 - **Competitive moat**: Implementation speed, AI capabilities, domain expertise — not exclusivity
 
-## Key Design Principle: TDi-First, Not TDi-Specific
+## Key Design Principle: Generic, Rebrandable, Multi-Tenant
 
-| Aspect | Generic Platform (Correct) | TDi-Specific (Wrong) |
+| Aspect | Generic Platform (Correct) | Hardcoded Vertical Product (Wrong) |
 |--------|---------------------------|----------------------|
-| Branding | White-label engine, any consultancy can rebrand | Hardcoded TDi logos/colors |
-| Frameworks | Configurable JSON frameworks | Hardcoded Bettercoal only |
-| Roles | Generic: ADMIN, COORDINATOR, ASSESSOR | TDi-specific role names |
-| Workflows | Configurable state machines | Hardcoded TDi approval flow |
+| Branding | White-label engine, any consultancy can rebrand | Hardcoded client/partner branding |
+| Frameworks | Configurable JSON frameworks | Hardcoded single-program framework |
+| Roles | Generic: ADMIN, COORDINATOR, ASSESSOR | Hardcoded organization-specific role names |
+| Workflows | Configurable state machines | Hardcoded single-client approval flow |
 | Sectors | 11 sector templates | Only mining/energy |
 
 ## Three Demo Moments (Universal Value)

@@ -5,6 +5,8 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
+    "dev:devtools": "ENABLE_ROUTER_DEVTOOLS=true react-router dev",
+    "dev:no-devtools": "ENABLE_ROUTER_DEVTOOLS=false react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "test": "vitest",
@@ -13,6 +15,12 @@
     "test:coverage": "vitest run --coverage",
     "playwright": "TEST_MOCK=true playwright test",
     "playwright:ui": "TEST_MOCK=true playwright test --ui",
+    "playwright:all": "playwright test",
+    "playwright:ui:all": "playwright test --ui",
+    "playwright:org-admin": "playwright test tests/e2e/org-admin-workflows.spec.ts --project=chromium",
+    "playwright:ui:org-admin": "playwright test tests/e2e/org-admin-workflows.spec.ts --ui --project=chromium",
+    "playwright:setup": "playwright test tests/e2e/auth.setup.ts --project=setup",
+    "playwright:ui:setup": "playwright test tests/e2e/auth.setup.ts --ui --project=setup",
     "playwright:codegen": "playwright codegen localhost:5173",
     "test:e2e": "playwright test"
   },

@@ -28,6 +28,10 @@ export default [
     route("organizations/:orgId/members", "routes/organizations.$orgId.members.tsx"),
     route("organizations/:orgId/settings", "routes/organizations.$orgId.settings.tsx"),
   ]),
+  route(
+    "resources/organizations/select",
+    "routes/resources.organizations.select.tsx",
+  ),
   // Resource routes (outside layout - no auth required)
   route("resources/reports/:id/pdf", "routes/resources.reports.$id.pdf.tsx"),
   // Public routes (no auth/layout required)

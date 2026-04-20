@@ -1,9 +1,9 @@
-"""Django management command to import Bettercoal PostgreSQL dump.
+"""Django management command to import a legacy framework PostgreSQL dump.
 
 Usage:
-    python manage.py import_bettercoal /path/to/bettercoal.sql
+    python manage.py import_framework_dump /path/to/framework.sql
 
-This command parses the Bettercoal pg_dump file and maps entities
+This command parses a legacy framework pg_dump file and maps entities
 to Veris models. Both empty (schema-only) and populated
 dumps are supported.
 
@@ -19,7 +19,6 @@ Mapping:
 """
 
 import re
-import uuid
 from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
@@ -30,10 +29,10 @@ User = get_user_model()
 
 
 class Command(BaseCommand):
-    help = "Import Bettercoal PostgreSQL dump into Veris models"
+    help = "Import a legacy framework PostgreSQL dump into Veris models"
 
     def add_arguments(self, parser):
-        parser.add_argument("filepath", type=str, help="Path to bettercoal.sql dump")
+        parser.add_argument("filepath", type=str, help="Path to framework.sql dump")
         parser.add_argument(
             "--dry-run",
             action="store_true",
@@ -43,13 +42,13 @@ class Command(BaseCommand):
             "--org-slug",
             type=str,
             default=None,
-            help="Slug for the organization to create/import into (default: bettercoal)",
+            help="Slug for the organization to create/import into (default: framework-import)",
         )
 
     def handle(self, *args, **options):
         filepath = options["filepath"]
         dry_run = options["dry_run"]
-        org_slug = options["org_slug"] or "bettercoal"
+        org_slug = options["org_slug"] or "framework-import"
 
         self.stdout.write(f"Parsing: {filepath}")
 
@@ -67,7 +66,6 @@ class Command(BaseCommand):
         from assessments.models import (
             Assessment,
             AssessmentPlan,
-            AssessmentReport,
             CIPCycle,
             ESGFocusArea,
             Finding,
@@ -75,12 +73,11 @@ class Command(BaseCommand):
             Site,
         )
         from organizations.models import Organization
-        from users.models import AssessorProfile
 
         # ── Organization ──
         company_data = tables.get("users_company", [])
         org_name = (
-            company_data[0]["company_name"] if company_data else "Bettercoal Import"
+            company_data[0]["company_name"] if company_data else "Framework Import"
         )
         org, _ = Organization.objects.get_or_create(
             slug=org_slug,
@@ -108,8 +105,8 @@ class Command(BaseCommand):
                 fw, _ = Framework.objects.get_or_create(
                     name=name,
                     defaults={
-                        "version": "Bettercoal Import",
-                        "description": f"Imported from Bettercoal - {name}",
+                        "version": "Framework Import",
+                        "description": f"Imported from framework dump - {name}",
                         "categories": fw_cats.get(pid, {}),
                     },
                 )
@@ -138,10 +135,10 @@ class Command(BaseCommand):
         else:
             # No CIP code data - create placeholder framework
             fw, _ = Framework.objects.get_or_create(
-                name="Bettercoal ESG Framework",
+                name="Imported ESG Framework",
                 defaults={
                     "version": "Import",
-                    "description": "Placeholder for Bettercoal import",
+                    "description": "Placeholder for framework import",
                 },
             )
             self.stdout.write(f"  [OK] Framework: {fw.name} (placeholder)")
@@ -240,14 +237,8 @@ class Command(BaseCommand):
         if assurance_procs:
             for ap in assurance_procs:
                 aid = ap.get("id")
-                public_id = ap.get("public_id", str(uuid.uuid4()))
-                supplier = ap.get("supplier_organisation_id")
-
-                # Try to find a matching framework
-                target_fw = Framework.objects.first()
 
                 # Each assurance process becomes an assessment
-                today = timezone.now()
                 assessment = Assessment.objects.create(
                     organization=org,
                     status=Assessment.Status.IN_PROGRESS,
@@ -259,7 +250,7 @@ class Command(BaseCommand):
                             hour=0, minute=0, second=0
                         )
                     ),
-                    ai_summary=f"Imported from Bettercoal assurance process #{aid}",
+                    ai_summary=f"Imported from framework assurance process #{aid}",
                 )
                 self.stdout.write(f"  [OK] Assessment from assurance process #{aid}")
 
@@ -276,7 +267,7 @@ class Command(BaseCommand):
                                     "draft_assessment_report_deadline"
                                 )
                                 or date.today(),
-                                "notes": "Imported from Bettercoal",
+                                "notes": "Imported from framework import",
                             },
                         )
 
@@ -317,7 +308,7 @@ class Command(BaseCommand):
 
         # ── Summary ──
         self.stdout.write(self.style.SUCCESS("\n" + "=" * 50))
-        self.stdout.write(self.style.SUCCESS("Bettercoal import complete!"))
+        self.stdout.write(self.style.SUCCESS("Framework import complete!"))
         self.stdout.write(self.style.SUCCESS("=" * 50))
         self.stdout.write(
             f"Organization:  {Organization.objects.filter(slug=org_slug).count()}"

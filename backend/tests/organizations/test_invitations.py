@@ -281,6 +281,27 @@ class TestInvitationViewSet:
         invitation.refresh_from_db()
         assert invitation.status == Invitation.Status.DECLINED
 
+    def test_superuser_can_create_invitation_without_membership(
+        self, api_factory, superuser, make_org
+    ):
+        """Platform superuser can invite into an org without belonging to it."""
+        org = make_org()
+
+        api_factory.force_authenticate(user=superuser)
+        response = api_factory.post(
+            f"/api/organizations/{org.id}/invitations/",
+            {
+                "email": "super-invited@example.com",
+                "fallback_role": "ADMIN",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+
+        assert response.status_code == 201
+        assert response.data["email"] == "super-invited@example.com"
+        assert response.data["fallback_role"] == "ADMIN"
+
 
 @pytest.mark.django_db
 @pytest.mark.integrated

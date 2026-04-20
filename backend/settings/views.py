@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from assessments.models import ESGFocusArea, Framework
 from organizations.models import Organization
-from themes.models import Theme
+from themes.models import OrganizationTheme
 from users.models import User
 
 
@@ -26,7 +26,7 @@ def settings_dashboard(request, org_id=None):
         orgs = Organization.objects.all()
         return render(request, "settings/org_list.html", {"orgs": orgs})
 
-    theme, _ = Theme.objects.get_or_create(organization=org)
+    theme, _ = OrganizationTheme.objects.get_or_create(organization=org)
     frameworks = Framework.objects.all()
     focus_area_count = org.focus_areas.count()
     user_count = User.objects.filter(organization=org).count()
@@ -78,7 +78,7 @@ def theme_settings(request, org_id=None):
     if not org:
         return redirect("settings:org_list")
 
-    theme, _ = Theme.objects.get_or_create(organization=org)
+    theme, _ = OrganizationTheme.objects.get_or_create(organization=org)
 
     if request.method == "POST":
         theme.primary_color = request.POST.get("primary_color", theme.primary_color)

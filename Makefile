@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 .PHONY: help setup up up-build down down-clean db-up \
-        backend-makemigrations backend-migrate backend-seed backend-shell backend-bash backend-test \
+        backend-makemigrations backend-migrate backend-seed backend-shell backend-bash backend-test create-superuser import-framework-dump \
         frontend-install frontend-logs \
         ai-shell ai-bash ai-test \
         logs logs-backend logs-frontend logs-ai clean \
@@ -53,8 +53,8 @@ full-reset: down-clean ## Wipe everything, rebuild from scratch, migrate + seed
 	@echo "Running migrations + seed..."
 	docker compose run --rm backend python manage.py migrate
 	docker compose run --rm backend python manage.py seed
-	@echo "\033[33m>>> Migrating Bettercoal data...\033[0m"
-	$(MAKE) migrate-bettercoal
+	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
+	$(MAKE) import-framework-dump
 	@echo ""
 	@echo "\033[32m========================================\033[0m"
 	@echo "\033[32m  Full reset complete!\033[0m"
@@ -65,7 +65,7 @@ full-reset: down-clean ## Wipe everything, rebuild from scratch, migrate + seed
 	@docker exec veris-db-1 psql -U postgres -d veris -c \
 		"SELECT 'Orgs: ' || COUNT(*) FROM organizations UNION ALL SELECT 'Users: ' || COUNT(*) FROM users UNION ALL SELECT 'Frameworks: ' || COUNT(*) FROM frameworks UNION ALL SELECT 'Sites: ' || COUNT(*) FROM sites UNION ALL SELECT 'Assessments: ' || COUNT(*) FROM assessments UNION ALL SELECT 'Findings: ' || COUNT(*) FROM findings;"
 
-wire: ## Full end-to-end setup: DB → migrations → seed → bettercoal → verify
+wire: ## Full end-to-end setup: DB → migrations → seed → framework import → verify
 	@echo "\033[33m>>> Starting database...\033[0m"
 	$(MAKE) db-up
 	@echo "Waiting for database (healthcheck)..."
@@ -74,8 +74,8 @@ wire: ## Full end-to-end setup: DB → migrations → seed → bettercoal → ve
 	docker compose run --rm backend python manage.py migrate
 	@echo "\033[33m>>> Seeding demo data...\033[0m"
 	docker compose run --rm backend python manage.py seed
-	@echo "\033[33m>>> Migrating Bettercoal data...\033[0m"
-	$(MAKE) migrate-bettercoal
+	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
+	$(MAKE) import-framework-dump
 	@echo ""
 	@echo "\033[32m========================================\033[0m"
 	@echo "\033[32m  Wire complete! App is ready.\033[0m"
@@ -126,15 +126,15 @@ backend-test: ## Run backend tests
 create-superuser: ## Create Django superuser
 	docker compose run --rm backend python manage.py createsuperuser
 
-migrate-bettercoal: ## Migrate Bettercoal data into Veris DB
-	@echo "Loading bettercoal.sql into temp database..."
-	@docker exec veris-db-1 psql -U postgres -c "DROP DATABASE IF EXISTS bettercoal_temp;"
-	@docker exec veris-db-1 psql -U postgres -c "CREATE DATABASE bettercoal_temp;"
-	@docker cp backend/bettercoal.sql veris-db-1:/tmp/bettercoal.sql
-	@docker exec veris-db-1 psql -U postgres -d bettercoal_temp -f /tmp/bettercoal.sql
+import-framework-dump: ## Import legacy framework data into Veris DB
+	@echo "Loading framework.sql into temp database..."
+	@docker exec veris-db-1 psql -U postgres -c "DROP DATABASE IF EXISTS framework_import;"
+	@docker exec veris-db-1 psql -U postgres -c "CREATE DATABASE framework_import;"
+	@docker cp backend/framework.sql veris-db-1:/tmp/framework.sql
+	@docker exec veris-db-1 psql -U postgres -d framework_import -f /tmp/framework.sql
 	@echo "Temp DB loaded. Running migration..."
-	docker compose exec backend python migrate_bettercoal.py
-	@echo "Bettercoal migration complete!"
+	docker compose exec backend python migrate_framework_dump.py
+	@echo "Framework import complete!"
 
 # ─────────────────────────────────────────────
 # Frontend (Vite)

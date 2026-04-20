@@ -15,13 +15,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  // SUPERADMIN sees all templates, others see only public published templates
+  // Platform-level template management remains superuser-only.
   const templates = await api.get<any[]>(
-    user.fallbackRole === "SUPERADMIN" 
-      ? "/api/templates/" 
-      : "/api/templates/public/",
+    user.isSuperuser ? "/api/templates/" : "/api/templates/public/",
     token,
-    request
+    request,
   );
 
   return {
@@ -179,7 +177,7 @@ export default function TemplatesRoute() {
     }
   };
 
-  const canManageTemplates = RBAC.canManageTemplates(user, "");
+  const canManageTemplates = RBAC.canManageTemplates(user);
 
   return (
     <div className="max-w-7xl mx-auto py-8 space-y-6">

@@ -1,14 +1,14 @@
-# TDi Platform Ecosystem
+# Legacy Consultancy Platform Ecosystem
 
 ## Company Context
 
-TDi builds **certification and assurance platforms** for sustainability standards across extractive industries. Multiple clients/standards share similar domain patterns — questionnaires, assessments, findings, continuous improvement plans, and reports.
+Legacy Consultancy builds **certification and assurance platforms** for sustainability standards across extractive industries. Multiple clients/standards share similar domain patterns — questionnaires, assessments, findings, continuous improvement plans, and reports.
 
 ---
 
-# 1. Bettercoal
+# 1. Legacy Mining Assurance Program
 
-**Path:** `/Users/allanimire/projects/TDi/bettercoal`
+**Path:** `/Users/allanimire/projects/Legacy Consultancy/legacy_mining_program`
 
 ## Overview
 A Django monolith for managing environmental/social compliance assessments in the **coal mining industry**. Multi-stakeholder workflow: mining companies ("suppliers/producers") get assessed by independent assessors, with oversight from member companies and a secretariat.
@@ -38,7 +38,7 @@ A Django monolith for managing environmental/social compliance assessments in th
 1. **Secretariat** — Platform admin/superuser
 2. **Supplier** — Mining company staff (Coordinator + Team Members)
 3. **Assessor** — Lead + Team assessors who conduct assessments
-4. **Member** — Bettercoal member companies, view-only access to assigned processes
+4. **Member** — Legacy Mining Assurance Program member companies, view-only access to assigned processes
 
 ## Main Workflow (4 Phases)
 
@@ -113,7 +113,7 @@ GenericForeignKey-based — files attach to any model (provisions, findings, rep
 
 # 2. EO100 Frontend
 
-**Path:** `/Users/allanimire/projects/TDi/frontend`
+**Path:** `/Users/allanimire/projects/Legacy Consultancy/frontend`
 
 ## Overview
 Certification management platform for the **EO100 Standard for Responsible Energy Development** (by Equitable Origin). Manages the full certification lifecycle for energy industry "Certifiable Units" (CUs).
@@ -201,7 +201,7 @@ frontend/
 
 # 3. EO100 Backend
 
-**Path:** `/Users/allanimire/projects/TDi/backend`
+**Path:** `/Users/allanimire/projects/Legacy Consultancy/backend`
 
 ## Overview
 Django REST API powering the EO100 certification platform. API-only (no HTML templates), versioned serializer system, Helm/K8s deployment.
@@ -341,7 +341,7 @@ Custom versioned serializer lookup system (`config/serializer_map.py` + `service
 **Path:** `/Users/allanimire/projects/Veris`
 
 ## Overview
-AI-first, multi-industry certification and assessment platform. Built to be generic enough to serve TDi clients across different sectors (coal mining, energy, agriculture, etc.). **Currently in early development.**
+AI-first, multi-industry certification and assessment platform. Built to be generic enough to serve Legacy Consultancy clients across different sectors (coal mining, energy, agriculture, etc.). **Currently in early development.**
 
 ## Tech Stack
 | Layer | Tech |
@@ -389,8 +389,8 @@ Veris/
 | AIInsight | Detailed AI reasoning (type, confidence, source_documents) |
 | Task | Improvement actions, FK to assessment/org/focus_area |
 | Site | Multi-industry (12 types: MINE, OPERATION, WELL, FACILITY, etc.) with JSON industry_data |
-| AssessmentReport | Bettercoal-compatible report sections |
-| Finding | Bettercoal-compatible findings |
+| AssessmentReport | Legacy Mining Assurance Program-compatible report sections |
+| Finding | Legacy Mining Assurance Program-compatible findings |
 | CIPCycle | Continuous Improvement Plan cycles |
 | AssessmentPlan | Site assessment plan with dates |
 
@@ -399,7 +399,7 @@ Veris/
 |---|---|
 | Organization | Multi-tenant entity with status tiers (FREE/STANDARD/ENTERPRISE) |
 | User | Custom user with email USERNAME_FIELD, role enum, org FK, status |
-| AssessorProfile | Bettercoal-compatible assessor profile |
+| AssessorProfile | Legacy Mining Assurance Program-compatible assessor profile |
 | Theme | White-label theming (colors, logo, fonts, custom CSS) |
 | KnowledgeDocument | RAG pipeline documents with embedding tracking |
 
@@ -409,11 +409,11 @@ Veris/
 - Custom `login_view` (email + password → JWT)
 - Cookie-based session (7-day max-age, SameSite=Lax)
 
-## What Veris Does Well (Better than EO100/Bettercoal)
+## What Veris Does Well (Better than EO100/Legacy Mining Assurance Program)
 - **AI-first architecture** — AIInsight model, knowledge documents for RAG
 - **Multi-industry flexibility** — 12 SiteTypes + JSON industry_data
 - **White-label theming** — Per-org theming with live preview
-- **Modern frontend** — React Router v7 SSR vs Bettercoal's Jinja2
+- **Modern frontend** — React Router v7 SSR vs Legacy Mining Assurance Program's Jinja2
 - **Clean API-first design** — Separated API from frontend
 - **Comprehensive seed data** — Rich demo across 3 industries
 
@@ -429,7 +429,7 @@ Veris/
 
 ## Shared Domain Concepts
 
-| Concept | Bettercoal | EO100 | Veris |
+| Concept | Legacy Mining Assurance Program | EO100 | Veris |
 |---|---|---|---|
 | Central Process | AssuranceProcess | CertificationProcess | Assessment |
 | Entity (site/unit) | MineSite | CertifiableUnit | Site |
@@ -458,8 +458,8 @@ Entity Creation → Questionnaire → Assessment → Report → Findings → CIP
 | Docker Compose (dev) | Universal |
 | Helm + K8s (prod) | Universal |
 | SOPS for secrets | Universal |
-| GitLab CI | Universal (EO100 + Bettercoal) |
-| Token auth | Knox (EO100), sessions (Bettercoal), JWT (Veris) |
+| GitLab CI | Universal (EO100 + Legacy Mining Assurance Program) |
+| Token auth | Knox (EO100), sessions (Legacy Mining Assurance Program), JWT (Veris) |
 
 ## Code Duplication Assessment
 
@@ -476,7 +476,7 @@ The domain models, workflow logic, auth, notifications, deadlines, and document 
 
 ---
 
-# 6. Veris Gap Analysis: What's Needed to Replace Bettercoal/EO100
+# 6. Veris Gap Analysis: What's Needed to Replace Legacy Mining Assurance Program/EO100
 
 ## Critical Blockers (P0 — Must Fix)
 
@@ -500,7 +500,7 @@ Viewset exists but never added to the router. Can't create/manipulate questions 
 
 ## Significant Gaps (P1-P2)
 
-| Feature | Bettercoal Has | EO100 Has | Veris Needs |
+| Feature | Legacy Mining Assurance Program Has | EO100 Has | Veris Needs |
 |---|---|---|---|
 | User invitation/signup flow | Token-based invites | Token-based per-role invites | Multi-role invite system with tokenized signup |
 | Role-based permissions | Fine-grained ACL per step | Permission checks in service layer | Role middleware + per-model/org permissions |
@@ -524,13 +524,13 @@ Viewset exists but never added to the router. Can't create/manipulate questions 
 ## Architecture Decisions Needed
 
 ### A. Workflow Engine
-Bettercoal's ActionGraph is the most mature — frozen dataclasses, prerequisite chains, role-based ACL per step, email config. Should be extracted as a generic `WorkflowEngine` library with config-driven graphs, decoupled from Bettercoal domain.
+Legacy Mining Assurance Program's ActionGraph is the most mature — frozen dataclasses, prerequisite chains, role-based ACL per step, email config. Should be extracted as a generic `WorkflowEngine` library with config-driven graphs, decoupled from Legacy Mining Assurance Program domain.
 
 ### B. Role System
 EO100's ArrayField + active_role switching is better for a generic platform. A user can be Assessor for one org, Coordinator for another. Veris currently has single role — needs upgrade.
 
 ### C. AI Engine Priority
-Minimum viable AI for TDi clients:
+Minimum viable AI for Legacy Consultancy clients:
 1. **Document analysis** — Score evidence docs against provisions
 2. **Response suggestions** — AI suggests answers based on uploaded documents
 3. **Risk flagging** — AI reviews completed assessments and flags gaps
@@ -574,7 +574,7 @@ Minimum viable AI for TDi clients:
 
 ## The Product Engine Vision
 
-Veris should become a **reusable certification platform engine** that TDi configures per client rather than rebuilding from scratch. The architecture should be:
+Veris should become a **reusable certification platform engine** that Legacy Consultancy configures per client rather than rebuilding from scratch. The architecture should be:
 
 ```
 Config Layer (per-client YAML)
@@ -600,4 +600,4 @@ Client Frontend (React Router v7, branded per theme)
 1. **Fix the platform** (P0 items) — Veris can't replace anything until routing, auth, and org-scoping work
 2. **Build the questionnaire** — This is the core user-facing feature
 3. **Build the AI engine** — This is the differentiator
-4. **Extract shared patterns** — Once Veris works, build the "TDi Platform Engine" library that can be reused for new clients
+4. **Extract shared patterns** — Once Veris works, build the "Legacy Consultancy Platform Engine" library that can be reused for new clients

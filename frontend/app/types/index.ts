@@ -11,7 +11,7 @@ export interface ThemeConfig {
   secondary_foreground: string;
   accent: string;
   accent_foreground: string;
-  
+
   // Surface colors - light mode
   background: string;
   foreground: string;
@@ -19,13 +19,13 @@ export interface ThemeConfig {
   muted_foreground: string;
   card: string;
   card_foreground: string;
-  
+
   // State colors - light mode
   border: string;
   destructive: string;
   destructive_foreground: string;
   success: string;
-  
+
   // Primary colors - dark mode
   primary_dark?: string;
   primary_foreground_dark?: string;
@@ -33,7 +33,7 @@ export interface ThemeConfig {
   secondary_foreground_dark?: string;
   accent_dark?: string;
   accent_foreground_dark?: string;
-  
+
   // Surface colors - dark mode
   background_dark?: string;
   foreground_dark?: string;
@@ -41,14 +41,18 @@ export interface ThemeConfig {
   muted_foreground_dark?: string;
   card_dark?: string;
   card_foreground_dark?: string;
-  
+
   // State colors - dark mode
   border_dark?: string;
   destructive_dark?: string;
   destructive_foreground_dark?: string;
   success_dark?: string;
-  
+
   // Branding
+  app_name?: string;
+  login_title?: string;
+  login_subtitle?: string;
+  support_email?: string;
   logo_url?: string;
   logo_url_dark?: string;
   favicon_url?: string;
@@ -64,35 +68,123 @@ export type ThemeContextValue = {
 };
 
 /**
- * User shape returned by the auth session helpers.
+ * Frontend auth / tenant types
  */
-import { UserRole } from "~/types/rbac";
 
-export interface OrganizationMembership {
+export interface ActiveOrganization {
   id: string;
   name: string;
-  role: string;
-  fallback_role?: string;
+  slug?: string;
 }
 
-export interface User {
+export interface ActiveMembership {
+  role?: string | null;
+  fallback_role?: string;
+  is_default?: boolean;
+  status?: string;
+}
+
+export interface OrganizationListItem {
+  id: string;
+  name: string;
+  slug?: string;
+  role?: string | null;
+  fallback_role?: string;
+  status?: string;
+  is_default?: boolean;
+}
+
+export type OrganizationMembership = OrganizationListItem;
+
+export type User = {
   id: string;
   email: string;
   fullName: string;
   firstName?: string;
   lastName?: string;
+  pictureUrl?: string;
+
+  // Flattened convenience fields for UI compatibility
   orgId: string | null;
   orgName?: string;
-  role: UserRole;  // Display role (custom role name or fallback)
-  fallbackRole?: string;  // Durable permission level (ADMIN, COORDINATOR, etc.)
-  pictureUrl?: string;
-  organizations?: OrganizationMembership[];
-  isSuperuser?: boolean;
-  isStaff?: boolean;
+  role: string;
+  fallbackRole?: string;
+
+  // Active tenant context
+  activeOrganization?: ActiveOrganization | null;
+  activeMembership?: ActiveMembership | null;
+  activePermissions?: string[];
+
+  // Optional org switcher/bootstrap data
+  organizationCount?: number;
+  organizations?: OrganizationListItem[];
+  recentOrganizations?: OrganizationListItem[];
+
+  // Platform-level flags
+  isSuperuser: boolean;
+  isStaff: boolean;
+
+  // Profile
   timezone?: string;
   country?: string;
-}
+};
 
+export type MeResponse = {
+  id: string;
+  email: string;
+  full_name: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  picture_url?: string | null;
+  is_superuser: boolean;
+  is_staff: boolean;
+  timezone?: string;
+  country?: string;
+
+  organization_count?: number;
+  active_organization?: {
+    id: string;
+    name: string;
+    slug?: string;
+  } | null;
+  active_membership?: {
+    role?: string | null;
+    fallback_role?: string;
+    is_default?: boolean;
+    status?: string;
+  } | null;
+  active_permissions?: string[];
+  recent_organizations?: Array<{
+    id: string;
+    name: string;
+    slug?: string;
+    role?: string | null;
+    fallback_role?: string;
+    status?: string;
+    is_default?: boolean;
+  }>;
+};
+
+export type LoginResponse = {
+  access_token?: string;
+  access?: string;
+  refresh_token?: string;
+  refresh?: string;
+  user_id?: string;
+  active_organization?: {
+    id: string;
+    name: string;
+    slug?: string;
+  } | null;
+  active_membership?: {
+    role?: string | null;
+    fallback_role?: string;
+    is_default?: boolean;
+    status?: string;
+  } | null;
+  organization_count?: number;
+  requires_org_selection?: boolean;
+};
 
 /* ───────── Assessment & Related Models ───────── */
 
@@ -249,4 +341,3 @@ export interface AssessmentFullDetail {
   cip_cycles: CIPCycle[];
   tasks: Task[];
 }
-

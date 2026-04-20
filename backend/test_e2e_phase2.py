@@ -101,7 +101,7 @@ def test_phase2_pipeline():
             "file_type": "PDF",
             "file_size": upload_data["file_size"],
             "category": "Evidence",
-            "framework_tags": json.dumps(["bettercoal"]),
+            "framework_tags": json.dumps(["primary_assurance_standard"]),
         },
         format="json",
     )

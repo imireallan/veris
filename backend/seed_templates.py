@@ -19,22 +19,22 @@ def seed_templates():
         print("❌ No SUPERADMIN user found. Create one first.")
         return
 
-    # Get Bettercoal framework
-    framework = Framework.objects.filter(name__icontains="bettercoal").first()
+    # Get primary assurance framework
+    framework = Framework.objects.filter(name__icontains="primary assurance").first()
     if not framework:
-        print("⚠️  Bettercoal framework not found. Creating...")
+        print("⚠️  Primary assurance framework not found. Creating...")
         framework = Framework.objects.create(
-            name="Bettercoal",
+            name="Primary Assurance Standard",
             version="2024",
-            description="Bettercoal Assessment Standard",
+            description="Primary assurance assessment standard",
         )
 
-    # Create Bettercoal 2024 Template
-    print("✓ Creating Bettercoal 2024 Assessment template...")
+    # Create primary assurance 2024 template
+    print("✓ Creating Primary Assurance 2024 Assessment template...")
     template = AssessmentTemplate.objects.create(
-        name="Bettercoal 2024 Assessment",
-        slug="bettercoal-2024",
-        description="Standard Bettercoal assessment for mining sites. Covers all 12 principles and 144 provisions.",
+        name="Primary Assurance 2024 Assessment",
+        slug="primary-assurance-2024",
+        description="Standard mining assurance assessment for operational sites. Covers core principles and requirements.",
         framework=framework,
         version="1.0.0",
         is_public=True,
@@ -52,7 +52,7 @@ def seed_templates():
             "framework_mappings": [
                 {
                     "framework_id": str(framework.id),
-                    "framework_name": "Bettercoal",
+                    "framework_name": "Primary Assurance Standard",
                     "provision_code": "P3.4",
                     "provision_name": "Environmental Management",
                 }
@@ -107,21 +107,23 @@ def seed_templates():
     print(f"✓ Slug: {template.slug}")
     print(f"✓ Questions: {template.assessment_questions.count()}")
 
-    # Create CGWG template
-    print("\n✓ Creating CGWG 2024 Assessment template...")
-    cgwg_framework = Framework.objects.filter(name__icontains="cgwg").first()
-    if not cgwg_framework:
-        cgwg_framework = Framework.objects.create(
-            name="CGWG",
+    # Create supplier questionnaire template
+    print("\n✓ Creating Supplier Questionnaire 2024 Assessment template...")
+    supplier_questionnaire_framework = Framework.objects.filter(
+        name__icontains="supplier questionnaire"
+    ).first()
+    if not supplier_questionnaire_framework:
+        supplier_questionnaire_framework = Framework.objects.create(
+            name="Supplier Questionnaire",
             version="2024",
             description="Coloured Gemstone Working Group Assessment",
         )
 
-    cgwg_template = AssessmentTemplate.objects.create(
-        name="CGWG 2024 Assessment",
-        slug="cgwg-2024",
-        description="CGWG Self-Assessment Questionnaire (SAQ) for gemstone suppliers.",
-        framework=cgwg_framework,
+    supplier_questionnaire_template = AssessmentTemplate.objects.create(
+        name="Supplier Questionnaire 2024 Assessment",
+        slug="supplier-questionnaire-2024",
+        description="Supplier self-assessment questionnaire for distributed supplier programs.",
+        framework=supplier_questionnaire_framework,
         version="1.0.0",
         is_public=True,
         owner_org=None,
@@ -129,8 +131,8 @@ def seed_templates():
         created_by=superadmin,
     )
 
-    # Add CGWG questions
-    cgwg_questions = [
+    # Add supplier questionnaire questions
+    supplier_questionnaire_questions = [
         {
             "text": "Does your company have a policy on responsible sourcing of gemstones?",
             "category": "Governance",
@@ -151,9 +153,9 @@ def seed_templates():
         },
     ]
 
-    for i, q_data in enumerate(cgwg_questions):
+    for i, q_data in enumerate(supplier_questionnaire_questions):
         AssessmentQuestion.objects.create(
-            template=cgwg_template,
+            template=supplier_questionnaire_template,
             text=q_data["text"],
             order=i + 1,
             category=q_data["category"],
@@ -161,19 +163,23 @@ def seed_templates():
             framework_mappings=q_data["framework_mappings"],
         )
 
-    cgwg_template.status = AssessmentTemplate.Status.PUBLISHED
-    cgwg_template.published_at = timezone.now()
-    cgwg_template.published_by = superadmin
-    cgwg_template.save()
+    supplier_questionnaire_template.status = AssessmentTemplate.Status.PUBLISHED
+    supplier_questionnaire_template.published_at = timezone.now()
+    supplier_questionnaire_template.published_by = superadmin
+    supplier_questionnaire_template.save()
 
-    print(f"✓ CGWG template published: {cgwg_template.name}")
-    print(f"✓ Questions: {cgwg_template.assessment_questions.count()}")
+    print(
+        f"✓ Supplier questionnaire template published: {supplier_questionnaire_template.name}"
+    )
+    print(
+        f"✓ Questions: {supplier_questionnaire_template.assessment_questions.count()}"
+    )
 
     print("\n✅ Seed complete!")
     print("\nAvailable templates:")
     print(f"  1. {template.name} ({template.assessment_questions.count()} questions)")
     print(
-        f"  2. {cgwg_template.name} ({cgwg_template.assessment_questions.count()} questions)"
+        f"  2. {supplier_questionnaire_template.name} ({supplier_questionnaire_template.assessment_questions.count()} questions)"
     )
     print("\nTest instantiation:")
     print(f"  POST /api/templates/{template.id}/instantiate/")

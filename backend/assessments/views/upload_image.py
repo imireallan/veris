@@ -35,7 +35,18 @@ def upload_image(request):
             {"error": "Invalid image file type."}, status=status.HTTP_400_BAD_REQUEST
         )
 
-    image = UploadedImage.objects.create(uploaded_by=request.user, file=uploaded_file)
+    organization = getattr(request, "organization", None)
+    if not organization:
+        return Response(
+            {"error": "Organization context is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    image = UploadedImage.objects.create(
+        uploaded_by=request.user,
+        organization=organization,
+        file=uploaded_file,
+    )
 
     return Response(
         {

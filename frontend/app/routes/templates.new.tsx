@@ -147,7 +147,7 @@ export default function NewTemplateRoute() {
               <Input
                 id="name"
                 name="name"
-                placeholder="e.g., Bettercoal 2024 Assessment"
+                placeholder="e.g., Supplier Due Diligence 2026"
                 className={formErrors.name ? "border-destructive" : ""}
               />
               {formErrors.name && (

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from themes.models import Theme
+from themes.models import OrganizationTheme
 from themes.utils import hex_to_hsl, hsl_to_hex, is_valid_hex
 
 
@@ -99,7 +99,7 @@ class ThemeSerializer(serializers.ModelSerializer):
     custom_css_dark = serializers.CharField(required=False, allow_blank=True)
 
     class Meta:
-        model = Theme
+        model = OrganizationTheme
         fields = [
             "id",
             "organization",
@@ -223,107 +223,107 @@ class ThemeSerializer(serializers.ModelSerializer):
         return hex_to_hsl(hex_value)
 
     # Light mode getters
-    def get_primary(self, obj: Theme) -> str:
+    def get_primary(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.primary_color)
 
-    def get_primary_foreground(self, obj: Theme) -> str:
+    def get_primary_foreground(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_primary(obj))
         return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
 
-    def get_secondary(self, obj: Theme) -> str:
+    def get_secondary(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.secondary_color)
 
-    def get_secondary_foreground(self, obj: Theme) -> str:
+    def get_secondary_foreground(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_secondary(obj))
         return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
 
-    def get_accent(self, obj: Theme) -> str:
+    def get_accent(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.accent_color)
 
-    def get_accent_foreground(self, obj: Theme) -> str:
+    def get_accent_foreground(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_accent(obj))
         return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
 
-    def get_background(self, obj: Theme) -> str:
+    def get_background(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.background_color)
 
-    def get_foreground(self, obj: Theme) -> str:
+    def get_foreground(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.text_color)
 
-    def get_muted(self, obj: Theme) -> str:
+    def get_muted(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.muted_color)
 
-    def get_muted_foreground(self, obj: Theme) -> str:
+    def get_muted_foreground(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.muted_foreground_color)
 
-    def get_card(self, obj: Theme) -> str:
+    def get_card(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.card_color)
 
-    def get_card_foreground(self, obj: Theme) -> str:
+    def get_card_foreground(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.card_foreground_color)
 
-    def get_border(self, obj: Theme) -> str:
+    def get_border(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.border_color)
 
-    def get_destructive(self, obj: Theme) -> str:
+    def get_destructive(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.destructive_color)
 
-    def get_destructive_foreground(self, obj: Theme) -> str:
+    def get_destructive_foreground(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.destructive_foreground_color)
 
-    def get_success(self, obj: Theme) -> str:
+    def get_success(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.success_color)
 
     # Dark mode getters
-    def get_primary_dark(self, obj: Theme) -> str:
+    def get_primary_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.primary_color_dark)
 
-    def get_primary_foreground_dark(self, obj: Theme) -> str:
+    def get_primary_foreground_dark(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_primary_dark(obj))
         return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
 
-    def get_secondary_dark(self, obj: Theme) -> str:
+    def get_secondary_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.secondary_color_dark)
 
-    def get_secondary_foreground_dark(self, obj: Theme) -> str:
+    def get_secondary_foreground_dark(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_secondary_dark(obj))
         return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
 
-    def get_accent_dark(self, obj: Theme) -> str:
+    def get_accent_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.accent_color_dark)
 
-    def get_accent_foreground_dark(self, obj: Theme) -> str:
+    def get_accent_foreground_dark(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_accent_dark(obj))
         return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
 
-    def get_background_dark(self, obj: Theme) -> str:
+    def get_background_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.background_color_dark)
 
-    def get_foreground_dark(self, obj: Theme) -> str:
+    def get_foreground_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.text_color_dark)
 
-    def get_muted_dark(self, obj: Theme) -> str:
+    def get_muted_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.muted_color_dark)
 
-    def get_muted_foreground_dark(self, obj: Theme) -> str:
+    def get_muted_foreground_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.muted_foreground_color_dark)
 
-    def get_card_dark(self, obj: Theme) -> str:
+    def get_card_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.card_color_dark)
 
-    def get_card_foreground_dark(self, obj: Theme) -> str:
+    def get_card_foreground_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.card_foreground_color_dark)
 
-    def get_border_dark(self, obj: Theme) -> str:
+    def get_border_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.border_color_dark)
 
-    def get_destructive_dark(self, obj: Theme) -> str:
+    def get_destructive_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.destructive_color_dark)
 
-    def get_destructive_foreground_dark(self, obj: Theme) -> str:
+    def get_destructive_foreground_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.destructive_foreground_color_dark)
 
-    def get_success_dark(self, obj: Theme) -> str:
+    def get_success_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.success_color_dark)
 
     @staticmethod

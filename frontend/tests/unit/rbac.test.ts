@@ -59,6 +59,28 @@ describe("RBAC active-org permissions", () => {
     expect(RBAC.canCreateAssessments(user, "org-2")).toBe(false);
   });
 
+  it("uses active organization context instead of stale compatibility orgId", () => {
+    const user = makeUser({
+      orgId: "org-1",
+      orgName: "Org 1",
+      activeOrganization: { id: "org-2", name: "Org 2" },
+      activeMembership: {
+        role: UserRole.ASSESSOR,
+        fallback_role: UserRole.ASSESSOR,
+        is_default: false,
+        status: "ACTIVE",
+      },
+      role: UserRole.ASSESSOR,
+      fallbackRole: UserRole.ASSESSOR,
+      activePermissions: ["assessment:view"],
+    });
+
+    expect(RBAC.getActiveOrgId(user)).toBe("org-2");
+    expect(RBAC.canAccessAssessments(user, "org-2")).toBe(true);
+    expect(RBAC.canCreateAssessments(user, "org-2")).toBe(false);
+    expect(RBAC.canAccessAssessments(user, "org-1")).toBe(false);
+  });
+
   it("treats organization creation as a platform-level permission", () => {
     const adminUser = makeUser();
     const superUser = makeUser({

@@ -5,6 +5,7 @@ import Sidebar from "~/components/Sidebar";
 import { OrganizationSwitcher } from "~/components/OrganizationSwitcher";
 import { UserDropdown } from "~/components/UserDropdown";
 import type { OrganizationListItem, User } from "~/types";
+import { getResolvedActiveOrganizationId } from "~/lib/active-organization";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -44,6 +45,7 @@ function useDarkMode(): [boolean, () => void] {
 export function AppLayout({ children, user, organizations, navLinks }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [dark, toggleTheme] = useDarkMode();
+  const activeOrganizationId = getResolvedActiveOrganizationId(user);
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -86,7 +88,7 @@ export function AppLayout({ children, user, organizations, navLinks }: AppLayout
           {organizations.length > 1 ? (
             <OrganizationSwitcher
               organizations={organizations}
-              activeOrganizationId={user.orgId}
+              activeOrganizationId={activeOrganizationId}
               className="mr-4"
             />
           ) : null}

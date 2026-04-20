@@ -1,11 +1,11 @@
 # AI Validation: End-to-End Use Case & Testing Guide
 
-## Use Case: Bettercoal Assessment Submission
+## Use Case: Mining Assurance Assessment Submission
 
 ### Scenario
 
-**User**: Sustainability consultant at TDi (working for Bettercoal client)  
-**Task**: Submit assessment response for Bettercoal Provision 3.2 (Environmental Policy)  
+**User**: Sustainability consultant working with a mining assurance client  
+**Task**: Submit assessment response for Provision 3.2 (Environmental Policy)  
 **Goal**: Get AI validation that response is supported by uploaded evidence
 
 ---
@@ -19,7 +19,7 @@
 **API Call**:
 ```bash
 curl -X POST http://localhost:8000/api/upload-evidence/ \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Authorization: Bearer *** \
   -F "file=@environmental_policy_2025.pdf"
 ```
 
@@ -42,7 +42,7 @@ curl -X POST http://localhost:8000/api/upload-evidence/ \
 **API Call**:
 ```bash
 curl -X POST "http://localhost:8000/api/documents/?organization=$ORG_ID" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Authorization: Bearer *** \
   -H "Content-Type: application/json" \
   -d '{
     "organization": "'$ORG_ID'",
@@ -52,7 +52,7 @@ curl -X POST "http://localhost:8000/api/documents/?organization=$ORG_ID" \
     "file_type": "PDF",
     "file_size": 524288,
     "category": "policy",
-    "framework_tags": ["bettercoal"]
+    "framework_tags": ["mining-assurance-standard"]
   }'
 ```
 
@@ -77,7 +77,7 @@ curl -X POST "http://localhost:8000/api/documents/?organization=$ORG_ID" \
 **API Call**:
 ```bash
 curl -X POST "http://localhost:8000/api/documents/doc-uuid-1234-5678/process/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN"
+  -H "Authorization: Bearer ***
 ```
 
 **Response**:
@@ -100,14 +100,14 @@ curl -X POST "http://localhost:8000/api/documents/doc-uuid-1234-5678/process/" \
      "organization_id": "org-uuid-abcd-efgh",
      "chunk_index": 0,
      "text": "Our company is committed to minimizing environmental impact...",
-     "framework_tags": ["bettercoal"]
+     "framework_tags": ["mining-assurance-standard"]
    }
    ```
 
 **Verify**:
 ```bash
 curl "http://localhost:8000/api/documents/doc-uuid-1234-5678/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN"
+  -H "Authorization: Bearer ***
 ```
 
 Check `embeddings_indexed: true` and `chunk_count: 12`.
@@ -121,7 +121,7 @@ Check `embeddings_indexed: true` and `chunk_count: 12`.
 **API Call**:
 ```bash
 curl -X POST "http://localhost:8000/api/organizations/$ORG_ID/assessments/$ASSESSMENT_ID/responses/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Authorization: Bearer *** \
   -H "Content-Type: application/json" \
   -d '{
     "question_id": "question-uuid-321",
@@ -155,7 +155,7 @@ curl -X POST "http://localhost:8000/api/organizations/$ORG_ID/assessments/$ASSES
 **API Call**:
 ```bash
 curl -X POST "http://localhost:8000/api/organizations/$ORG_ID/assessments/$ASSESSMENT_ID/responses/response-uuid-9876/validate/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN"
+  -H "Authorization: Bearer ***
 ```
 
 **Response** (Scenario A: Strong Match):
@@ -187,7 +187,7 @@ curl -X POST "http://localhost:8000/api/organizations/$ORG_ID/assessments/$ASSES
 **API Call**:
 ```bash
 curl "http://localhost:8000/api/organizations/$ORG_ID/assessments/$ASSESSMENT_ID/responses/response-uuid-9876/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN"
+  -H "Authorization: Bearer ***
 ```
 
 **Response** (After Validation):
@@ -285,7 +285,7 @@ set -e
 
 # Configuration
 BASE_URL="http://localhost:8000"
-ACCESS_TOKEN="your-jwt-token"
+ACCESS_TOKEN="***"
 ORG_ID="your-org-uuid"
 ASSESSMENT_ID="your-assessment-uuid"
 
@@ -294,7 +294,7 @@ echo "=== AI Validation E2E Test ==="
 # Step 1: Upload evidence
 echo "Step 1: Uploading evidence document..."
 UPLOAD_RESPONSE=$(curl -s -X POST "$BASE_URL/api/upload-evidence/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Authorization: Bearer *** \
   -F "file=@test_evidence.pdf")
 
 FILE_URL=$(echo "$UPLOAD_RESPONSE" | jq -r '.url')
@@ -303,7 +303,7 @@ echo "Uploaded to: $FILE_URL"
 # Step 2: Create knowledge document
 echo "Step 2: Creating knowledge document..."
 DOC_RESPONSE=$(curl -s -X POST "$BASE_URL/api/documents/?organization=$ORG_ID" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Authorization: Bearer *** \
   -H "Content-Type: application/json" \
   -d "{
     \"organization\": \"$ORG_ID\",
@@ -319,14 +319,14 @@ echo "Created document: $DOC_ID"
 # Step 3: Process document
 echo "Step 3: Processing document (embedding)..."
 PROCESS_RESPONSE=$(curl -s -X POST "$BASE_URL/api/documents/$DOC_ID/process/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN")
+  -H "Authorization: Bearer ***
 
 echo "Processing result: $(echo "$PROCESS_RESPONSE" | jq -r '.status')"
 
 # Step 4: Create assessment response
 echo "Step 4: Creating assessment response..."
 RESPONSE_CREATE=$(curl -s -X POST "$BASE_URL/api/organizations/$ORG_ID/assessments/$ASSESSMENT_ID/responses/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H "Authorization: Bearer *** \
   -H "Content-Type: application/json" \
   -d "{
     \"question_id\": \"test-question-id\",
@@ -341,7 +341,7 @@ echo "Created response: $RESPONSE_ID"
 # Step 5: Validate response
 echo "Step 5: Triggering AI validation..."
 VALIDATE_RESPONSE=$(curl -s -X POST "$BASE_URL/api/organizations/$ORG_ID/assessments/$ASSESSMENT_ID/responses/$RESPONSE_ID/validate/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN")
+  -H "Authorization: Bearer ***
 
 echo "Validation Result:"
 echo "$VALIDATE_RESPONSE" | jq '.'
@@ -405,7 +405,7 @@ fi
 ```bash
 # Check if document was processed
 curl "$BASE_URL/api/documents/$DOC_ID/" \
-  -H "Authorization: Bearer $ACCESS_TOKEN" | jq '.embeddings_indexed'
+  -H "Authorization: Bearer *** | jq '.embeddings_indexed'
 
 # Should be: true
 

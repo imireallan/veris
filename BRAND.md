@@ -157,7 +157,7 @@ Input → Processing Pipeline → Storage → Retrieval → AI → Structured Ou
 - **Assessment Templates** — reusable questionnaire structures
 - **Assessment Responses** — answers with AI scoring, feedback, validation
 
-### Bettercoal-Style Assurance Flow
+### Mining Assurance Demo Flow
 
 - **Findings** — assessment observations with severity (LOW → CRITICAL), status tracking, responsible party
 - **Assessment Reports** — multi-section structured reports (executive summary, methodology, scope, conclusion)

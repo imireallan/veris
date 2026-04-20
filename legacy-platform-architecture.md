@@ -1,4 +1,4 @@
-# Bettercoal Platform Architecture
+# Legacy Mining Assurance Program Platform Architecture
 
 ## What It Is
 
@@ -6,7 +6,7 @@ A **Django monolith** for managing environmental/social compliance assessments i
 
 ## Path
 
-`/Users/allanimire/projects/TDi/bettercoal`
+`/Users/allanimire/projects/Legacy Consultancy/legacy_mining_program`
 
 ---
 
@@ -29,7 +29,7 @@ A **Django monolith** for managing environmental/social compliance assessments i
 1. **Secretariat** — Platform admin/superuser
 2. **Supplier** — Mining company staff (Coordinator + Team Members)
 3. **Assessor** — Lead + Team assessors who conduct assessments
-4. **Member** — Bettercoal member companies, view-only access to assigned processes
+4. **Member** — Legacy Mining Assurance Program member companies, view-only access to assigned processes
 
 ---
 

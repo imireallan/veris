@@ -20,7 +20,7 @@ Templates: 4
   - Test Template (v1.0.0) - DRAFT - 1 questions
   - ESG Compliance 2026 (v1.0.0) - DRAFT - 3 questions
   - Sustainability Baseline 2026 (v1.0.0) - DRAFT - 3 questions
-  - Bettercoal Standard Template (v1.0.0) - DRAFT - 291 questions
+  - Mining Assurance Standard Template (v1.0.0) - DRAFT - 291 questions
 ```
 
 ---
@@ -93,31 +93,31 @@ class AssessmentTemplateAdmin(admin.ModelAdmin):
 ```bash
 # 1. List templates (SUPERADMIN)
 curl http://localhost:8000/api/templates/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>"
+  -H "Authorization: Bearer <SUPER...EN>"
 
 # 2. Get template detail with questions
 curl http://localhost:8000/api/templates/<template-id>/ \
-  -H "Authorization: Bearer <TOKEN>"
+  -H "Authorization: Bearer ***
 
 # 3. Publish template
 curl -X POST http://localhost:8000/api/templates/<template-id>/publish/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>"
+  -H "Authorization: Bearer <SUPER...EN>"
 
 # 4. Duplicate template
 curl -X POST http://localhost:8000/api/templates/<template-id>/duplicate/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>" \
+  -H "Authorization: Bearer <SUPER...EN>" \
   -H "Content-Type: application/json" \
   -d '{"version": "2.0.0", "version_notes": "Updated for 2026"}'
 
 # 5. Instantiate (ORG_ADMIN)
 curl -X POST http://localhost:8000/api/templates/<template-id>/instantiate/ \
-  -H "Authorization: Bearer <ORG_ADMIN_TOKEN>" \
+  -H "Authorization: Bearer <ORG_A...EN>" \
   -H "Content-Type: application/json" \
   -d '{"organization_id": "<org-uuid>"}'
 
 # 6. List public templates (all users)
 curl http://localhost:8000/api/templates/public/ \
-  -H "Authorization: Bearer <TOKEN>"
+  -H "Authorization: Bearer ***
 ```
 
 ---

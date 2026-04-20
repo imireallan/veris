@@ -92,7 +92,7 @@ setup("authenticate as SUPERADMIN", async ({ page, context }) => {
   const payload = btoa(
     JSON.stringify({
       sub: "test-superadmin-123",
-      email: "superadmin@tdi.com",
+      email: "superadmin@veris.local",
       role: "SUPERADMIN",
       organization_id: "test-org-uuid",
       exp,
@@ -134,7 +134,7 @@ def get_user_from_token(token: str) -> Optional[dict]:
             if payload.get("sub") == "test-superadmin-123":
                 return {
                     "id": "test-superadmin-123",
-                    "email": "superadmin@tdi.com",
+                    "email": "superadmin@veris.local",
                     "role": "SUPERADMIN",
                     "organization_id": "test-org-uuid",
                 }
@@ -215,8 +215,8 @@ test.describe("Cross-Framework Mapping", () => {
 
   // Mock data
   const mockFrameworks = [
-    { id: "fw-bettercoal-001", name: "Bettercoal", version: "2024" },
-    { id: "fw-cgwg-001", name: "CGWG", version: "2024" },
+    { id: "fw-primary-assurance-001", name: "Primary Assurance Standard", version: "2024" },
+    { id: "fw-supplier-questionnaire-001", name: "Supplier Questionnaire", version: "2024" },
     { id: "fw-e0100-001", name: "E0100", version: "2023" },
   ];
 
@@ -225,8 +225,8 @@ test.describe("Cross-Framework Mapping", () => {
     text: "Do you have an environmental policy?",
     framework_mappings: [
       {
-        framework_id: "fw-bettercoal-001",
-        framework_name: "Bettercoal",
+        framework_id: "fw-primary-assurance-001",
+        framework_name: "Primary Assurance Standard",
         provision_code: "P3.4",
         provision_name: "Environmental Management",
       },
@@ -264,7 +264,7 @@ test.describe("Cross-Framework Mapping", () => {
   test.describe("TC-01: View Mappings", () => {
     test("should display framework mapping badges", async ({ page }) => {
       // Verify badge is visible
-      const badge = page.getByText("Bettercoal P3.4");
+      const badge = page.getByText("Primary Assurance Standard P3.4");
       await expect(badge).toBeVisible();
 
       // Verify tooltip shows full provision name
@@ -282,7 +282,7 @@ test.describe("Cross-Framework Mapping", () => {
   });
 
   test.describe("TC-02: Add New Mapping", () => {
-    test("should add CGWG mapping successfully", async ({ page }) => {
+    test("should add Supplier Questionnaire mapping successfully", async ({ page }) => {
       // Mock POST mapping API
       await page.route(
         `**/api/questions/${mockQuestion.id}/mappings/`,
@@ -290,14 +290,14 @@ test.describe("Cross-Framework Mapping", () => {
           const body = JSON.parse(route.request().postData() || "{}");
           
           // Validate request
-          expect(body.framework_id).toBe("fw-cgwg-001");
+          expect(body.framework_id).toBe("fw-supplier-questionnaire-001");
           
           // Return updated mappings
           const updatedMappings = [
             ...mockQuestion.framework_mappings,
             {
               framework_id: body.framework_id,
-              framework_name: "CGWG",
+              framework_name: "Supplier Questionnaire",
               provision_code: body.provision_code || "SAQ.12",
               provision_name: body.provision_name || "Environmental Policy",
             },
@@ -320,7 +320,7 @@ test.describe("Cross-Framework Mapping", () => {
 
       // Select framework
       await page.getByRole("combobox").click();
-      await page.getByText("CGWG").click();
+      await page.getByText("Supplier Questionnaire").click();
 
       // Fill provision details
       await page.getByLabel("Provision Code").fill("SAQ.12");
@@ -333,8 +333,8 @@ test.describe("Cross-Framework Mapping", () => {
       await page.waitForSelector("role=dialog", { state: "hidden" });
 
       // Verify new badge appears
-      const cgwgBadge = page.getByText("CGWG SAQ.12");
-      await expect(cgwgBadge).toBeVisible();
+      const supplierQuestionnaireBadge = page.getByText("Supplier Questionnaire SAQ.12");
+      await expect(supplierQuestionnaireBadge).toBeVisible();
 
       // Verify toast notification
       await expect(
@@ -359,7 +359,7 @@ test.describe("Cross-Framework Mapping", () => {
 
       await page.getByRole("button", { name: /map framework/i }).click();
       await page.getByRole("combobox").click();
-      await page.getByText("CGWG").click();
+      await page.getByText("Supplier Questionnaire").click();
       await page.getByRole("button", { name: "Add Mapping" }).click();
 
       // Verify loading state
@@ -383,7 +383,7 @@ test.describe("Cross-Framework Mapping", () => {
 
       await page.getByRole("button", { name: /map framework/i }).click();
       await page.getByRole("combobox").click();
-      await page.getByText("CGWG").click();
+      await page.getByText("Supplier Questionnaire").click();
       await page.getByRole("button", { name: "Add Mapping" }).click();
 
       // Verify error toast
@@ -411,7 +411,7 @@ test.describe("Cross-Framework Mapping", () => {
       );
 
       // Hover over badge to show remove button
-      const badge = page.getByText("Bettercoal P3.4");
+      const badge = page.getByText("Primary Assurance Standard P3.4");
       await badge.hover();
 
       // Click remove button
@@ -429,7 +429,7 @@ test.describe("Cross-Framework Mapping", () => {
 
     test("should show confirmation before remove", async ({ page }) => {
       // This test verifies the remove button appears on hover
-      const badge = page.getByText("Bettercoal P3.4");
+      const badge = page.getByText("Primary Assurance Standard P3.4");
       await badge.hover();
 
       const removeButton = page.locator("button", { hasText: "×" }).first();
@@ -474,7 +474,7 @@ test.describe("Cross-Framework Mapping", () => {
 
     test("should show mappings but no edit button", async ({ page }) => {
       // Badge should be visible
-      const badge = page.getByText("Bettercoal P3.4");
+      const badge = page.getByText("Primary Assurance Standard P3.4");
       await expect(badge).toBeVisible();
 
       // Map Framework button should NOT be visible
@@ -498,7 +498,7 @@ test.describe("Cross-Framework Mapping", () => {
         async (route) => {
           const body = JSON.parse(route.request().postData() || "{}");
           
-          if (body.framework_id === "fw-bettercoal-001") {
+          if (body.framework_id === "fw-primary-assurance-001") {
             await route.fulfill({
               status: 409,
               body: JSON.stringify({ error: "Mapping already exists" }),
@@ -514,7 +514,7 @@ test.describe("Cross-Framework Mapping", () => {
 
       await page.getByRole("button", { name: /map framework/i }).click();
       await page.getByRole("combobox").click();
-      await page.getByText("Bettercoal").click();
+      await page.getByText("Primary Assurance Standard").click();
       await page.getByLabel("Provision Code").fill("P3.4");
       await page.getByRole("button", { name: "Add Mapping" }).click();
 
@@ -537,7 +537,7 @@ test.describe("Cross-Framework Mapping", () => {
 
       await page.getByRole("button", { name: /map framework/i }).click();
       await page.getByRole("combobox").click();
-      await page.getByText("CGWG").click();
+      await page.getByText("Supplier Questionnaire").click();
       await page.getByRole("button", { name: "Add Mapping" }).click();
 
       // Verify error toast
@@ -563,7 +563,7 @@ test.describe("Cross-Framework Mapping", () => {
 
       await page.getByRole("button", { name: /map framework/i }).click();
       await page.getByRole("combobox").click();
-      await page.getByText("CGWG").click();
+      await page.getByText("Supplier Questionnaire").click();
       await page.getByRole("button", { name: "Add Mapping" }).click();
 
       // Verify specific error message
@@ -594,8 +594,8 @@ test.describe("Cross-Framework Mapping", () => {
 ```json
 [
   {
-    "id": "fw-bettercoal-001",
-    "name": "Bettercoal",
+    "id": "fw-primary-assurance-001",
+    "name": "Primary Assurance Standard",
     "version": "2024"
   }
 ]
@@ -606,8 +606,8 @@ test.describe("Cross-Framework Mapping", () => {
 {
   "mappings": [
     {
-      "framework_id": "fw-bettercoal-001",
-      "framework_name": "Bettercoal",
+      "framework_id": "fw-primary-assurance-001",
+      "framework_name": "Primary Assurance Standard",
       "provision_code": "P3.4",
       "provision_name": "Environmental Management"
     }
@@ -619,7 +619,7 @@ test.describe("Cross-Framework Mapping", () => {
 ```json
 // Request
 {
-  "framework_id": "fw-cgwg-001",
+  "framework_id": "fw-supplier-questionnaire-001",
   "provision_code": "SAQ.12",
   "provision_name": "Environmental Policy"
 }
@@ -628,14 +628,14 @@ test.describe("Cross-Framework Mapping", () => {
 {
   "mappings": [
     {
-      "framework_id": "fw-bettercoal-001",
-      "framework_name": "Bettercoal",
+      "framework_id": "fw-primary-assurance-001",
+      "framework_name": "Primary Assurance Standard",
       "provision_code": "P3.4",
       "provision_name": "Environmental Management"
     },
     {
-      "framework_id": "fw-cgwg-001",
-      "framework_name": "CGWG",
+      "framework_id": "fw-supplier-questionnaire-001",
+      "framework_name": "Supplier Questionnaire",
       "provision_code": "SAQ.12",
       "provision_name": "Environmental Policy"
     }
@@ -649,8 +649,8 @@ test.describe("Cross-Framework Mapping", () => {
 {
   "message": "Mapping removed",
   "removed": {
-    "framework_id": "fw-bettercoal-001",
-    "framework_name": "Bettercoal",
+    "framework_id": "fw-primary-assurance-001",
+    "framework_name": "Primary Assurance Standard",
     "provision_code": "P3.4",
     "provision_name": "Environmental Management"
   },

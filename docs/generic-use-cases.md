@@ -2,12 +2,12 @@
 
 ## Overview
 
-**Veris** is a generic, white-label B2B SaaS platform for sustainability assessments and compliance management. It enables sustainability consultancies to manage client assessments against multiple frameworks (Bettercoal, OECD, RBA, etc.) with AI-powered evidence validation.
+**Veris** is a generic, white-label B2B SaaS platform for sustainability assessments and compliance management. It enables sustainability consultancies to manage client assessments against multiple frameworks (industry standards, OECD, RBA, and custom frameworks) with AI-powered evidence validation.
 
-**Primary Target Customer**: TDi Sustainability (and similar consultancies)  
+**Primary Target Customer**: Sustainability consultancies serving multiple client organizations  
 **Also Suitable For**: Any ESG/sustainability consultancy serving clients across multiple industries
 
-**Key Design Principle**: TDi-First, Not TDi-Specific — The platform is generic and configurable. TDi is the primary target, but any consultancy can use it with minimal customization.
+**Key Design Principle**: Generic and configurable — the platform must work without hardcoded client, consultancy, or framework names.
 
 ---
 
@@ -15,10 +15,10 @@
 
 | Role | Description | Primary Goals |
 |------|-------------|---------------|
-| **Platform Admin** | Veris platform owner / TDi internal team | Manage platform, onboard consultancies, monitor usage |
-| **Consultancy Admin** | Consultancy (e.g., TDi) managing multiple client organizations | Oversee all client engagements, assign team members, switch between clients |
+| **Platform Admin** | Veris platform owner / internal ops team | Manage platform, onboard consultancies, monitor usage |
+| **Consultancy Admin** | Consultancy managing multiple client organizations | Oversee all client engagements, assign team members, switch between clients |
 | **Consultant** | Consultancy staff working on client assessments | Complete assessments, validate evidence, generate reports |
-| **Client Admin** | Client organization admin (e.g., Bettercoal producer, energy operator) | Manage their organization, invite team members |
+| **Client Admin** | Client organization admin (e.g., mining operator, energy operator) | Manage their organization, invite team members |
 | **Client Contributor** | Client staff submitting assessment data | Complete questionnaires, upload evidence |
 | **Auditor/Reviewer** | Third-party verifier (future role) | Review submissions, verify claims, approve certifications |
 
@@ -82,9 +82,9 @@ Veris Platform
 1. Consultancy Admin logs into Veris
 2. Navigates to Organizations → Create New
 3. Enters client details:
-   - Organization name (e.g., "Bettercoal Producer ABC", "Energy Operator XYZ")
+   - Organization name (e.g., "North Ridge Mining", "Energy Operator XYZ")
    - Industry sector (Mining, Energy, Automotive, etc.)
-   - Primary framework (e.g., Bettercoal, OECD, EO100, RBA)
+   - Primary framework (e.g., Mining Assurance Standard, OECD, Supplier Questionnaire, RBA)
    - Contact information
 4. System creates organization with default settings
 5. System generates invitation link for Client Admin
@@ -96,7 +96,7 @@ Veris Platform
 
 **Business Value**: Enables multi-tenant architecture where any consultancy can manage multiple clients from single dashboard
 
-**Generic Platform Note**: This use case works for TDi onboarding Bettercoal, or any competitor consultancy onboarding their clients. The framework and sector selections are configurable.
+**Generic Platform Note**: This use case works for any consultancy onboarding client organizations. The framework and sector selections are configurable.
 
 ---
 
@@ -165,7 +165,7 @@ Veris Platform
 POST /api/token/
 {
   "email": "user@example.com",
-  "password": "password123"
+  "password": "***"
 }
 
 # Response
@@ -198,9 +198,9 @@ POST /api/token/
 **Main Flow**:
 1. User clicks organization selector (top nav)
 2. System shows list of user's organizations:
-   - "Bettercoal Producer ABC" (Client)
+   - "North Ridge Mining" (Client)
    - "EO100 Mining Corp" (Client)
-   - "TDi Internal" (Consultancy)
+   - "Consultancy Operations" (Consultancy)
 3. User selects target organization
 4. Frontend updates organization context
 5. All subsequent API calls use new org ID
@@ -237,13 +237,13 @@ orgs = [m.organization for m in memberships]
 
 **Preconditions**:
 - Client organization exists
-- Assessment template available (Bettercoal, OECD, etc.)
+- Assessment template available (Mining Assurance Standard, OECD, etc.)
 - User has permission to create assessments
 
 **Main Flow**:
 1. Consultant navigates to Assessments → Create New
 2. Selects framework:
-   - Bettercoal (12 principles, 144 provisions)
+   - Mining Assurance Standard (12 principles, 144 provisions)
    - OECD Due Diligence
    - RBA (Responsible Business Alliance)
    - Custom framework
@@ -297,7 +297,7 @@ orgs = [m.organization for m in memberships]
 {
   "id": "question-uuid",
   "text": "Does the company have an environmental policy covering waste management?",
-  "framework": "Bettercoal",
+  "framework": "Mining Assurance Standard",
   "provision": "3.2",
   "scoring_criteria": {
     "0": "No policy exists",
@@ -387,7 +387,7 @@ Response:
      "organization_id": "org-uuid",
      "chunk_index": 0,
      "text": "Our company is committed to...",
-     "framework_tags": ["bettercoal"]
+     "framework_tags": ["mining-assurance-standard"]
    }
    ```
 6. KnowledgeDocument updated:
@@ -587,15 +587,15 @@ Response:
 **Goal**: Submit one response that maps to multiple frameworks
 
 **Preconditions**:
-- Client assessed against multiple frameworks (e.g., Bettercoal + OECD)
+- Client assessed against multiple frameworks (e.g., Mining Assurance Standard + OECD)
 - Response submitted for one framework
 - Cross-framework mapping data available
 
 **Main Flow**:
-1. Client submits response for Bettercoal Provision 3.2
+1. Client submits response for Provision 3.2 in a primary assurance standard
 2. System identifies overlapping requirements:
-   - Bettercoal 3.2 ↔ OECD Human Rights
-   - Bettercoal 3.2 ↔ RBA Labor Standards
+   - Provision 3.2 ↔ OECD Human Rights
+   - Provision 3.2 ↔ RBA Labor Standards
 3. AI maps response to related framework questions
 4. System suggests: "This response also addresses OECD HR-12. Would you like to apply it?"
 5. User confirms mapping
@@ -689,7 +689,7 @@ if membership.role.has_permission('assessments:write'):
     # Allow access
 ```
 
-**Business Value**: Flexible RBAC supports diverse client org structures. Bettercoal "Producer" vs. EO100 "Coordinator" vs. custom titles.
+**Business Value**: Flexible RBAC supports diverse client org structures across programs and sectors.
 
 ---
 
@@ -750,15 +750,15 @@ if membership.role.has_permission('assessments:write'):
 2. Consultancy Admin uploads:
    - Logo (PNG, SVG)
    - Brand colors (primary, secondary)
-   - Custom domain (optional: assessments.tdi.com)
+   - Custom domain (optional: assessments.consultancy.com)
 3. System creates Theme record:
    ```python
    {
-     "organization": "tdi-uuid",
+     "organization": "consultancy-uuid",
      "logo_url": "s3://...",
      "primary_color": "#0052CC",
      "secondary_color": "#FF5630",
-     "custom_domain": "assessments.tdi.com"
+     "custom_domain": "assessments.consultancy.com"
    }
    ```
 4. Frontend applies theme dynamically
@@ -777,7 +777,7 @@ if membership.role.has_permission('assessments:write'):
 
 **Users Involved**: ASM (Artisanal Small-scale Miner), Consultancy
 
-**Goal**: Simplified onboarding for small miners (CGWG model)
+**Goal**: Simplified onboarding for low-friction supplier questionnaires
 
 **Preconditions**:
 - Consultancy manages ASM program (e.g., Gemfields, Kering)
@@ -799,7 +799,7 @@ if membership.role.has_permission('assessments:write'):
 - No account created (frictionless)
 - Data linked to consultancy program
 
-**Business Value**: Expands addressable market to ASM sector. CGWG already uses this model (no-login web form).
+**Business Value**: Expands addressable market to lightweight supplier and SME workflows, including no-login web forms.
 
 ---
 
@@ -825,15 +825,15 @@ if membership.role.has_permission('assessments:write'):
 
 | Term | Definition |
 |------|------------|
-| **Assessment** | Structured evaluation against a framework (e.g., Bettercoal annual assessment) |
+| **Assessment** | Structured evaluation against a framework (e.g., annual assurance review) |
 | **CIP** | Continuous Improvement Plan — actionable tasks derived from assessment gaps |
 | **CIP Cycle** | Time-bound CIP (e.g., "2026 Q1 CIP") |
 | **Evidence** | Supporting documents uploaded to validate responses |
 | **Focus Area** | ESG category (Human Rights, Environment, Ethics, etc.) |
-| **Framework** | External standard (Bettercoal, OECD, RBA, etc.) |
+| **Framework** | External standard (industry standards, OECD, RBA, and custom frameworks) |
 | **KnowledgeDocument** | Processed evidence document with vector embeddings |
 | **OrganizationMembership** | Through-table linking User → Organization with Role |
-| **Provision** | Individual requirement within a framework (Bettercoal has 144) |
+| **Provision** | Individual requirement within a framework (some standards include 100+ requirements) |
 | **RAG** | Retrieval-Augmented Generation — AI pattern using vector search |
 | **SAQ** | Self-Assessment Questionnaire (simplified for ASM) |
 | **Validation Status** | AI confidence: validated/flagged/insufficient_evidence |

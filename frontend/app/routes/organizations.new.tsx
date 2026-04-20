@@ -387,8 +387,8 @@ export default function NewOrganizationRoute() {
                         <option value="" disabled>
                           Select framework
                         </option>
-                        <option value="bettercoal">Bettercoal</option>
-                        <option value="cgwg">CGWG</option>
+                        <option value="mining-standard">Mining assurance standard</option>
+                        <option value="supplier-questionnaire">Supplier questionnaire</option>
                         <option value="custom">Custom Framework</option>
                       </select>
                     </Field>

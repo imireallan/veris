@@ -8,7 +8,7 @@
 
 ## Overview
 
-Cross-Framework Mapping allows consultancies (TDi) and their clients to answer a question **once** and map that answer to **multiple sustainability frameworks** simultaneously. This eliminates redundant data entry when organizations need to comply with multiple standards (e.g., Bettercoal, CGWG, E0100).
+Cross-Framework Mapping allows consultancies and their clients to answer a question **once** and map that answer to **multiple sustainability frameworks** simultaneously. This eliminates redundant data entry when organizations need to comply with multiple standards at the same time.
 
 ### Core Value Proposition
 
@@ -31,7 +31,7 @@ AssessmentQuestion
 │   └── [
 │       {
 │           "framework_id": "uuid",
-│           "framework_name": "Bettercoal",
+│           "framework_name": "Primary Assurance Standard",
 │           "provision_code": "P1.2.3",
 │           "provision_name": "Environmental Policy"
 │       },
@@ -56,12 +56,12 @@ AssessmentResponse
 
 ## End-to-End Use Case Flow
 
-### Scenario: Bettercoal Site Maps to CGWG
+### Scenario: Primary Assessment Maps to a Secondary Supplier Questionnaire
 
 **Actors**:
-- **Consultancy Admin** (TDi): Manages frameworks and questionnaires
-- **Site Manager** (Bettercoal site): Completes assessments
-- **Client Admin** (Bettercoal): Reviews compliance
+- **Consultancy Admin**: Manages frameworks and questionnaires
+- **Site Manager**: Completes assessments
+- **Client Admin**: Reviews compliance
 
 ### Step-by-Step Flow
 
@@ -69,20 +69,20 @@ AssessmentResponse
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ PHASE 1: SETUP (Consultancy Admin)                                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 1. Admin creates Bettercoal assessment template                             │
-│ 2. Admin adds CGWG as secondary framework to organization                   │
+│ 1. Admin creates Primary Assurance Standard assessment template                             │
+│ 2. Admin adds Supplier Questionnaire as secondary framework to organization                   │
 │ 3. Admin opens questionnaire builder                                        │
 │ 4. For each question, admin clicks "Map Framework"                          │
-│ 5. Admin selects CGWG, enters provision code (e.g., "SAQ.12")               │
-│ 6. Question now maps to: Bettercoal P3.4 + CGWG SAQ.12                      │
+│ 5. Admin selects Supplier Questionnaire, enters provision code (e.g., "SAQ.12")               │
+│ 6. Question now maps to: Primary Assurance Standard P3.4 + Supplier Questionnaire SAQ.12                      │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     ↓
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ PHASE 2: ASSESSMENT COMPLETION (Site Manager)                               │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 1. Site Manager opens Bettercoal assessment                                 │
+│ 1. Site Manager opens Primary Assurance Standard assessment                                 │
 │ 2. Sees question: "Do you have an environmental policy?"                    │
-│ 3. Badge shows: [Bettercoal P3.4] [CGWG SAQ.12]                             │
+│ 3. Badge shows: [Primary Assurance Standard P3.4] [Supplier Questionnaire SAQ.12]                             │
 │ 4. Enters answer: "Yes, implemented since 2023"                             │
 │ 5. Uploads evidence: environmental_policy.pdf                               │
 │ 6. Saves response                                                           │
@@ -92,9 +92,9 @@ AssessmentResponse
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ PHASE 3: COMPLIANCE REPORTING (Client Admin)                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│ 1. Bettercoal Admin views Bettercoal compliance dashboard                   │
+│ 1. Primary Assurance Standard Admin views Primary Assurance Standard compliance dashboard                   │
 │    → Sees P3.4: ✓ Compliant (evidence attached)                             │
-│ 2. CGWG Admin views CGWG compliance dashboard                               │
+│ 2. Supplier Questionnaire Admin views Supplier Questionnaire compliance dashboard                               │
 │    → Sees SAQ.12: ✓ Compliant (same evidence)                               │
 │ 3. Both frameworks show identical compliance status                         │
 │ 4. Single evidence file validates both provisions                           │
@@ -109,7 +109,7 @@ AssessmentResponse
 
 ```http
 GET /api/questions/:id/mappings/
-Authorization: Bearer <token>
+Authorization: Bearer ***
 ```
 
 **Response**:
@@ -118,13 +118,13 @@ Authorization: Bearer <token>
   "mappings": [
     {
       "framework_id": "550e8400-e29b-41d4-a716-446655440001",
-      "framework_name": "Bettercoal",
+      "framework_name": "Primary Assurance Standard",
       "provision_code": "P3.4",
       "provision_name": "Environmental Management"
     },
     {
       "framework_id": "550e8400-e29b-41d4-a716-446655440002",
-      "framework_name": "CGWG",
+      "framework_name": "Supplier Questionnaire",
       "provision_code": "SAQ.12",
       "provision_name": "Environmental Policy"
     }
@@ -136,7 +136,7 @@ Authorization: Bearer <token>
 
 ```http
 POST /api/questions/:id/mappings/
-Authorization: Bearer <token>
+Authorization: Bearer ***
 Content-Type: application/json
 
 {
@@ -152,13 +152,13 @@ Content-Type: application/json
   "mappings": [
     {
       "framework_id": "550e8400-e29b-41d4-a716-446655440001",
-      "framework_name": "Bettercoal",
+      "framework_name": "Primary Assurance Standard",
       "provision_code": "P3.4",
       "provision_name": "Environmental Management"
     },
     {
       "framework_id": "550e8400-e29b-41d4-a716-446655440002",
-      "framework_name": "CGWG",
+      "framework_name": "Supplier Questionnaire",
       "provision_code": "SAQ.12",
       "provision_name": "Environmental Policy"
     }
@@ -170,7 +170,7 @@ Content-Type: application/json
 
 ```http
 DELETE /api/questions/:id/mappings/:index/
-Authorization: Bearer <token>
+Authorization: Bearer ***
 ```
 
 **Response** (200 OK):
@@ -179,14 +179,14 @@ Authorization: Bearer <token>
   "message": "Mapping removed",
   "removed": {
     "framework_id": "550e8400-e29b-41d4-a716-446655440002",
-    "framework_name": "CGWG",
+    "framework_name": "Supplier Questionnaire",
     "provision_code": "SAQ.12",
     "provision_name": "Environmental Policy"
   },
   "mappings": [
     {
       "framework_id": "550e8400-e29b-41d4-a716-446655440001",
-      "framework_name": "Bettercoal",
+      "framework_name": "Primary Assurance Standard",
       "provision_code": "P3.4",
       "provision_name": "Environmental Management"
     }
@@ -819,7 +819,7 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
 
 | Role | Can View Mappings | Can Add/Remove Mappings |
 |------|------------------|-------------------------|
-| **SUPERADMIN** (TDi) | ✓ | ✓ |
+| **SUPERADMIN** (Consultancy Platform Admin) | ✓ | ✓ |
 | **ORG ADMIN** (Client) | ✓ | ✗ |
 | **SITE MANAGER** | ✓ | ✗ |
 | **VIEWER** | ✓ | ✗ |
@@ -840,7 +840,7 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
 ```python
 from assessments.models import AssessmentResponse
 
-# Find all responses where the question maps to Bettercoal
+# Find all responses where the question maps to Primary Assurance Standard
 responses = AssessmentResponse.objects.filter(
     question__framework_mappings__contains=[
         {"framework_id": "550e8400-e29b-41d4-a716-446655440001"}
@@ -886,7 +886,7 @@ def get_framework_compliance(org_id, framework_id):
 ### P3: AI-Assisted Mapping
 
 - **Auto-suggest mappings**: NLP analyzes question text, suggests relevant provisions from other frameworks
-- **Confidence scoring**: AI rates mapping relevance (e.g., "95% match to CGWG SAQ.12")
+- **Confidence scoring**: AI rates mapping relevance (e.g., "95% match to Supplier Questionnaire SAQ.12")
 - **Bulk mapping**: Upload framework crosswalk CSV, auto-map all questions
 
 ### P3: Response-Level Overrides
@@ -896,7 +896,7 @@ def get_framework_compliance(org_id, framework_id):
 
 ### P4: Framework Versioning
 
-- **Track framework versions**: Bettercoal 2023 vs 2024 revisions
+- **Track framework versions**: Primary Assurance Standard 2023 vs 2024 revisions
 - **Migration workflows**: When framework updates, prompt to remap questions
 
 ---
@@ -987,12 +987,12 @@ If you have existing questions without mappings:
 # Migration script (backend/migrate_framework_mappings.py)
 from assessments.models import AssessmentQuestion
 
-# Example: Bulk add CGWG mapping to all Environmental questions
+# Example: Bulk add Supplier Questionnaire mapping to all Environmental questions
 Question.objects.filter(category="Environmental").update(
     framework_mappings=[
         {
-            "framework_id": "cgwg-uuid",
-            "framework_name": "CGWG",
+            "framework_id": "supplier-questionnaire-uuid",
+            "framework_name": "Supplier Questionnaire",
             "provision_code": "ENV.1",
             "provision_name": "Environmental Management"
         }

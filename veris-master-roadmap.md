@@ -1,13 +1,13 @@
 # Veris: AI-First Sustainability Platform Project Management Document
 
 ## 1. Vision & Goal
-Transform the fragmented certification and assurance workflows from legacy products (Bettercoal, EO100, CGWG) into a single, generic, AI-first sustainability engine. Veris will move from a "digital form" approach to an "intelligent assistant" approach, where AI handles evidence validation, gap analysis, and report drafting, while humans provide oversight and final approval.
+Transform fragmented certification and assurance workflows from legacy vertical products into a single, generic, AI-first sustainability engine. Veris will move from a "digital form" approach to an "intelligent assistant" approach, where AI handles evidence validation, gap analysis, and report drafting, while humans provide oversight and final approval.
 
 ## 2. Core Functional Pillars (The Unified Engine)
-To support Bettercoal, EO100, and CGWG, Veris must implement these generalized modules:
+To support multiple legacy program patterns, Veris must implement these generalized modules:
 
 ### A. Flexible Framework Engine
-- **Legacy Requirement:**- Bettercoal (Principles > Categories > Provisions)
+- **Legacy Requirement:** Standards with hierarchies like Principles > Categories > Provisions
 - EO100 (S.P.O.Q: Supplement > Principle > Objective > Question)
 - **Veris Implementation:** A JSON-driven `Framework` model that allows defining arbitrary hierarchies and scoring logic without code changes.
 
@@ -24,7 +24,7 @@ To support Bettercoal, EO100, and CGWG, Veris must implement these generalized m
 
 ### D. Standardized Assurance Workflow
 - **Phases:** Entity Creation $\rightarrow$ Self-Assessment $\rightarrow$ External Assessment $\rightarrow$ Reporting $\rightarrow$ Findings $\rightarrow$ CIP $\rightarrow$ Monitoring.
-- **Logic:** Re-implement the `ActionGraph` concept from Bettercoal but as a flexible state machine tied to the `Assessment` entity.
+- **Logic:** Re-implement a flexible workflow state machine tied to the `Assessment` entity.
 
 ## 3. Gap Analysis & Critical Path (P0/P1)
 
@@ -52,7 +52,7 @@ To support Bettercoal, EO100, and CGWG, Veris must implement these generalized m
 
 ### Phase 2: The "Digital Form" MVP (Mid Term)
 - Goal: Complete the end-to-end flow (Questionnaire $\rightarrow$ Report $\rightarrow$ Findings) without AI.
-- Key Milestone: "A user can complete a full Bettercoal-style assessment."
+- Key Milestone: "A user can complete a full multi-step assurance assessment."
 
 ### Phase 3: AI-Augmentation (The Pivot)
 - Goal: Activate the AI Engine to automate the boring parts of assessment.

@@ -227,7 +227,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"organization\": \"{{organization_id}}\",\n  \"title\": \"Sustainability Report 2025\",\n  \"description\": \"Annual sustainability report with ESG metrics\",\n  \"file_url\": \"{{uploaded_file_url}}\",\n  \"file_type\": \"PDF\",\n  \"file_size\": 1024000,\n  \"category\": \"evidence\",\n  \"framework_tags\": [\"bettercoal\", \"oecd\"]\n}",
+              "raw": "{\n  \"organization\": \"{{organization_id}}\",\n  \"title\": \"Sustainability Report 2025\",\n  \"description\": \"Annual sustainability report with ESG metrics\",\n  \"file_url\": \"{{uploaded_file_url}}\",\n  \"file_type\": \"PDF\",\n  \"file_size\": 1024000,\n  \"category\": \"evidence\",\n  \"framework_tags\": [\"primary-assurance-standard\", \"oecd\"]\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {

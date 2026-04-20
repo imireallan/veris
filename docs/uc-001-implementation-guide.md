@@ -37,12 +37,12 @@ Dashboard → Organizations → Create New
 
 ### Step 2: Fill Organization Form
 **Required Fields:**
-- Organization Name* (e.g., "Bettercoal Producer ABC")
+- Organization Name* (e.g., "North Ridge Mining")
 - Industry Sector* (dropdown: Mining, Agriculture, Energy, Manufacturing, Other)
 - Client Admin Email* (for invitation)
 
 **Optional Fields:**
-- Primary Framework (Bettercoal, OECD, RBA, Custom)
+- Primary Framework (Mining Assurance Standard, OECD, RBA, Custom)
 - Contract Document (if `require_contract_upload` is enabled)
 - Contact Information (phone, address)
 
@@ -71,7 +71,7 @@ System creates:
 **Request:**
 ```json
 {
-  "name": "Bettercoal Producer ABC",
+  "name": "North Ridge Mining",
   "industry_sector": "MINING",
   "client_admin_email": "admin@client.com",
   "primary_framework": "BETTERCOAL",
@@ -83,7 +83,7 @@ System creates:
 ```json
 {
   "id": "uuid",
-  "name": "Bettercoal Producer ABC",
+  "name": "North Ridge Mining",
   "status": "ACTIVE",
   "invitation": {
     "id": "uuid",

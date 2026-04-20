@@ -203,11 +203,11 @@ python manage.py dbshell
 ```bash
 # 1. Create template (SUPERADMIN)
 curl -X POST http://localhost:8000/api/templates/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>" \
+  -H "Authorization: Bearer <SUPER...EN>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Bettercoal 2024 Assessment",
-    "description": "Standard Bettercoal assessment",
+    "name": "Mining Assurance 2024 Assessment",
+    "description": "Standard mining assurance assessment",
     "framework": "<framework-uuid>",
     "version": "1.0.0",
     "is_public": true
@@ -215,7 +215,7 @@ curl -X POST http://localhost:8000/api/templates/ \
 
 # 2. Add question to template
 curl -X POST http://localhost:8000/api/templates/<template-id>/questions/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>" \
+  -H "Authorization: Bearer <SUPER...EN>" \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Do you have an environmental policy?",
@@ -226,11 +226,11 @@ curl -X POST http://localhost:8000/api/templates/<template-id>/questions/ \
 
 # 3. Publish template
 curl -X POST http://localhost:8000/api/templates/<template-id>/publish/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>"
+  -H "Authorization: Bearer <SUPER...EN>"
 
 # 4. Instantiate (ORG_ADMIN)
 curl -X POST http://localhost:8000/api/templates/<template-id>/instantiate/ \
-  -H "Authorization: Bearer <ORG_ADMIN_TOKEN>" \
+  -H "Authorization: Bearer <ORG_A...EN>" \
   -H "Content-Type: application/json" \
   -d '{
     "organization_id": "<org-uuid>"
@@ -238,7 +238,7 @@ curl -X POST http://localhost:8000/api/templates/<template-id>/instantiate/ \
 
 # 5. Verify assessment created with questions
 curl http://localhost:8000/api/assessments/<assessment-id>/questions/ \
-  -H "Authorization: Bearer <ORG_ADMIN_TOKEN>"
+  -H "Authorization: Bearer <ORG_A...EN>"
 ```
 
 ### Test RBAC
@@ -246,13 +246,13 @@ curl http://localhost:8000/api/assessments/<assessment-id>/questions/ \
 ```bash
 # ORG_ADMIN tries to create template (should fail)
 curl -X POST http://localhost:8000/api/templates/ \
-  -H "Authorization: Bearer <ORG_ADMIN_TOKEN>" \
+  -H "Authorization: Bearer <ORG_A...EN>" \
   -d '{...}'
 # Expected: 403 Forbidden
 
 # SUPERADMIN tries to edit published template (should fail)
 curl -X PUT http://localhost:8000/api/templates/<published-id>/ \
-  -H "Authorization: Bearer <SUPERADMIN_TOKEN>" \
+  -H "Authorization: Bearer <SUPER...EN>" \
   -d '{"name": "New Name"}'
 # Expected: 403 Forbidden or validation error
 ```

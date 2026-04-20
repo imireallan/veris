@@ -261,13 +261,13 @@ Industry-specific fields live in `Site.industry_data` (JSONField). This avoids a
 - Manufacturing: `production_lines`, `capacity_units`, `waste_management_type`
 
 ### Assessors
-`AssessorProfile` replaces Bettercoal's assessor model. Key fields:
+`AssessorProfile` replaces the legacy assessor profile model. Key fields:
 - `role`: LEAD, SENIOR, JUNIOR, EXPERT
 - `specializations`: JSON list of industries (COAL, OIL_GAS, AGRICULTURE, etc.)
 - `can_be_lead_assessor`: bool
 - Cross-industry: an assessor can work on multiple industry types
 
-### Bettercoal Frameworks
+### Legacy Framework Imports
 Their 12 CIP Code principles (Business Integrity, Human Rights, Labour Rights, H&S, etc.)  
 map to our `Framework` model. Their provisions map to `ESGFocusArea`. This means:
 - Any industry can have any framework loaded
@@ -276,8 +276,8 @@ map to our `Framework` model. Their provisions map to `ESGFocusArea`. This means
 
 ### Import Existing Data
 ```bash
-docker compose run --rm backend python manage.py import_bettercoal bettercoal.sql --dry-run
-docker compose run --rm backend python manage.py import_bettercoal bettercoal.sql
+docker compose run --rm backend python manage.py import_framework_dump framework.sql --dry-run
+docker compose run --rm backend python manage.py import_framework_dump framework.sql
 ```
 
 The importer maps:

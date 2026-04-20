@@ -22,15 +22,15 @@ Password: admin
 
 The Data Browser has 7 tabs:
 
-| Tab | What It Shows | Seed Data | Bettercoal Import |
+| Tab | What It Shows | Seed Data | Legacy Import |
 |-----|--------------|-----------|-------------------|
 | **Findings** | Assessment findings with severity, status, recommendations | 4 findings (PPE, Grievance, Water Quality, FPIC) | 3 findings from their assessment reports |
 | **Sites** | Physical locations with industry-specific data | 3 sites (coal mine, processing plant, oil rig) | 3 mine sites with coal fields |
 | **Reports** | Structured assessment reports | 1 mining report with methodology/scope | None (dump had empty report sections) |
 | **CIP Cycles** | Continuous improvement monitoring cycles | 2 cycles (12-month, 24-month) | None |
 | **Assess. Plans** | Site visit scheduling and deadlines | 1 plan with site visit dates | 2 plans from assessment_planning |
-| **Frameworks** | ESG/sustainability frameworks | 3 frameworks + their focus areas | 12 Bettercoal/CIP Code principles |
-| **Organizations** | Multi-tenant org list | 3 (Energy, Mining, Automotive) | 1 (Bettercoal Import) |
+| **Frameworks** | ESG/sustainability frameworks | 3 frameworks + their focus areas | Imported legacy framework hierarchy |
+| **Organizations** | Multi-tenant org list | 3 (Energy, Mining, Automotive) | 1 (Legacy Import) |
 
 ### 4. Test Each Model
 
@@ -39,7 +39,7 @@ The Data Browser has 7 tabs:
 - Status: OPEN/IN_PROGRESS/CLOSED/RESOLVED/WAIVED
 - Summary text and recommended actions display
 - Responsible party is tracked
-- Bettercoal findings show as "New Finding" with HTML content (their data has rich text)
+- Imported legacy findings may appear as "New Finding" with HTML content (rich text source data)
 
 **Sites Tab** — Verify:
 - Site types: MINE, FACILITY, OPERATION
@@ -66,7 +66,7 @@ The Data Browser has 7 tabs:
 
 **Frameworks Tab** — Verify:
 - 3 seed frameworks (Energy Certification, OECD, RBA)
-- 12 Bettercoal frameworks (Business Integrity, Human Rights, etc.)
+- Imported framework categories and principles from legacy data
 - Each has version and description
 - Some have categories object with key-value pairs
 
@@ -92,7 +92,7 @@ curl -b "access_token=<YOUR_TOKEN>" http://localhost:8000/api/plans/
 # Create a finding
 curl -X POST http://localhost:8000/api/findings/ \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <TOKEN>" \
+  -H "Authorization: Bearer *** \
   -d '{
     "topic": "Test Finding from API",
     "summary": "Finding created via REST API",
@@ -102,13 +102,13 @@ curl -X POST http://localhost:8000/api/findings/ \
   }'
 ```
 
-### 7. Reimport Bettercoal Data (if you want a fresh test)
+### 7. Reimport Legacy Data (if you want a fresh test)
 
 ```bash
 # Clean and reimport
 make down-clean
 make setup                 # run migrations + seed
-docker compose run --rm backend python manage.py import_bettercoal bettercoal.sql
+docker compose run --rm backend python manage.py import_framework_dump framework.sql
 make up
 ```
 
@@ -116,10 +116,10 @@ make up
 
 | Tab | Proves This Works |
 |-----|-------------------|
-| Findings | New Finding model + Bettercoal data mapping |
+| Findings | New Finding model + legacy data mapping |
 | Sites | Extended Site model with industry_data JSON |
 | Reports | AssessmentReport model (multi-section) |
 | CIP Cycles | CIPCycle model (monitoring cycles) |
 | Plans | AssessmentPlan model (scheduling) |
-| Frameworks | Bettercoal 12 CIP principles imported |
+| Frameworks | Legacy framework principles imported |
 | Organizations | Multi-tenant across industries |

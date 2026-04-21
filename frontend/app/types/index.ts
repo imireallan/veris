@@ -186,6 +186,62 @@ export type LoginResponse = {
   requires_org_selection?: boolean;
 };
 
+export interface DashboardAttentionItem {
+  id: string;
+  type: "task" | "assessment";
+  title: string;
+  organization_name: string;
+  assessment_id: string;
+  assessment_name: string;
+  site_name?: string | null;
+  status: "overdue" | "due_soon";
+  priority: string;
+  due_date?: string | null;
+  url: string;
+}
+
+export interface DashboardDeadlineItem {
+  id: string;
+  type: "task_due" | "assessment_due";
+  title: string;
+  organization_name: string;
+  assessment_id: string;
+  due_date?: string | null;
+  status: "overdue" | "upcoming";
+  url: string;
+}
+
+export interface DashboardActivityItem {
+  id: string;
+  type:
+    | "assessment_created"
+    | "task_created"
+    | "finding_created"
+    | "document_uploaded";
+  title: string;
+  description: string;
+  timestamp: string;
+  url: string;
+}
+
+export interface DashboardSummary {
+  viewer: {
+    role: string;
+    scope: "organization" | "assigned";
+    organization_id?: string | null;
+    organization_name?: string | null;
+  };
+  kpis: {
+    active_assessments: number;
+    overdue_actions: number;
+    open_findings: number;
+    pending_evidence_reviews: number;
+  };
+  attention_items: DashboardAttentionItem[];
+  upcoming_deadlines: DashboardDeadlineItem[];
+  recent_activity: DashboardActivityItem[];
+}
+
 /* ───────── Assessment & Related Models ───────── */
 
 export interface Assessment {

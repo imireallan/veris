@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { data, useFetcher, useLoaderData, useNavigate } from "react-router";
+import { data, redirect, useFetcher, useLoaderData, useNavigate } from "react-router";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
   ArrowRight,
@@ -30,8 +30,17 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
 
   try {
     const invitation = await api.get<any>(`/api/invitations/${token}/`, null, request);
+
+    if (sessionToken && invitation.status === "ACCEPTED" && !invitation.needs_onboarding) {
+      throw redirect("/");
+    }
+
     return { invitation, token, hasSession: Boolean(sessionToken) };
   } catch (error: any) {
+    if (error instanceof Response) {
+      throw error;
+    }
+
     return {
       invitation: null,
       token,

@@ -668,3 +668,99 @@ class TestDashboardSummaryApi:
         assert mine_b["total"] == 1
         assert mine_b["draft"] == 1
         assert mine_b["completion_pct"] == 0.0
+
+    def test_p2_ai_and_risk_fields_present_for_org_wide_roles(
+        self, make_user, make_org, make_membership
+    ):
+        """P2 fields: cross_framework_reuse, risk_trend, ai pipeline stats."""
+        user = make_user(email="admin-p2@test.com")
+        org = make_org(name="P2 Org", slug="p2-org")
+        make_membership(user=user, organization=org, fallback_role="ADMIN")
+
+        now = timezone.now()
+
+        active = Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=now - timezone.timedelta(days=5),
+            due_date=now + timezone.timedelta(days=5),
+            created_by=user,
+        )
+
+        # Response with framework mappings and AI validation
+        AssessmentResponse.objects.create(
+            organization=org,
+            assessment=active,
+            answer_text="Answer mapped to multiple frameworks",
+            frameworks_mapped_to=[
+                {"framework_id": str(active.id), "provision_code": "P1.2"},
+                {"framework_id": str(active.id), "provision_code": "P2.3"},
+            ],
+            citations=["doc-1"],
+            ai_validated=True,
+            ai_score_suggestion=0.8,
+            created_by=user,
+        )
+        AssessmentResponse.objects.create(
+            organization=org,
+            assessment=active,
+            answer_text="Mapped to one",
+            frameworks_mapped_to=[{"framework_id": str(active.id), "provision_code": "P1.2"}],
+            citations=["doc-2"],
+            ai_score_suggestion=0.6,
+            created_by=user,
+        )
+        AssessmentResponse.objects.create(
+            organization=org,
+            assessment=active,
+            answer_text="Unmapped response",
+            created_by=user,
+        )
+
+        # Findings to test risk trend
+        Finding.objects.create(
+            organization=org,
+            assessment=active,
+            topic="Old critical",
+            severity=Finding.Severity.CRITICAL,
+            status=Finding.Status.OPEN,
+            created_at=now - timezone.timedelta(days=70),
+        )
+        Finding.objects.create(
+            organization=org,
+            assessment=active,
+            topic="Recent high",
+            severity=Finding.Severity.HIGH,
+            status=Finding.Status.OPEN,
+            created_at=now - timezone.timedelta(days=15),
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Cross-framework reuse
+        reuse = data["cross_framework_reuse"]
+        assert "reusable_answers" in reuse
+        assert "mapped_answers" in reuse
+        assert "unmapped_answers" in reuse
+        assert "reuse_opportunity_pct" in reuse
+        assert "top_frameworks_by_coverage" in reuse
+
+        # Risk trend
+        trend = data["risk_trend"]
+        assert "trend" in trend
+        assert "current_risk_index" in trend
+        assert "risk_level" in trend
+        assert "open_critical" in trend
+        assert "open_high" in trend
+        assert len(trend["trend"]) == 3
+
+        # Evidence pipeline AI fields
+        pipeline = data["evidence_pipeline"]
+        assert "ai_suggested" in pipeline
+        assert "ai_validated" in pipeline

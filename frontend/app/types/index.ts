@@ -273,7 +273,37 @@ export interface DashboardSummary {
     mapped: number;
     unmapped: number;
     awaiting_review: number;
+    ai_suggested: number;
+    ai_validated: number;
     total_uploaded: number;
+  };
+  /* ─── P2 AI & Risk Insights ─── */
+  cross_framework_reuse: {
+    reusable_answers: number;
+    mapped_answers: number;
+    unmapped_answers: number;
+    reuse_opportunity_pct: number;
+    top_frameworks_by_coverage: {
+      framework_id: string;
+      framework_name: string;
+      mapped_answers: number;
+    }[];
+  };
+  risk_trend: {
+    trend: {
+      label: string;
+      period_start: string;
+      period_end: string;
+      created_total: number;
+      created_by_severity: { critical: number; high: number; medium: number; low: number };
+      resolved_total: number;
+      resolved_by_severity: { critical: number; high: number; medium: number; low: number };
+      net_change: number;
+    }[];
+    current_risk_index: number;
+    risk_level: "critical" | "high" | "medium" | "low";
+    open_critical: number;
+    open_high: number;
   };
   site_progress: {
     site_id: string | null;

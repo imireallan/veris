@@ -122,9 +122,7 @@ class DashboardSummaryView(APIView):
             "assessment_status_breakdown": self._build_assessment_status_breakdown(
                 assessments=assessments
             ),
-            "findings_by_severity": self._build_findings_by_severity(
-                findings=findings
-            ),
+            "findings_by_severity": self._build_findings_by_severity(findings=findings),
             "pending_invitations": self._build_pending_invitations(
                 invitations=invitations_qs
             ),
@@ -132,9 +130,7 @@ class DashboardSummaryView(APIView):
                 documents=documents,
                 responses=responses,
             ),
-            "site_progress": self._build_site_progress(
-                assessments=assessments
-            ),
+            "site_progress": self._build_site_progress(assessments=assessments),
         }
         return Response(payload)
 
@@ -306,7 +302,9 @@ class DashboardSummaryView(APIView):
             Assessment.Status.ARCHIVED: "archived",
         }
         for status_val, count in (
-            assessments.values("status").annotate(count=models.Count("id")).values_list("status", "count")
+            assessments.values("status")
+            .annotate(count=models.Count("id"))
+            .values_list("status", "count")
         ):
             key = mapping.get(status_val)
             if key:
@@ -328,7 +326,9 @@ class DashboardSummaryView(APIView):
             Finding.Severity.LOW: "low",
         }
         for severity_val, count in (
-            findings.values("severity").annotate(count=models.Count("id")).values_list("severity", "count")
+            findings.values("severity")
+            .annotate(count=models.Count("id"))
+            .values_list("severity", "count")
         ):
             key = mapping.get(severity_val)
             if key:
@@ -364,9 +364,7 @@ class DashboardSummaryView(APIView):
             "invitations": pending_list[:6],
         }
 
-    def _build_evidence_pipeline(
-        self, documents, responses
-    ) -> dict[str, Any]:
+    def _build_evidence_pipeline(self, documents, responses) -> dict[str, Any]:
         """Evidence mapping health: uploaded, mapped, unmapped, awaiting review."""
         # Documents uploaded this calendar month
         now = timezone.now()
@@ -385,9 +383,7 @@ class DashboardSummaryView(APIView):
                 unmapped += 1
 
         # Awaiting review = pending evidence responses (same logic as KPI)
-        awaiting_review = sum(
-            1 for response in responses if response.evidence_files
-        )
+        awaiting_review = sum(1 for response in responses if response.evidence_files)
 
         # Also count ALL unreviewed knowledge documents as unreviewed evidence
         total_docs = documents.count()
@@ -430,7 +426,9 @@ class DashboardSummaryView(APIView):
         result = []
         for data in sites.values():
             total = data["total"]
-            data["completion_pct"] = round((data["completed"] / total) * 100, 1) if total else 0
+            data["completion_pct"] = (
+                round((data["completed"] / total) * 100, 1) if total else 0
+            )
             result.append(data)
 
         # Sort by highest total first, cap at 8

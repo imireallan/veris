@@ -74,7 +74,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       return { success: true, redirectTo: `/onboarding/set-password/${token}` };
     }
 
-    return { success: true, redirectTo: "/" };
+    return { success: true, redirectTo: "/app" };
   } catch (error: any) {
     return data(
       { error: error.body?.detail || "Failed to accept invitation" },

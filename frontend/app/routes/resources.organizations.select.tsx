@@ -13,7 +13,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const token = await getUserToken(request);
   const formData = await request.formData();
   const organizationId = formData.get("organizationId");
-  const redirectTo = (formData.get("redirectTo") as string) || "/";
+  const redirectTo = (formData.get("redirectTo") as string) || "/app";
 
   if (!organizationId || typeof organizationId !== "string") {
     return redirect(redirectTo);

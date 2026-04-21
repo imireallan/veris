@@ -1,11 +1,13 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
+  index("routes/landing.tsx"),
   route("login", "routes/login.tsx"),
   route("logout", "routes/logout.tsx"),
+  route("demo/veris-workflow", "routes/demo.veris-workflow.tsx"),
   // Authenticated routes with sidebar layout
   route("", "routes/dashboard_layout.tsx", [
-    index("routes/index.tsx"),
+    route("app", "routes/index.tsx"),
     route("assessments", "routes/assessments.tsx"),
     route("assessments/new", "routes/assessments.new.tsx"),
     route("assessments/:id", "routes/assessments_detail.tsx"),

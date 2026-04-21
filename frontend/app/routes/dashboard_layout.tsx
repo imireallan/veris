@@ -14,7 +14,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const organizations = await getAccessibleOrganizations(request, token);
 
   const navLinks: { to: string; label: string; icon: string }[] = [
-    { to: "/", label: "Dashboard", icon: "LayoutDashboard" },
+    { to: "/app", label: "Dashboard", icon: "LayoutDashboard" },
     { to: "/assessments", label: "Assessments", icon: "ClipboardCheck" },
     { to: "/templates", label: "Templates", icon: "FileText" },
     { to: "/organizations", label: "Organizations", icon: "Building2" },

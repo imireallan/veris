@@ -1,29 +1,31 @@
-import { useFetcher, useLoaderData, useNavigate } from "react-router";
-import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
-import { data } from "react-router";
-import { api } from "~/.server/lib/api";
-import { useToast } from "~/hooks/use-toast";
-import { useFetcherToast } from "~/hooks/use-fetcher-toast";
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Alert, AlertDescription, Input, Label } from "~/components/ui";
-import { CheckCircle2, XCircle, Mail } from "lucide-react";
 import { useEffect } from "react";
+import { data, useFetcher, useLoaderData, useNavigate } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { ArrowRight, Leaf, Mail, ShieldCheck, TriangleAlert, UserPlus } from "lucide-react";
 
-// Public route - no auth required
+import { api } from "~/.server/lib/api";
+import { AuthCard, AuthLayout } from "~/components/auth/auth-layout";
+import { AuthPanelHeader } from "~/components/auth/auth-panel-header";
+import { AuthStateCard } from "~/components/auth/auth-state-card";
+import { PasswordField } from "~/components/auth/password-field";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
+import { useToast } from "~/hooks/use-toast";
+import { Alert, AlertDescription, Button, CardContent } from "~/components/ui";
+
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const token = params.token!;
 
   try {
-    // Pass request but NO token - this is a public endpoint
     const invitation = await api.get<any>(`/api/invitations/${token}/`, null, request);
-    return { 
-      invitation, 
+    return {
+      invitation,
       token,
-      needsPassword: true 
+      needsPassword: true,
     };
   } catch (error: any) {
-    return { 
-      invitation: null, 
-      token, 
+    return {
+      invitation: null,
+      token,
       error: error.body?.detail || error.message || "Invalid or expired invitation",
     };
   }
@@ -36,44 +38,36 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const token = params.token!;
 
   if (!password || !confirmPassword) {
-    return data(
-      { error: "Password and confirmation are required" },
-      { status: 400 }
-    );
+    return data({ error: "Password and confirmation are required" }, { status: 400 });
   }
 
   if (password.length < 8) {
-    return data(
-      { error: "Password must be at least 8 characters" },
-      { status: 400 }
-    );
+    return data({ error: "Password must be at least 8 characters" }, { status: 400 });
   }
 
   if (password !== confirmPassword) {
-    return data(
-      { error: "Passwords do not match" },
-      { status: 400 }
-    );
+    return data({ error: "Passwords do not match" }, { status: 400 });
   }
 
   try {
-    const result = await api.post<any>(
-      `/api/auth/set-password/`,
-      { token, password }
-    );
+    const result = await api.post<any>(`/api/auth/set-password/`, { token, password });
 
-    return { 
-      success: true, 
-      message: result.detail || "Password set successfully! Redirecting to login..." 
+    return {
+      success: true,
+      message: result.detail || "Password set successfully! Redirecting to login...",
     };
   } catch (error: any) {
     return data(
-      { 
-        error: error.body?.detail || "Failed to set password" 
+      {
+        error: error.body?.detail || "Failed to set password",
       },
       { status: error.status || 500 }
     );
   }
+}
+
+export function meta() {
+  return [{ title: "Set Password — Veris" }];
 }
 
 export default function OnboardingSetPasswordRoute() {
@@ -82,102 +76,120 @@ export default function OnboardingSetPasswordRoute() {
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
   const { handleFetcherResult } = useFetcherToast();
+  const isProcessing = fetcher.state === "submitting";
+  const response = fetcher.data;
 
   useEffect(() => {
     handleFetcherResult(fetcher, {
       success: (data: any) => {
-        toastSuccess("Success", data.message as string);
-        // Redirect to login after 2 seconds
+        toastSuccess("Password set", data.message as string);
         setTimeout(() => {
-          navigate("/login");
+          navigate(`/login?redirectTo=${encodeURIComponent(`/invitations/${token}`)}`);
         }, 2000);
       },
-      error: (data: any) => toastError("Error", data.error),
+      error: (data: any) => toastError("Password setup failed", data.error),
     });
-  }, [fetcher, toastSuccess, toastError, navigate]);
+  }, [fetcher, handleFetcherResult, navigate, toastError, toastSuccess, token]);
 
-  const isProcessing = fetcher.state === "submitting";
-
-  // Error state - invalid/expired invitation
   if (error || !invitation) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <XCircle className="w-16 h-16 mx-auto text-destructive mb-4" />
-            <CardTitle className="text-2xl">Invalid Invitation</CardTitle>
-            <CardDescription>
-              {error || "This invitation is invalid or has expired."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => navigate("/login")}>
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthLayout
+        icon={<TriangleAlert className="h-6 w-6 text-destructive" />}
+        title="Invalid invitation"
+        description={error || "This invitation is invalid or has expired."}
+      >
+        <AuthStateCard
+          tone="destructive"
+          message={error || "This invitation is invalid or has expired."}
+          actions={[{ label: "Go to Login", onClick: () => navigate("/login") }]}
+        />
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <CheckCircle2 className="w-16 h-16 mx-auto text-green-600 mb-4" />
-          <CardTitle className="text-2xl">Set Your Password</CardTitle>
-          <CardDescription>
-            Welcome to {invitation.organization.name}! Create a password to access your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert className="mb-6">
+    <AuthLayout
+      icon={<Leaf className="h-6 w-6 text-primary" />}
+      title="Create your Veris password"
+      description={
+        <>
+          Finish joining <span className="font-medium text-foreground">{invitation.organization.name}</span> by creating a password for your account.
+        </>
+      }
+    >
+      <AuthCard>
+        <AuthPanelHeader
+          icon={<UserPlus className="h-4.5 w-4.5 text-primary" />}
+          title="Invitation onboarding"
+          description={`Set your password once to activate access for ${invitation.email}.`}
+        />
+
+        <CardContent className="pt-6">
+          <Alert className="mb-4">
             <Mail className="h-4 w-4" />
             <AlertDescription>
-              <strong>Email:</strong> {invitation.email}
+              You’re setting up access for <span className="font-medium text-foreground">{invitation.email}</span>.
             </AlertDescription>
           </Alert>
 
           <fetcher.Form method="post" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter your password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
+            {response && "error" in response && (
+              <Alert variant="destructive">
+                <AlertDescription>{response.error}</AlertDescription>
+              </Alert>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="Confirm your password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
+            {response && "success" in response && response.success && (
+              <Alert>
+                <ShieldCheck className="h-4 w-4" />
+                <AlertDescription>{response.message}</AlertDescription>
+              </Alert>
+            )}
 
-            <Button type="submit" className="w-full" disabled={isProcessing}>
-              {isProcessing ? "Setting Password..." : "Set Password & Continue"}
+            <PasswordField
+              id="password"
+              name="password"
+              label="Password"
+              placeholder="Create your password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+
+            <PasswordField
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Confirm password"
+              placeholder="Confirm your password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+
+            <Button type="submit" className="h-11 w-full rounded-xl text-sm font-medium" disabled={isProcessing}>
+              {isProcessing ? (
+                "Setting password..."
+              ) : (
+                <>
+                  Set Password and Continue
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </fetcher.Form>
 
-          <div className="mt-4 text-center text-sm text-muted-foreground">
+          <p className="mt-5 text-center text-sm text-muted-foreground">
             Already have a password?{" "}
-            <Button variant="link" className="p-0" onClick={() => navigate("/login")}>
+            <button
+              type="button"
+              onClick={() => navigate(`/login?redirectTo=${encodeURIComponent(`/invitations/${token}`)}`)}
+              className="font-medium text-primary hover:underline"
+            >
               Login instead
-            </Button>
-          </div>
+            </button>
+          </p>
         </CardContent>
-      </Card>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   );
 }

@@ -151,7 +151,7 @@ export default function ProfileRoute() {
               <span className="text-sm font-medium">Password</span>
             </div>
             <a
-              href="/reset-password/request"
+              href="/reset-password"
               className="text-sm text-primary hover:underline"
             >
               Reset Password →

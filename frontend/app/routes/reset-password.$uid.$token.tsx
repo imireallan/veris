@@ -1,12 +1,16 @@
-import { useFetcher, useNavigate, useParams } from "react-router";
-import type { ActionFunctionArgs } from "react-router";
-import { data } from "react-router";
-import { api } from "~/.server/lib/api";
-import { useToast } from "~/hooks/use-toast";
-import { useFetcherToast } from "~/hooks/use-fetcher-toast";
-import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Input, Label } from "~/components/ui";
-import { CheckCircle2 } from "lucide-react";
 import { useEffect } from "react";
+import { data, Link, useFetcher, useNavigate, useParams } from "react-router";
+import type { ActionFunctionArgs } from "react-router";
+import { ArrowLeft, ArrowRight, KeyRound, Leaf, ShieldCheck, TriangleAlert } from "lucide-react";
+
+import { api } from "~/.server/lib/api";
+import { AuthCard, AuthLayout } from "~/components/auth/auth-layout";
+import { AuthPanelHeader } from "~/components/auth/auth-panel-header";
+import { AuthStateCard } from "~/components/auth/auth-state-card";
+import { PasswordField } from "~/components/auth/password-field";
+import { useFetcherToast } from "~/hooks/use-fetcher-toast";
+import { useToast } from "~/hooks/use-toast";
+import { Alert, AlertDescription, Button, CardContent } from "~/components/ui";
 
 export async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
@@ -15,51 +19,40 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const { uid, token } = params;
 
   if (!uid || !token) {
-    return data(
-      { error: "Invalid reset link" },
-      { status: 400 }
-    );
+    return data({ error: "Invalid reset link" }, { status: 400 });
   }
 
   if (!password || !confirmPassword) {
-    return data(
-      { error: "Password and confirmation are required" },
-      { status: 400 }
-    );
+    return data({ error: "Password and confirmation are required" }, { status: 400 });
   }
 
   if (password.length < 8) {
-    return data(
-      { error: "Password must be at least 8 characters" },
-      { status: 400 }
-    );
+    return data({ error: "Password must be at least 8 characters" }, { status: 400 });
   }
 
   if (password !== confirmPassword) {
-    return data(
-      { error: "Passwords do not match" },
-      { status: 400 }
-    );
+    return data({ error: "Passwords do not match" }, { status: 400 });
   }
 
   try {
-    const result = await api.post<any>(
-      `/api/auth/reset-password/confirm/`,
-      { uid, token, password }
-    );
+    const result = await api.post<any>(`/api/auth/reset-password/confirm/`, { uid, token, password });
 
-    return { 
-      success: true, 
-      message: result.detail || "Password reset successfully!" 
+    return {
+      success: true,
+      message: result.detail || "Password reset successfully!",
     };
   } catch (error: any) {
     return data(
-      { 
-        error: error.body?.detail || "Failed to reset password" 
+      {
+        error: error.body?.detail || "Failed to reset password",
       },
       { status: error.status || 500 }
     );
   }
+}
+
+export function meta() {
+  return [{ title: "Set New Password — Veris" }];
 }
 
 export default function ResetPasswordConfirmRoute() {
@@ -68,86 +61,105 @@ export default function ResetPasswordConfirmRoute() {
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
   const { handleFetcherResult } = useFetcherToast();
+  const isProcessing = fetcher.state === "submitting";
+  const response = fetcher.data;
 
   useEffect(() => {
     handleFetcherResult(fetcher, {
       success: (data: any) => {
-        toastSuccess("Success", data.message as string);
-        // Redirect to login after 2 seconds
+        toastSuccess("Password updated", data.message as string);
         setTimeout(() => {
           navigate("/login");
         }, 2000);
       },
-      error: (data: any) => toastError("Error", data.error),
+      error: (data: any) => toastError("Password update failed", data.error),
     });
-  }, [fetcher, toastSuccess, toastError, navigate]);
-
-  const isProcessing = fetcher.state === "submitting";
+  }, [fetcher, handleFetcherResult, navigate, toastError, toastSuccess]);
 
   if (!uid || !token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-        <Card className="max-w-md w-full">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Invalid Link</CardTitle>
-            <CardDescription>
-              This password reset link is invalid.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <Button onClick={() => navigate("/reset-password")}>
-              Request New Link
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <AuthLayout
+        icon={<TriangleAlert className="h-6 w-6 text-destructive" />}
+        title="Invalid reset link"
+        description="This password reset link is malformed or incomplete. Request a new one to continue."
+      >
+        <AuthStateCard
+          tone="destructive"
+          message="This password reset link is invalid."
+          actions={[{ label: "Request New Link", onClick: () => navigate("/reset-password") }]}
+        />
+      </AuthLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/50 p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <CheckCircle2 className="w-16 h-16 mx-auto text-green-600 mb-4" />
-          <CardTitle className="text-2xl">Set New Password</CardTitle>
-          <CardDescription>
-            Enter your new password below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+    <AuthLayout
+      icon={<Leaf className="h-6 w-6 text-primary" />}
+      title="Set a new password"
+      description="Choose a new password for your Veris account. You’ll be redirected to sign in once the reset is complete."
+    >
+      <AuthCard>
+        <AuthPanelHeader
+          icon={<ShieldCheck className="h-4.5 w-4.5 text-primary" />}
+          title="Secure password update"
+          description="Use at least 8 characters and confirm it once before continuing."
+        />
+
+        <CardContent className="pt-6">
           <fetcher.Form method="post" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Enter new password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
+            {response && "error" in response && (
+              <Alert variant="destructive">
+                <AlertDescription>{response.error}</AlertDescription>
+              </Alert>
+            )}
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                placeholder="Confirm new password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-              />
-            </div>
+            {response && "success" in response && response.success && (
+              <Alert>
+                <KeyRound className="h-4 w-4" />
+                <AlertDescription>{response.message} Redirecting to login…</AlertDescription>
+              </Alert>
+            )}
 
-            <Button type="submit" className="w-full" disabled={isProcessing}>
-              {isProcessing ? "Resetting..." : "Reset Password"}
+            <PasswordField
+              id="password"
+              name="password"
+              label="New password"
+              placeholder="Enter your new password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+
+            <PasswordField
+              id="confirmPassword"
+              name="confirmPassword"
+              label="Confirm new password"
+              placeholder="Confirm your new password"
+              required
+              minLength={8}
+              autoComplete="new-password"
+            />
+
+            <Button type="submit" className="h-11 w-full rounded-xl text-sm font-medium" disabled={isProcessing}>
+              {isProcessing ? (
+                "Resetting password..."
+              ) : (
+                <>
+                  Reset Password
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </fetcher.Form>
+
+          <div className="mt-5 text-center">
+            <Link to="/login" className="inline-flex items-center text-sm font-medium text-primary hover:underline">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to login
+            </Link>
+          </div>
         </CardContent>
-      </Card>
-    </div>
+      </AuthCard>
+    </AuthLayout>
   );
 }

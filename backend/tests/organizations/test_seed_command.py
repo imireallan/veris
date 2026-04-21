@@ -40,4 +40,6 @@ class TestSeedCommand:
         )
         assert admin_role.name == "EO E2E Org Admin"
         assert admin_role.is_system_role is True
-        assert memberships["allanimire+veris-e2e-org-admin@gmail.com"].role == admin_role
+        assert (
+            memberships["allanimire+veris-e2e-org-admin@gmail.com"].role == admin_role
+        )

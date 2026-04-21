@@ -51,12 +51,8 @@ class Command(BaseCommand):
         config.allow_staff_users = True
         config.allow_superusers = True
         config.helper_title = "Create New Organization"
-        config.helper_description = (
-            "Set up a new client organization on Veris. They will receive an invitation to join the platform."
-        )
-        config.prerequisite_warning = (
-            "Ensure you have client approval before creating their organization. This action cannot be undone."
-        )
+        config.helper_description = "Set up a new client organization on Veris. They will receive an invitation to join the platform."
+        config.prerequisite_warning = "Ensure you have client approval before creating their organization. This action cannot be undone."
         config.save()
         self.stdout.write(
             self.style.SUCCESS("Upserted organization creation config defaults")
@@ -748,10 +744,12 @@ class Command(BaseCommand):
                     "is_default": True,
                     "is_lead_assessor": is_lead_assessor,
                 }
-                membership, membership_created = OrganizationMembership.objects.get_or_create(
-                    user=user,
-                    organization=e2e_org,
-                    defaults=membership_defaults,
+                membership, membership_created = (
+                    OrganizationMembership.objects.get_or_create(
+                        user=user,
+                        organization=e2e_org,
+                        defaults=membership_defaults,
+                    )
                 )
                 if not membership_created:
                     membership.fallback_role = fallback_role

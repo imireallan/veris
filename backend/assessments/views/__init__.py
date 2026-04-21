@@ -47,8 +47,8 @@ from users.permissions import (
     CanViewReports,
     IsAssessmentOwner,
     IsOrganizationMember,
-    IsOrganizationOwnerOrAdmin,
 )
+
 
 def get_request_organization_id(request, kwargs=None):
     organization = getattr(request, "organization", None)

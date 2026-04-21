@@ -99,14 +99,18 @@ test.describe("Org admin workflows", () => {
     await page.getByRole("button", { name: /Sign In/i }).click();
 
     await expect(page.getByText(/Welcome back,/i)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole("button", { name: new RegExp(ORG_NAME) })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: ORG_NAME, exact: true }),
+    ).toBeVisible();
   });
 
   test("org admin lands in the correct organization context after login", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.getByText(/Welcome back,/i)).toBeVisible();
-    await expect(page.getByRole("button", { name: new RegExp(ORG_NAME) })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: ORG_NAME, exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /EO E2E Org Admin/i }),
     ).toBeVisible();

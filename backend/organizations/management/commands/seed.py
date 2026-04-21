@@ -1,5 +1,7 @@
 """Management command to seed the database with demo data."""
 
+import uuid
+
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
@@ -26,52 +28,56 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Superuser already exists"))
 
         # Organization Creation Config (singleton)
-        from organizations.models import OrganizationCreationConfig
-
-        config, created = OrganizationCreationConfig.objects.get_or_create(
-            id=(
-                OrganizationCreationConfig.objects.first().id
-                if OrganizationCreationConfig.objects.exists()
-                else None
-            ),
-            defaults={
-                "require_contract_upload": False,
-                "require_client_email": True,
-                "require_framework_selection": True,
-                "require_industry_sector": True,
-                "auto_send_invitation": True,
-                "invitation_expiry_days": 7,
-                "allowed_creator_roles": ["SUPERADMIN"],
-                "helper_title": "Create New Organization",
-                "helper_description": "Set up a new client organization on Veris. They will receive an invitation to join the platform.",
-                "prerequisite_warning": "Ensure you have client approval before creating their organization. This action cannot be undone.",
-            },
+        from organizations.models import (
+            DEFAULT_ROLE_PERMISSIONS,
+            CustomRole,
+            Organization,
+            OrganizationCreationConfig,
+            OrganizationMembership,
+            OrganizationSettings,
+            OrganizationTerminology,
         )
-        if created:
-            self.stdout.write(
-                self.style.SUCCESS("Created organization creation config with defaults")
-            )
-        else:
-            self.stdout.write(
-                self.style.WARNING("Organization creation config already exists")
-            )
+        from themes.models import OrganizationTheme
+        from users.roles import UserRole
 
-        # Organizations and Themes
-        from organizations.models import Organization
-        from themes.models import Theme
+        config = OrganizationCreationConfig.get_solo()
+        config.require_contract_upload = False
+        config.require_client_email = True
+        config.require_framework_selection = True
+        config.require_industry_sector = True
+        config.auto_send_invitation = True
+        config.invitation_expiry_days = 7
+        config.allow_authenticated_users = False
+        config.allow_staff_users = True
+        config.allow_superusers = True
+        config.helper_title = "Create New Organization"
+        config.helper_description = (
+            "Set up a new client organization on Veris. They will receive an invitation to join the platform."
+        )
+        config.prerequisite_warning = (
+            "Ensure you have client approval before creating their organization. This action cannot be undone."
+        )
+        config.save()
+        self.stdout.write(
+            self.style.SUCCESS("Upserted organization creation config defaults")
+        )
 
+        # Organizations and tenant defaults
         demo_orgs = [
             {
                 "name": "Demo Energy Corp",
                 "slug": "demo-energy",
                 "status": Organization.Status.ACTIVE,
-                "subscription_tier": "enterprise",
+                "subscription_tier": Organization.SubscriptionTier.ENTERPRISE,
                 "theme": {
-                    "primary_color": "#2D5A7B",
-                    "secondary_color": "#8FAABF",
-                    "accent_color": "#E88D67",
-                    "background_color": "#FAFAFA",
-                    "text_color": "#1A1A1A",
+                    "app_name": "Veris Energy",
+                    "login_title": "Veris Energy",
+                    "login_subtitle": "Energy assurance workspace",
+                    "primary_color": "205 46 33",
+                    "secondary_color": "205 25 66",
+                    "accent_color": "20 73 66",
+                    "background_color": "0 0 98",
+                    "text_color": "222 47 11",
                     "logo_url": "",
                     "favicon_url": "",
                     "font_family": "Inter, system-ui, sans-serif",
@@ -81,13 +87,16 @@ class Command(BaseCommand):
                 "name": "Demo Mining Ltd",
                 "slug": "demo-mining",
                 "status": Organization.Status.ACTIVE,
-                "subscription_tier": "standard",
+                "subscription_tier": Organization.SubscriptionTier.STANDARD,
                 "theme": {
-                    "primary_color": "#1B4332",
-                    "secondary_color": "#40916C",
-                    "accent_color": "#D4A373",
-                    "background_color": "#FEFAE0",
-                    "text_color": "#2B2D42",
+                    "app_name": "Veris Mining",
+                    "login_title": "Veris Mining",
+                    "login_subtitle": "Mining assurance workspace",
+                    "primary_color": "145 43 18",
+                    "secondary_color": "152 38 41",
+                    "accent_color": "28 54 64",
+                    "background_color": "48 100 94",
+                    "text_color": "222 47 11",
                     "logo_url": "",
                     "favicon_url": "",
                     "font_family": "Inter, system-ui, sans-serif",
@@ -97,33 +106,100 @@ class Command(BaseCommand):
                 "name": "Demo Automotive Inc",
                 "slug": "demo-automotive",
                 "status": Organization.Status.ACTIVE,
-                "subscription_tier": "enterprise",
+                "subscription_tier": Organization.SubscriptionTier.ENTERPRISE,
                 "theme": {
-                    "primary_color": "#3B82F6",
-                    "secondary_color": "#60A5FA",
-                    "accent_color": "#F59E0B",
-                    "background_color": "#F1F5F9",
-                    "text_color": "#0F172A",
+                    "app_name": "Veris Automotive",
+                    "login_title": "Veris Automotive",
+                    "login_subtitle": "Automotive assurance workspace",
+                    "primary_color": "217 91 60",
+                    "secondary_color": "213 94 68",
+                    "accent_color": "38 92 50",
+                    "background_color": "210 40 96",
+                    "text_color": "222 47 11",
                     "logo_url": "",
                     "favicon_url": "",
                     "font_family": "Inter, system-ui, sans-serif",
                 },
             },
+            {
+                "id": uuid.UUID("03abc363-bf7a-4d3e-a5a2-dd47b8d37ccc"),
+                "name": "E2E Org Admin QA",
+                "slug": "e2e-org-admin-qa",
+                "status": Organization.Status.ACTIVE,
+                "subscription_tier": Organization.SubscriptionTier.ENTERPRISE,
+                "theme": {
+                    "app_name": "Veris E2E QA",
+                    "login_title": "Veris E2E QA",
+                    "login_subtitle": "Tenant role access demo workspace",
+                    "primary_color": "160 84 39",
+                    "secondary_color": "173 80 40",
+                    "accent_color": "160 84 39",
+                    "background_color": "210 40 98",
+                    "text_color": "222 47 11",
+                    "logo_url": "",
+                    "favicon_url": "",
+                    "font_family": "Inter, system-ui, sans-serif",
+                },
+                "terminology": {
+                    "assessment_label": "Assessment",
+                    "site_label": "Site",
+                    "task_label": "Action",
+                    "evidence_label": "Evidence",
+                    "report_label": "Report",
+                },
+                "settings": {
+                    "features": {
+                        "memberships": True,
+                        "invitations": True,
+                        "rbac": True,
+                    },
+                    "preferences": {
+                        "demo_mode": True,
+                        "show_role_matrix": True,
+                    },
+                },
+            },
         ]
 
-        for org_data in demo_orgs:
+        for raw_org_data in demo_orgs:
+            org_data = raw_org_data.copy()
             theme_data = org_data.pop("theme")
-            org, created = Organization.objects.get_or_create(
-                slug=org_data["slug"],
-                defaults=org_data,
-            )
-            status = "Created" if created else "Exists"
+            terminology_data = org_data.pop("terminology", None)
+            settings_data = org_data.pop("settings", None)
+            org_id = org_data.pop("id", None)
+
+            org = Organization.objects.filter(slug=org_data["slug"]).first()
+            created = False
+            if org:
+                for field, value in org_data.items():
+                    setattr(org, field, value)
+                org.save(update_fields=list(org_data.keys()) + ["updated_at"])
+            else:
+                if org_id is not None:
+                    org = Organization.objects.create(id=org_id, **org_data)
+                else:
+                    org = Organization.objects.create(**org_data)
+                created = True
+
+            status = "Created" if created else "Updated"
             self.stdout.write(f"  [{status}] Organization: {org.name}")
 
-            Theme.objects.update_or_create(
+            OrganizationTheme.objects.update_or_create(
                 organization=org,
                 defaults=theme_data,
             )
+
+            if terminology_data:
+                OrganizationTerminology.objects.update_or_create(
+                    organization=org,
+                    defaults=terminology_data,
+                )
+
+            if settings_data:
+                OrganizationSettings.objects.update_or_create(
+                    organization=org,
+                    defaults=settings_data,
+                )
 
         # Frameworks
         from assessments.models import Framework
@@ -405,7 +481,9 @@ class Command(BaseCommand):
         # ─────────────────────────────────────────────────────
         # Assessment + Plan + Report + Finding + CIP Cycle demo
         # ─────────────────────────────────────────────────────
-        from datetime import date, timedelta
+        from datetime import timedelta
+
+        from django.utils import timezone
 
         from assessments.models import (
             Assessment,
@@ -418,6 +496,8 @@ class Command(BaseCommand):
 
         mining_org = org_map.get("demo-mining")
         energy_org = org_map.get("demo-energy")
+        now = timezone.now()
+        today = timezone.localdate()
         site1 = (
             Site.objects.filter(organization=mining_org).first() if mining_org else None
         )
@@ -439,8 +519,8 @@ class Command(BaseCommand):
                 defaults={
                     "site": site1,
                     "status": Assessment.Status.IN_PROGRESS,
-                    "start_date": date.today() - timedelta(days=30),
-                    "due_date": date.today() + timedelta(days=60),
+                    "start_date": now - timedelta(days=30),
+                    "due_date": now + timedelta(days=60),
                     "created_by": User.objects.filter(is_superuser=True).first(),
                     "overall_score": 62.5,
                     "risk_level": Assessment.RiskLevel.MEDIUM,
@@ -455,10 +535,10 @@ class Command(BaseCommand):
                 assessment=demo_assessment,
                 defaults={
                     "organization": mining_org,
-                    "site_assessment_start": date.today() - timedelta(days=10),
-                    "site_assessment_end": date.today() + timedelta(days=5),
-                    "draft_report_deadline": date.today() + timedelta(days=30),
-                    "final_report_deadline": date.today() + timedelta(days=60),
+                    "site_assessment_start": today - timedelta(days=10),
+                    "site_assessment_end": today + timedelta(days=5),
+                    "draft_report_deadline": today + timedelta(days=30),
+                    "final_report_deadline": today + timedelta(days=60),
                     "notes": "Follow OECD Due Diligence framework for site visit.",
                 },
             )
@@ -522,7 +602,7 @@ class Command(BaseCommand):
                     label=label,
                     defaults={
                         "deadline_period_months": months,
-                        "start_date": date.today(),
+                        "start_date": today,
                         "status": CIPCycle.CycleStatus.ACTIVE,
                     },
                 )
@@ -561,8 +641,8 @@ class Command(BaseCommand):
                     defaults={
                         "site": site3,
                         "status": Assessment.Status.DRAFT,
-                        "start_date": date.today(),
-                        "due_date": date.today() + timedelta(days=90),
+                        "start_date": now,
+                        "due_date": now + timedelta(days=90),
                         "overall_score": 0.0,
                         "risk_level": Assessment.RiskLevel.HIGH,
                     },
@@ -585,12 +665,110 @@ class Command(BaseCommand):
                 )
 
         # ─────────────────────────────────────────────────────
+        # E2E role demo users for org-admin QA
+        e2e_org = org_map.get("e2e-org-admin-qa")
+        if e2e_org:
+            e2e_admin_role, _ = CustomRole.objects.update_or_create(
+                organization=e2e_org,
+                key="eo-e2e-org-admin",
+                defaults={
+                    "name": "EO E2E Org Admin",
+                    "description": "Custom admin display role for org admin E2E QA demos.",
+                    "permissions": DEFAULT_ROLE_PERMISSIONS[UserRole.ADMIN],
+                    "is_active": True,
+                    "is_system_role": True,
+                },
+            )
+
+            e2e_users = [
+                {
+                    "email": "allanimire+veris-e2e-org-admin@gmail.com",
+                    "name": "E2E Org Admin",
+                    "password": "pass@word1",
+                    "fallback_role": UserRole.ADMIN,
+                    "role": e2e_admin_role,
+                },
+                {
+                    "email": "allanimire+veris-e2e-coordinator@gmail.com",
+                    "name": "E2E Coordinator",
+                    "password": "pass@word1",
+                    "fallback_role": UserRole.COORDINATOR,
+                },
+                {
+                    "email": "allanimire+veris-e2e-executive@gmail.com",
+                    "name": "E2E Executive",
+                    "password": "pass@word1",
+                    "fallback_role": UserRole.EXECUTIVE,
+                },
+                {
+                    "email": "allanimire+veris-e2e-consultant@gmail.com",
+                    "name": "E2E Consultant",
+                    "password": "pass@word1",
+                    "fallback_role": UserRole.CONSULTANT,
+                },
+                {
+                    "email": "allanimire+veris-e2e-operator@gmail.com",
+                    "name": "E2E Operator",
+                    "password": "pass@word1",
+                    "fallback_role": UserRole.OPERATOR,
+                },
+                {
+                    "email": "allanimire+veris-e2e-assessor@gmail.com",
+                    "name": "E2E Assessor",
+                    "password": "pass@word1",
+                    "fallback_role": UserRole.ASSESSOR,
+                    "is_lead_assessor": True,
+                },
+            ]
+
+            for user_data in e2e_users:
+                role = user_data.get("role")
+                fallback_role = user_data["fallback_role"]
+                is_lead_assessor = user_data.get("is_lead_assessor", False)
+                user, created = User.objects.get_or_create(
+                    email=user_data["email"],
+                    defaults={
+                        "name": user_data["name"],
+                        "status": User.Status.ACTIVE,
+                    },
+                )
+                if created:
+                    user.set_password(user_data["password"])
+                else:
+                    user.name = user_data["name"]
+                    user.status = User.Status.ACTIVE
+                    if not user.has_usable_password():
+                        user.set_password(user_data["password"])
+                user.save()
+
+                membership_defaults = {
+                    "fallback_role": fallback_role,
+                    "status": OrganizationMembership.Status.ACTIVE,
+                    "role": role,
+                    "is_default": True,
+                    "is_lead_assessor": is_lead_assessor,
+                }
+                membership, membership_created = OrganizationMembership.objects.get_or_create(
+                    user=user,
+                    organization=e2e_org,
+                    defaults=membership_defaults,
+                )
+                if not membership_created:
+                    membership.fallback_role = fallback_role
+                    membership.status = OrganizationMembership.Status.ACTIVE
+                    membership.role = role
+                    membership.is_default = True
+                    membership.is_lead_assessor = is_lead_assessor
+                    membership.save()
+
+                membership_status = "Created" if membership_created else "Updated"
+                self.stdout.write(
+                    f"  [{membership_status}] E2E member: {user.email} ({fallback_role})"
+                )
+
         # Summary
-        # ─────────────────────────────────────────────────────
 
         # Assign admin user to the first organization if not already assigned
-        from organizations.models import OrganizationMembership
-
         admin_user = User.objects.filter(email="admin@example.com").first()
         if admin_user:
             # Check if admin has any membership
@@ -603,11 +781,11 @@ class Command(BaseCommand):
                     OrganizationMembership.objects.create(
                         user=admin_user,
                         organization=first_org,
-                        fallback_role="ADMIN",
+                        fallback_role=UserRole.ADMIN,
                     )
                     self.stdout.write(
                         self.style.SUCCESS(
-                            "  [Updated] Assigned admin user to Demo Energy Corp"
+                            f"  [Updated] Assigned admin user to {first_org.name}"
                         )
                     )
 

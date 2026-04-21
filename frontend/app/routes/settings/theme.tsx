@@ -21,7 +21,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   
   // Only ADMIN and SUPERADMIN can manage theme settings
   if (!RBAC.canManageOrg(user)) {
-    throw redirect("/");
+    throw redirect("/app");
   }
   
   try {

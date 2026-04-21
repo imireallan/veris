@@ -282,6 +282,9 @@ class OrganizationMembership(models.Model):
         if self.status != self.Status.ACTIVE:
             return False
 
+        if permission_key == "report:export" and self.is_lead_assessor:
+            return True
+
         if self.role:
             return self.role.has_permission(permission_key)
 

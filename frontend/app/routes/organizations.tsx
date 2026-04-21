@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import type { User, OrganizationListItem } from "~/types";
+import { getResolvedActiveOrganizationId } from "~/lib/active-organization";
 import { api } from "~/.server/lib/api";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge, Button, SearchBar, Skeleton } from "~/components/ui";
@@ -62,7 +63,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     orgs,
     user,
-    selectedOrgId: user.orgId ?? null,
+    selectedOrgId: getResolvedActiveOrganizationId(user),
     organizationOptions: user.organizations ?? user.recentOrganizations ?? [],
   };
 }

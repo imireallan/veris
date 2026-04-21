@@ -1,4 +1,5 @@
 import type { User } from "~/types";
+import { getResolvedActiveOrganizationId } from "~/lib/active-organization";
 
 export enum UserRole {
   SUPERADMIN = "SUPERADMIN",
@@ -23,7 +24,7 @@ export class RBAC {
    * Returns the active org id from the normalized user object.
    */
   static getActiveOrgId(user: User | null): string | null {
-    return user?.orgId ?? null;
+    return getResolvedActiveOrganizationId(user);
   }
 
   /**
@@ -33,7 +34,7 @@ export class RBAC {
   static getActiveRole(user: User | null): string | null {
     if (!user) return null;
 
-    if (user.isSuperuser && !user.orgId) {
+    if (user.isSuperuser && !this.getActiveOrgId(user)) {
       return UserRole.SUPERADMIN;
     }
 
@@ -44,7 +45,7 @@ export class RBAC {
    * Checks whether the user is currently inside an active tenant context.
    */
   static hasActiveOrganization(user: User | null): boolean {
-    return !!user?.orgId;
+    return !!this.getActiveOrgId(user);
   }
 
   /**
@@ -66,7 +67,7 @@ export class RBAC {
   static isOrgMember(user: User | null, orgId: string): boolean {
     if (!user || !orgId) return false;
     if (this.isPlatformAdmin(user)) return true;
-    if (String(user.orgId) === String(orgId)) return true;
+    if (String(this.getActiveOrgId(user)) === String(orgId)) return true;
     return (
       user.recentOrganizations?.some(
         (organization) => String(organization.id) === String(orgId),
@@ -77,7 +78,7 @@ export class RBAC {
   static getOrgRole(user: User | null, orgId: string): string | null {
     if (!user || !orgId) return null;
     if (this.isPlatformAdmin(user)) return UserRole.SUPERADMIN;
-    if (String(user.orgId) === String(orgId)) {
+    if (String(this.getActiveOrgId(user)) === String(orgId)) {
       return this.getActiveRole(user);
     }
 
@@ -94,7 +95,7 @@ export class RBAC {
 
   static canManageOrg(user: User | null, orgId?: string): boolean {
     if (this.isPlatformAdmin(user)) return true;
-    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    if (orgId && String(this.getActiveOrgId(user)) !== String(orgId)) return false;
     return this.hasPermission(user, "org:settings");
   }
 
@@ -113,7 +114,7 @@ export class RBAC {
 
   static canManageTemplates(user: User | null, orgId?: string): boolean {
     if (this.isPlatformAdmin(user)) return true;
-    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    if (orgId && String(this.getActiveOrgId(user)) !== String(orgId)) return false;
     return (
       this.hasPermission(user, "template:create") ||
       this.hasPermission(user, "template:edit") ||
@@ -127,13 +128,13 @@ export class RBAC {
 
   static canAccessAssessments(user: User | null, orgId?: string): boolean {
     if (this.isPlatformAdmin(user)) return true;
-    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    if (orgId && String(this.getActiveOrgId(user)) !== String(orgId)) return false;
     return this.canViewAssessments(user);
   }
 
   static canCreateAssessments(user: User | null, orgId?: string): boolean {
     if (this.isPlatformAdmin(user)) return true;
-    if (orgId && String(user?.orgId) !== String(orgId)) return false;
+    if (orgId && String(this.getActiveOrgId(user)) !== String(orgId)) return false;
     return this.hasPermission(user, "assessment:create");
   }
 

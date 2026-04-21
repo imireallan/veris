@@ -15,6 +15,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { cn } from "~/lib/utils";
 import type { OrganizationListItem, User as UserType } from "~/types";
+import { getResolvedActiveOrganization } from "~/lib/active-organization";
 import { RBAC, UserRole } from "~/types/rbac";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Badge } from "./ui/badge";
@@ -68,10 +69,7 @@ export function UserDropdown({
     : user.email.slice(0, 2).toUpperCase();
 
   const RoleIcon = getRoleIconComponent(user.role);
-  const selectedOrg =
-    organizations.find((organization) => organization.id === user.orgId) ??
-    user.activeOrganization ??
-    null;
+  const selectedOrg = getResolvedActiveOrganization(user, organizations);
 
   return (
     <DropdownMenu>

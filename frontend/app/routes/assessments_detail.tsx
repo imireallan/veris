@@ -21,7 +21,89 @@ import {
   BreadcrumbLink,
   BreadcrumbPage,
   BreadcrumbSeparator,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
 } from "~/components/ui";
+import type { AssessmentReport, User } from "~/types";
+import { RBAC } from "~/types/rbac";
+
+export function getReportExportUiState({
+  user,
+  hasReport,
+  generatingReport,
+}: {
+  user: User | null;
+  hasReport: boolean;
+  generatingReport: boolean;
+}) {
+  const canExportReport = RBAC.canExportReports(user);
+
+  if (generatingReport) {
+    return {
+      canClick: false,
+      disabled: true,
+      tooltip: "Generating PDF report...",
+    };
+  }
+
+  if (!hasReport) {
+    return {
+      canClick: false,
+      disabled: true,
+      tooltip: "No report generated yet. Complete the assessment and create a report first.",
+    };
+  }
+
+  if (!canExportReport) {
+    return {
+      canClick: false,
+      disabled: true,
+      tooltip: "You don't have permission to export reports. Contact your organization admin.",
+    };
+  }
+
+  return {
+    canClick: true,
+    disabled: false,
+    tooltip: "Download PDF report",
+  };
+}
+
+export function getReportViewUiState({
+  user,
+  hasReport,
+}: {
+  user: User | null;
+  hasReport: boolean;
+}) {
+  const canViewReport = RBAC.canViewReports(user);
+
+  if (!hasReport) {
+    return {
+      canView: canViewReport,
+      showTab: canViewReport,
+      state: "empty" as const,
+      message: "No report has been generated for this assessment yet.",
+    };
+  }
+
+  if (!canViewReport) {
+    return {
+      canView: false,
+      showTab: true,
+      state: "denied" as const,
+      message: "You don't have permission to view this report.",
+    };
+  }
+
+  return {
+    canView: true,
+    showTab: true,
+    state: "content" as const,
+    message: "",
+  };
+}
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -39,7 +121,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   });
   
   if (!assessment) {
-    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null, error: "permission_denied" };
+    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null, user, error: "permission_denied" };
   }
 
   const orgId = assessment.organization;
@@ -66,6 +148,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     plan: plan,
     tasks: tasks,
     report: report,
+    user,
   };
 }
 
@@ -152,6 +235,15 @@ export default function AssessmentDetailRoute() {
   }
 
   const a = data.assessment;
+  const reportExportUiState = getReportExportUiState({
+    user: data.user,
+    hasReport: Boolean(data.report),
+    generatingReport,
+  });
+  const reportViewUiState = getReportViewUiState({
+    user: data.user,
+    hasReport: Boolean(data.report),
+  });
 
   const handleSave = () => {
     formRef.current?.submit();
@@ -190,51 +282,46 @@ export default function AssessmentDetailRoute() {
           </p>
         </div>
         {/* Download Report Button */}
-        {data.report ? (
-          <Button
-            variant="default"
-            size="sm"
-            disabled={generatingReport}
-            className="gap-2"
-            title={generatingReport ? "Generating PDF report..." : "Download PDF report"}
-            onClick={async (e) => {
-              e.preventDefault();
-              setGeneratingReport(true);
-              try {
-                // Open PDF in new window - browser handles download
-                window.open(`/resources/reports/${data.report.id}/pdf`, "_blank");
-                // Reset loading state after a short delay (can't detect download completion)
-                setTimeout(() => setGeneratingReport(false), 2000);
-              } catch (error) {
-                console.error("PDF download failed:", error);
-                setGeneratingReport(false);
-              }
-            }}
-          >
-            {generatingReport ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Generating...
-              </span>
-            ) : (
-              <>
-                <Download className="w-4 h-4" />
-                Download Report
-              </>
-            )}
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled
-            className="gap-2"
-            title="No report generated yet. Complete the assessment and create a report first."
-          >
-            <Download className="w-4 h-4" />
-            Download Report
-          </Button>
-        )}
+        <Tooltip>
+          <TooltipTrigger>
+            <span tabIndex={0} className="inline-flex">
+              <Button
+                variant={data.report && reportExportUiState.canClick ? "default" : "outline"}
+                size="sm"
+                disabled={reportExportUiState.disabled}
+                className="gap-2"
+                aria-label={reportExportUiState.tooltip}
+                onClick={async (e) => {
+                  e.preventDefault();
+                  if (!data.report || !reportExportUiState.canClick) return;
+                  setGeneratingReport(true);
+                  try {
+                    window.open(`/resources/reports/${data.report.id}/pdf`, "_blank");
+                    setTimeout(() => setGeneratingReport(false), 2000);
+                  } catch (error) {
+                    console.error("PDF download failed:", error);
+                    setGeneratingReport(false);
+                  }
+                }}
+              >
+                {generatingReport ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Generating...
+                  </span>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Download Report
+                  </>
+                )}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center" sideOffset={8}>
+            {reportExportUiState.tooltip}
+          </TooltipContent>
+        </Tooltip>
         <EditModeToolbar
           editMode={editMode}
           onEdit={() => setEditMode(true)}
@@ -325,6 +412,7 @@ export default function AssessmentDetailRoute() {
           { key: "plan", label: "Plan" },
           { key: "cip", label: "CIP", count: data.cipCycles.length },
           { key: "tasks", label: "Tasks", count: data.tasks.length },
+          ...(reportViewUiState.showTab ? [{ key: "report", label: "Report" }] : []),
         ]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -454,6 +542,10 @@ export default function AssessmentDetailRoute() {
           )}
         </div>
       )}
+
+      {activeTab === "report" && (
+        <ReportTab report={data.report} viewState={reportViewUiState} />
+      )}
     </div>
   );
 }
@@ -465,6 +557,176 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
       {children}
     </div>
   );
+}
+
+function ReportTab({
+  report,
+  viewState,
+}: {
+  report: AssessmentReport | null;
+  viewState: ReturnType<typeof getReportViewUiState>;
+}) {
+  if (!report) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="No report yet"
+        description={viewState.message}
+      />
+    );
+  }
+
+  if (!viewState.canView) {
+    return (
+      <EmptyState
+        icon={AlertTriangle}
+        title="Report access restricted"
+        description={viewState.message}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionCard title="Report overview" description="Read-only assessment report content.">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <ReportMetaItem label="Title" value={report.title || "—"} />
+          <ReportMetaItem label="Status" value={formatDisplayLabel(report.status)} />
+          <ReportMetaItem label="Assessment start" value={formatDateValue(report.assessment_start_date)} />
+          <ReportMetaItem label="Assessment end" value={formatDateValue(report.assessment_end_date)} />
+          <ReportMetaItem label="Published" value={formatDateValue(report.report_published_date)} />
+          <ReportMetaItem label="Created" value={formatDateValue(report.created_at)} />
+          <ReportMetaItem label="Last updated" value={formatDateValue(report.updated_at)} />
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Executive summary" padding="compact">
+        <ReportTextBlock value={report.executive_summary} emptyValue="No executive summary provided." />
+      </SectionCard>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SectionCard title="Methodology" padding="compact">
+          <ReportTextBlock value={report.methodology} emptyValue="No methodology provided." />
+        </SectionCard>
+        <SectionCard title="Scope" padding="compact">
+          <ReportTextBlock value={report.scope} emptyValue="No scope provided." />
+        </SectionCard>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SectionCard title="Country context" padding="compact">
+          <ReportTextBlock value={report.country_context} emptyValue="No country context provided." />
+        </SectionCard>
+        <SectionCard title="Conclusion" padding="compact">
+          <ReportTextBlock value={report.conclusion} emptyValue="No conclusion provided." />
+        </SectionCard>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SectionCard title="Meeting participants" padding="compact">
+          <ReportListBlock
+            items={report.meeting_participants}
+            emptyValue="No meeting participants recorded."
+          />
+        </SectionCard>
+        <SectionCard title="Stakeholder meetings" padding="compact">
+          <ReportListBlock
+            items={report.stakeholder_meetings}
+            emptyValue="No stakeholder meetings recorded."
+          />
+        </SectionCard>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SectionCard title="Limitations" padding="compact">
+          <ReportListBlock items={report.limitations} emptyValue="No limitations recorded." />
+        </SectionCard>
+        <SectionCard title="Disclaimer" padding="compact">
+          <ReportTextBlock value={report.disclaimer} emptyValue="No disclaimer provided." />
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+function ReportMetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-medium text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function ReportTextBlock({ value, emptyValue }: { value?: string | null; emptyValue: string }) {
+  const content = value?.trim();
+
+  return content ? (
+    <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{content}</p>
+  ) : (
+    <p className="text-sm text-muted-foreground">{emptyValue}</p>
+  );
+}
+
+function ReportListBlock({
+  items,
+  emptyValue,
+}: {
+  items?: unknown[] | null;
+  emptyValue: string;
+}) {
+  if (!items || items.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyValue}</p>;
+  }
+
+  return (
+    <ul className="space-y-2 text-sm text-foreground">
+      {items.map((item, index) => (
+        <li key={`${formatReportListItem(item)}-${index}`} className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2">
+          {formatReportListItem(item)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function formatReportListItem(item: unknown): string {
+  if (typeof item === "string") {
+    return item;
+  }
+
+  try {
+    return JSON.stringify(item, null, 2);
+  } catch {
+    return String(item);
+  }
+}
+
+function formatDateValue(value?: string | null): string {
+  if (!value) {
+    return "—";
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleDateString();
+}
+
+function formatDisplayLabel(value?: string | null): string {
+  if (!value) {
+    return "—";
+  }
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 const riskBadgeVariant = (r: string) => {

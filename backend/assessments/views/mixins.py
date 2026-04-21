@@ -44,8 +44,6 @@ class ResponseValidationMixin:
 class ReportExportMixin:
     @action(detail=True, methods=["get"], url_path="export/pdf")
     def export_pdf(self, request, pk=None):
-        from reports.services import ReportGenerationError, ReportGenerator
-
         report = self.get_object()
 
         if not request.user.is_superuser:
@@ -71,6 +69,8 @@ class ReportExportMixin:
                 )
 
         try:
+            from reports.services import ReportGenerationError, ReportGenerator
+
             generator = ReportGenerator(report)
             pdf_bytes = generator.generate_pdf()
 

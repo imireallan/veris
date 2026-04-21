@@ -248,6 +248,15 @@ export interface AssessmentReport {
   executive_summary: string;
   methodology: string;
   scope: string;
+  country_context: string;
+  conclusion: string;
+  meeting_participants: unknown[];
+  stakeholder_meetings: unknown[];
+  limitations: unknown[];
+  disclaimer: string;
+  assessment_start_date: string | null;
+  assessment_end_date: string | null;
+  report_published_date: string | null;
   created_at: string;
   updated_at: string;
 }

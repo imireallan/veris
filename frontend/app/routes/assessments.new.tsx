@@ -27,7 +27,6 @@ import {
   Copy,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
-import { RichEditor } from "~/components/RichEditor";
 import { useWizardForm } from "~/hooks/useWizard";
 import {
   Breadcrumb,
@@ -106,6 +105,7 @@ export async function action({ request }: ActionFunctionArgs) {
   if (siteId) data.site = siteId;
   const framework = formData.get("framework");
   const focusArea = formData.get("focus_area");
+  const templateId = (formData.get("template_id") || "").toString().trim();
   if (framework) data.framework = framework;
   if (focusArea) data.focus_area = focusArea;
   const startDate = formData.get("start_date");
@@ -113,9 +113,28 @@ export async function action({ request }: ActionFunctionArgs) {
   if (startDate) data.start_date = `${startDate}T00:00:00Z`;
   if (dueDate) data.due_date = `${dueDate}T23:59:59Z`;
 
-  console.log({ data })
-
   try {
+    if (templateId) {
+      const instantiatePayload: Record<string, any> = {
+        organization_id: selectedOrg.id,
+        start_date: data.start_date,
+        due_date: data.due_date,
+      };
+      if (siteId) instantiatePayload.site_id = siteId;
+
+      const result = await api.post<any>(
+        `/api/templates/${templateId}/instantiate/`,
+        instantiatePayload,
+        token,
+        request,
+      );
+      const assessmentId = result.assessment_id || result.id;
+      if (!assessmentId) {
+        return { error: "Template instantiation succeeded but no assessment id was returned." };
+      }
+      return redirect(`/assessments/${assessmentId}`);
+    }
+
     const result = await api.post<any>(
       "/api/assessments/",
       data,
@@ -127,10 +146,13 @@ export async function action({ request }: ActionFunctionArgs) {
     const msg =
       err?.body?.non_field_errors?.[0] ??
       err?.body?.detail ??
+      err?.body?.error ??
       err?.body?.start_date?.[0] ??
       err?.body?.due_date?.[0] ??
       err?.message ??
-      "Failed to create assessment";
+      (templateId
+        ? "Failed to create assessment from template"
+        : "Failed to create assessment");
     return { error: msg, success: false };
   }
 }
@@ -609,7 +631,13 @@ export default function NewAssessmentRoute() {
                 </div>
               </Field>
               <Field label="Summary / Notes">
-                <RichEditor value={aiSummary} onChange={update("aiSummary")} />
+                <textarea
+                  value={aiSummary}
+                  onChange={(e) => update("aiSummary")(e.target.value)}
+                  placeholder="Add assessment notes, scope details, or context for reviewers..."
+                  rows={6}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition focus-visible:ring-2 focus-visible:ring-ring"
+                />
               </Field>
             </StepWrapper>
           )}

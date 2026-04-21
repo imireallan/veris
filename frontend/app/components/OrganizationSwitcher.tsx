@@ -1,7 +1,8 @@
 import * as React from "react";
-import { useLocation, useSubmit } from "react-router";
-import { Building2, Check, ChevronDown } from "lucide-react";
+import { useLocation } from "react-router";
+import { Building2, Check, ChevronDown, Loader2 } from "lucide-react";
 
+import { useToast } from "~/hooks/use-toast";
 import { cn } from "~/lib/utils";
 import type { OrganizationListItem } from "~/types";
 import {
@@ -17,6 +18,8 @@ interface OrganizationSwitcherProps {
   activeOrganizationId?: string | null;
   className?: string;
 }
+
+const PENDING_ORG_SWITCH_KEY = "veris:pending-org-switch";
 
 export function getSelectedOrganization(
   organizations: OrganizationListItem[],
@@ -40,7 +43,8 @@ export function OrganizationSwitcher({
   className,
 }: OrganizationSwitcherProps) {
   const location = useLocation();
-  const submit = useSubmit();
+  const { success: toastSuccess } = useToast();
+  const [switchingOrganizationId, setSwitchingOrganizationId] = React.useState<string | null>(null);
 
   const selectedOrganization = React.useMemo(
     () => getSelectedOrganization(organizations, activeOrganizationId),
@@ -63,21 +67,69 @@ export function OrganizationSwitcher({
     [location.pathname],
   );
 
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const pendingSwitch = window.sessionStorage.getItem(PENDING_ORG_SWITCH_KEY);
+    if (!pendingSwitch) return;
+
+    try {
+      const parsed = JSON.parse(pendingSwitch) as { orgId?: string; orgName?: string };
+      if (parsed.orgId && String(parsed.orgId) === String(activeOrganizationId)) {
+        toastSuccess(
+          "Organization switched",
+          parsed.orgName ? `Now viewing ${parsed.orgName}.` : undefined,
+        );
+        window.sessionStorage.removeItem(PENDING_ORG_SWITCH_KEY);
+        setSwitchingOrganizationId(null);
+      }
+    } catch {
+      window.sessionStorage.removeItem(PENDING_ORG_SWITCH_KEY);
+      setSwitchingOrganizationId(null);
+    }
+  }, [activeOrganizationId, toastSuccess]);
+
   const handleSelect = React.useCallback(
     (orgId: string) => {
+      if (String(orgId) === String(activeOrganizationId)) {
+        return;
+      }
+
       const redirectTo = buildRedirectPath(orgId);
-      submit(
-        {
-          organizationId: orgId,
-          redirectTo,
-        },
-        {
-          action: "/resources/organizations/select",
-          method: "post",
-        },
+      const organization = organizations.find(
+        (candidate) => String(candidate.id) === String(orgId),
       );
+
+      setSwitchingOrganizationId(orgId);
+
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(
+          PENDING_ORG_SWITCH_KEY,
+          JSON.stringify({ orgId, orgName: organization?.name ?? null }),
+        );
+
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = "/resources/organizations/select";
+        form.style.display = "none";
+
+        const organizationInput = document.createElement("input");
+        organizationInput.type = "hidden";
+        organizationInput.name = "organizationId";
+        organizationInput.value = orgId;
+        form.appendChild(organizationInput);
+
+        const redirectInput = document.createElement("input");
+        redirectInput.type = "hidden";
+        redirectInput.name = "redirectTo";
+        redirectInput.value = redirectTo;
+        form.appendChild(redirectInput);
+
+        document.body.appendChild(form);
+        form.submit();
+      }
     },
-    [buildRedirectPath, submit],
+    [activeOrganizationId, buildRedirectPath, organizations],
   );
 
   if (!organizations.length) {
@@ -109,9 +161,17 @@ export function OrganizationSwitcher({
       >
         <Building2 className="h-4 w-4 text-muted-foreground" />
         <span className="max-w-[150px] truncate">
-          {selectedOrganization?.name || "Select Organization"}
+          {switchingOrganizationId
+            ? organizations.find((organization) => String(organization.id) === String(switchingOrganizationId))?.name ??
+              selectedOrganization?.name ??
+              "Switching..."
+            : selectedOrganization?.name || "Select Organization"}
         </span>
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        {switchingOrganizationId ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+        ) : (
+          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <div className="px-2 py-1.5">
@@ -122,6 +182,7 @@ export function OrganizationSwitcher({
         <DropdownMenuSeparator />
         {organizations.map((organization) => {
           const isSelected = selectedOrganization?.id === organization.id;
+          const isSwitching = String(switchingOrganizationId) === String(organization.id);
           return (
             <DropdownMenuItem
               key={organization.id}
@@ -129,6 +190,7 @@ export function OrganizationSwitcher({
               className={cn(
                 "flex cursor-pointer items-center justify-between gap-2",
                 isSelected && "bg-primary/10 text-primary",
+                isSwitching && "opacity-80",
               )}
             >
               <div className="flex min-w-0 items-center gap-2">
@@ -140,7 +202,9 @@ export function OrganizationSwitcher({
                 />
                 <span className="truncate">{organization.name}</span>
               </div>
-              {isSelected ? (
+              {isSwitching ? (
+                <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+              ) : isSelected ? (
                 <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
               ) : null}
             </DropdownMenuItem>

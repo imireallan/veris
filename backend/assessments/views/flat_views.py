@@ -34,12 +34,16 @@ from assessments.services.access import AssessmentAccessService
 from assessments.views.base import BaseAssessmentScopedViewSet
 from assessments.views.mixins import ReportExportMixin, ResponseValidationMixin
 from organizations.models import OrganizationMembership
+from users.permissions import CanViewReports
 
 
 def get_request_organization_id(request):
     organization = getattr(request, "organization", None)
     if organization:
         return str(organization.id)
+    meta_org_id = getattr(request, "META", {}).get("HTTP_X_ORGANIZATION_ID")
+    if meta_org_id:
+        return str(meta_org_id)
     if hasattr(request, "query_params"):
         return request.query_params.get("organization") or request.query_params.get(
             "org"
@@ -192,11 +196,22 @@ class FlatAssessmentReportViewSet(ReportExportMixin, BaseAssessmentScopedViewSet
     """Flat report routes — /api/reports/ (filtered by assessment query param)."""
 
     serializer_class = AssessmentReportSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, CanViewReports]
 
     def get_queryset(self):
         qs = AssessmentReport.objects.select_related("assessment", "organization")
-        return self.filter_by_assessment(qs)
+        # For detail routes (e.g., /api/reports/{id}/export/pdf/), allow direct lookup
+        # by not filtering to none when assessment param is missing
+        assessment_id = self.request.query_params.get("assessment")
+        if assessment_id:
+            return self.filter_by_assessment(qs)
+        # No assessment filter = return all reports user has access to
+        org_id = get_request_organization_id(self.request)
+        if org_id and not self.request.user.is_superuser:
+            return qs.filter(organization_id=org_id)
+        elif not self.request.user.is_superuser:
+            return qs.none()
+        return qs
 
 
 class FlatAssessmentResponseViewSet(

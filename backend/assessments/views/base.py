@@ -12,6 +12,10 @@ class BaseAssessmentScopedViewSet(viewsets.ModelViewSet):
             return queryset.none()
 
         organization = getattr(self.request, "organization", None)
+        header_org_id = getattr(self.request, "META", {}).get("HTTP_X_ORGANIZATION_ID")
+        query_org_id = self.request.query_params.get(
+            "organization"
+        ) or self.request.query_params.get("org")
         assessment = Assessment.objects.filter(id=assessment_id).first()
         if not assessment:
             return queryset.none()
@@ -19,7 +23,16 @@ class BaseAssessmentScopedViewSet(viewsets.ModelViewSet):
         if self.request.user.is_superuser:
             return queryset.filter(assessment_id=assessment_id)
 
-        if not organization or str(assessment.organization_id) != str(organization.id):
+        active_org_id = (
+            str(organization.id)
+            if organization
+            else (
+                str(header_org_id)
+                if header_org_id
+                else str(query_org_id) if query_org_id else None
+            )
+        )
+        if not active_org_id or str(assessment.organization_id) != active_org_id:
             return queryset.none()
 
         return queryset.filter(assessment_id=assessment_id)

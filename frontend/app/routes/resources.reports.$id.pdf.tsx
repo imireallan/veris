@@ -17,10 +17,15 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   try {
     // Forward to Django backend using api.raw for non-JSON response
-    const response = await api.raw(`/api/reports/${id}/export/pdf/`, {
-      method: "GET",
-      token,
-    });
+    const response = await api.raw(
+      `/api/reports/${id}/export/pdf/`,
+      {
+        method: "GET",
+        token,
+      },
+      undefined,
+      request,
+    );
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "Failed to generate PDF");

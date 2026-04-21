@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db import models
 from django.utils import timezone
 from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
@@ -12,7 +13,7 @@ from assessments.models import Assessment, AssessmentResponse, Finding, Task
 from assessments.services.access import AssessmentAccessService
 from assessments.views.flat_views import get_request_organization_id
 from knowledge.models import KnowledgeDocument
-from organizations.models import OrganizationMembership
+from organizations.models import Invitation, OrganizationMembership
 
 
 class DashboardSummaryView(APIView):
@@ -57,6 +58,16 @@ class DashboardSummaryView(APIView):
             if org_ids
             else KnowledgeDocument.objects.none()
         ).select_related("organization", "created_by")
+
+        # P1: invitations only matter for org-wide scope
+        invitations_qs = (
+            Invitation.objects.filter(
+                organization_id__in=org_ids,
+                status=Invitation.Status.PENDING,
+            )
+            if org_ids and viewer["scope"] == "organization"
+            else Invitation.objects.none()
+        )
 
         assessments, tasks, findings, responses, documents = self._apply_viewer_scope(
             request=request,
@@ -106,6 +117,23 @@ class DashboardSummaryView(APIView):
                 tasks=tasks,
                 findings=findings,
                 documents=documents,
+            ),
+            # --- P1 Analytics ---
+            "assessment_status_breakdown": self._build_assessment_status_breakdown(
+                assessments=assessments
+            ),
+            "findings_by_severity": self._build_findings_by_severity(
+                findings=findings
+            ),
+            "pending_invitations": self._build_pending_invitations(
+                invitations=invitations_qs
+            ),
+            "evidence_pipeline": self._build_evidence_pipeline(
+                documents=documents,
+                responses=responses,
+            ),
+            "site_progress": self._build_site_progress(
+                assessments=assessments
             ),
         }
         return Response(payload)
@@ -258,6 +286,158 @@ class DashboardSummaryView(APIView):
         responses = responses.filter(assessment_id__in=scoped_assessment_ids)
         documents = documents.filter(created_by=user)
         return assessments, tasks, findings, responses, documents
+
+    # ─────────── P1 Analytics Builders ───────────
+
+    def _build_assessment_status_breakdown(self, assessments) -> dict[str, int]:
+        """Count assessments per status — useful for portfolio health snapshots."""
+        breakdown = {
+            "draft": 0,
+            "in_progress": 0,
+            "under_review": 0,
+            "completed": 0,
+            "archived": 0,
+        }
+        mapping = {
+            Assessment.Status.DRAFT: "draft",
+            Assessment.Status.IN_PROGRESS: "in_progress",
+            Assessment.Status.UNDER_REVIEW: "under_review",
+            Assessment.Status.COMPLETED: "completed",
+            Assessment.Status.ARCHIVED: "archived",
+        }
+        for status_val, count in (
+            assessments.values("status").annotate(count=models.Count("id")).values_list("status", "count")
+        ):
+            key = mapping.get(status_val)
+            if key:
+                breakdown[key] = count
+        return breakdown
+
+    def _build_findings_by_severity(self, findings) -> dict[str, int]:
+        """Severity distribution of all findings for risk visibility."""
+        breakdown = {
+            "critical": 0,
+            "high": 0,
+            "medium": 0,
+            "low": 0,
+        }
+        mapping = {
+            Finding.Severity.CRITICAL: "critical",
+            Finding.Severity.HIGH: "high",
+            Finding.Severity.MEDIUM: "medium",
+            Finding.Severity.LOW: "low",
+        }
+        for severity_val, count in (
+            findings.values("severity").annotate(count=models.Count("id")).values_list("severity", "count")
+        ):
+            key = mapping.get(severity_val)
+            if key:
+                breakdown[key] = count
+        return breakdown
+
+    def _build_pending_invitations(self, invitations) -> dict[str, Any]:
+        """Pending invitation count + list of upcoming/onboarding blockers."""
+        now = timezone.now()
+        pending_list = []
+        expired_count = 0
+
+        for inv in invitations.order_by("-created_at")[:10]:
+            is_expired = inv.expires_at < now
+            if is_expired:
+                expired_count += 1
+            pending_list.append(
+                {
+                    "id": str(inv.id),
+                    "email": inv.email,
+                    "invited_name": inv.invited_name,
+                    "fallback_role": inv.fallback_role,
+                    "organization_name": inv.organization.name,
+                    "expires_at": inv.expires_at.isoformat(),
+                    "is_expired": is_expired,
+                    "url": f"/organizations/{inv.organization_id}/members",
+                }
+            )
+
+        return {
+            "pending_count": invitations.count(),
+            "expired_count": expired_count,
+            "invitations": pending_list[:6],
+        }
+
+    def _build_evidence_pipeline(
+        self, documents, responses
+    ) -> dict[str, Any]:
+        """Evidence mapping health: uploaded, mapped, unmapped, awaiting review."""
+        # Documents uploaded this calendar month
+        now = timezone.now()
+        uploaded_this_month = documents.filter(
+            created_at__year=now.year,
+            created_at__month=now.month,
+        ).count()
+
+        # Mapped = responses with framework mappings or citations
+        mapped = 0
+        unmapped = 0
+        for resp in responses:
+            if resp.frameworks_mapped_to or resp.citations:
+                mapped += 1
+            else:
+                unmapped += 1
+
+        # Awaiting review = pending evidence responses (same logic as KPI)
+        awaiting_review = sum(
+            1 for response in responses if response.evidence_files
+        )
+
+        # Also count ALL unreviewed knowledge documents as unreviewed evidence
+        total_docs = documents.count()
+
+        return {
+            "uploaded_this_month": uploaded_this_month,
+            "mapped": mapped,
+            "unmapped": unmapped,
+            "awaiting_review": awaiting_review,
+            "total_uploaded": total_docs,
+        }
+
+    def _build_site_progress(self, assessments) -> list[dict[str, Any]]:
+        """Per-site assessment progress: completion pct and status counts."""
+        # Group by site (null site = organization-level)
+        sites: dict[str, dict[str, Any]] = {}
+        for a in assessments.select_related("site"):
+            site_name = a.site.name if a.site else "Organization-level"
+            site_id = str(a.site_id) if a.site else None
+            if site_name not in sites:
+                sites[site_name] = {
+                    "site_id": site_id,
+                    "site_name": site_name,
+                    "total": 0,
+                    "completed": 0,
+                    "in_progress": 0,
+                    "draft": 0,
+                    "under_review": 0,
+                }
+            sites[site_name]["total"] += 1
+            if a.status == Assessment.Status.COMPLETED:
+                sites[site_name]["completed"] += 1
+            elif a.status == Assessment.Status.IN_PROGRESS:
+                sites[site_name]["in_progress"] += 1
+            elif a.status == Assessment.Status.DRAFT:
+                sites[site_name]["draft"] += 1
+            elif a.status == Assessment.Status.UNDER_REVIEW:
+                sites[site_name]["under_review"] += 1
+
+        result = []
+        for data in sites.values():
+            total = data["total"]
+            data["completion_pct"] = round((data["completed"] / total) * 100, 1) if total else 0
+            result.append(data)
+
+        # Sort by highest total first, cap at 8
+        result.sort(key=lambda x: x["total"], reverse=True)
+        return result[:8]
+
+    # ─────────── P0 Builders (attention, deadlines, activity) ───────────
 
     def _build_attention_items(
         self,

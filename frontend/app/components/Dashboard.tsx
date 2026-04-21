@@ -17,7 +17,7 @@ import {
   StatCard,
   TimelineItem,
 } from "~/components/ui";
-import { RBAC } from "~/types/rbac";
+import { RBAC, UserRole } from "~/types/rbac";
 import type {
   DashboardActivityItem,
   DashboardAttentionItem,
@@ -154,35 +154,89 @@ function DeadlineList({ items }: { items: DashboardDeadlineItem[] }) {
   );
 }
 
-function getDashboardMode(summary: DashboardSummary) {
-  return summary.viewer?.scope === "assigned" ? "assessor" : "admin";
+type DashboardMode = "org-wide" | "assigned-only" | "consultant-aggregate" | "executive-summary";
+
+/**
+ * Resolve dashboard display mode from the server-provided viewer context.
+ * Falls back to role-based mapping when scope is not explicitly "assigned".
+ * All enum values are exhaustively matched so new roles fail compile-time.
+ */
+function getDashboardMode(summary: DashboardSummary): DashboardMode {
+  const scope = summary.viewer?.scope;
+  const role = (summary.viewer?.role ?? "").toUpperCase() as UserRole;
+
+  // Explicit assigned scope overrides everything
+  if (scope === "assigned") return "assigned-only";
+
+  switch (role) {
+    case UserRole.SUPERADMIN:
+    case UserRole.ADMIN:
+    case UserRole.COORDINATOR:
+      return "org-wide";
+    case UserRole.ASSESSOR:
+    case UserRole.OPERATOR:
+      return "assigned-only";
+    case UserRole.CONSULTANT:
+      return "consultant-aggregate";
+    case UserRole.EXECUTIVE:
+      return "executive-summary";
+    default:
+      // Unknown/custom role: safe fallback
+      return "org-wide";
+  }
 }
 
-function getQuickLinks(mode: "admin" | "assessor", user: User, activeOrgId?: string | null) {
-  if (mode === "assessor") {
-    return [
-      { label: "Open my assessments", href: "/assessments" },
-      { label: "Review evidence", href: "/knowledge" },
-      { label: "Ask AI for context", href: "/knowledge/chat" },
-      { label: "Update my profile", href: "/settings/profile" },
-    ];
-  }
-
-  const links = [
+function getQuickLinks(
+  mode: DashboardMode,
+  user: User,
+  activeOrgId?: string | null,
+) {
+  const orgWideLinks = [
     { label: "View assessments", href: "/assessments" },
     { label: "Review templates", href: "/templates" },
     { label: "Open knowledge base", href: "/knowledge" },
     { label: "Ask AI", href: "/knowledge/chat" },
   ];
 
+  const assignedLinks = [
+    { label: "Open my assessments", href: "/assessments" },
+    { label: "Review evidence", href: "/knowledge" },
+    { label: "Ask AI for context", href: "/knowledge/chat" },
+    { label: "Update my profile", href: "/settings/profile" },
+  ];
+
+  const consultantLinks = [
+    { label: "Cross-client assessments", href: "/assessments" },
+    { label: "Review templates", href: "/templates" },
+    { label: "Open knowledge base", href: "/knowledge" },
+    { label: "Ask AI", href: "/knowledge/chat" },
+  ];
+
+  const executiveLinks = [
+    { label: "View assessments", href: "/assessments" },
+    { label: "Export reports", href: "/reports" },
+    { label: "Open knowledge base", href: "/knowledge" },
+  ];
+
+  if (mode === "assigned-only") return assignedLinks;
+  if (mode === "consultant-aggregate") {
+    if (RBAC.canManageOrgUsers(user)) {
+      consultantLinks.unshift({
+        label: "Manage organization users",
+        href: activeOrgId ? `/organizations/${activeOrgId}/members` : "/organizations",
+      });
+    }
+    return consultantLinks;
+  }
+  if (mode === "executive-summary") return executiveLinks;
+
   if (RBAC.canManageOrgUsers(user)) {
-    links.unshift({
+    orgWideLinks.unshift({
       label: "Manage organization users",
       href: activeOrgId ? `/organizations/${activeOrgId}/members` : "/organizations",
     });
   }
-
-  return links;
+  return orgWideLinks;
 }
 
 export default function Dashboard({
@@ -207,8 +261,11 @@ export default function Dashboard({
   const roleLabel = RBAC.getRoleLabel(viewer.role ?? user.role);
   const quickLinks = getQuickLinks(mode, user, viewer.organization_id);
 
+  const orgCount = user.organizationCount ?? 1;
+  const hasMultipleOrgs = orgCount > 1;
+
   const hero =
-    mode === "assessor"
+    mode === "assigned-only"
       ? {
           eyebrow: "Assigned work only",
           title: `Your dashboard for ${orgName}`,
@@ -218,7 +275,9 @@ export default function Dashboard({
           attentionDescription:
             "Immediate work you own inside the currently selected organization.",
           attentionEmpty:
-            "Nothing urgent is assigned to you right now. Use the org switcher if you need a different context.",
+            hasMultipleOrgs
+              ? "Nothing urgent is assigned to you right now. Use the org switcher if you need a different context."
+              : "Nothing urgent is assigned to you right now. All caught up in your organization.",
           deadlineTitle: "My deadlines",
           deadlineDescription: "Deadlines tied to your assigned assessments and actions.",
           activityTitle: "Recent activity on my work",
@@ -230,29 +289,78 @@ export default function Dashboard({
             openFindings: "My open findings",
             pendingEvidenceReviews: "Evidence awaiting my review",
           },
+          scopeLabel: "Assigned scope" as const,
+          viewModeLabel: "Only your assigned work" as const,
         }
-      : {
-          eyebrow: "Active organization overview",
-          title: `${orgName} dashboard`,
-          description:
-            "This dashboard follows the active organization from the header switcher and surfaces the most important org-wide work first.",
-          attentionTitle: "Needs attention",
-          attentionDescription:
-            "Priority actions and assessment deadlines for the active organization.",
-          attentionEmpty:
-            "No urgent work right now. The active organization is clear for the moment.",
-          deadlineTitle: "Upcoming deadlines",
-          deadlineDescription: "Closest due dates across actions and assessments in the active organization.",
-          activityTitle: "Recent activity",
-          activityDescription:
-            "Latest dashboard-relevant updates from the active organization.",
-          statLabels: {
-            activeAssessments: "Active assessments",
-            overdueActions: "Overdue actions",
-            openFindings: "Open findings",
-            pendingEvidenceReviews: "Pending evidence review",
-          },
-        };
+      : mode === "executive-summary"
+        ? {
+            eyebrow: "Executive overview",
+            title: `${orgName} dashboard`,
+            description: `High-level summary for ${orgName}. Key metrics and deadlines without operational detail.`,
+            attentionTitle: "Key attention items",
+            attentionDescription: "Priority items requiring executive awareness.",
+            attentionEmpty: "No critical items require executive attention right now.",
+            deadlineTitle: "Upcoming deadlines",
+            deadlineDescription: "Major milestones and deadlines for the active organization.",
+            activityTitle: "Recent highlights",
+            activityDescription: "Significant updates from the active organization.",
+            statLabels: {
+              activeAssessments: "Active assessments",
+              overdueActions: "Overdue actions",
+              openFindings: "Open findings",
+              pendingEvidenceReviews: "Pending evidence review",
+            },
+            scopeLabel: "Executive scope" as const,
+            viewModeLabel: "High-level summary" as const,
+          }
+        : mode === "consultant-aggregate"
+          ? {
+              eyebrow: "Consultant overview",
+              title: `${orgName} dashboard`,
+              description:
+                "Cross-program view for the active client organization. Access related client work from the org switcher.",
+              attentionTitle: "Needs attention",
+              attentionDescription:
+                "Priority actions and assessment deadlines for the active client.",
+              attentionEmpty: "No urgent work right now. The active client organization is clear for the moment.",
+              deadlineTitle: "Upcoming deadlines",
+              deadlineDescription: "Closest due dates across actions and assessments in the active client organization.",
+              activityTitle: "Recent activity",
+              activityDescription: "Latest dashboard-relevant updates from the active client organization.",
+              statLabels: {
+                activeAssessments: "Active assessments",
+                overdueActions: "Overdue actions",
+                openFindings: "Open findings",
+                pendingEvidenceReviews: "Pending evidence review",
+              },
+              scopeLabel: "Consultant scope" as const,
+              viewModeLabel: "Client-wide view" as const,
+            }
+          : {
+              eyebrow: "Active organization overview",
+              title: `${orgName} dashboard`,
+              description:
+                "Operational overview for the active organization. All work, assignments, and deadlines in one place.",
+              attentionTitle: "Needs attention",
+              attentionDescription:
+                "Priority actions and assessment deadlines for the active organization.",
+              attentionEmpty:
+                hasMultipleOrgs
+                  ? "No urgent work right now. The active organization is clear for the moment."
+                  : "No urgent work right now. Your organization is clear for the moment.",
+              deadlineTitle: "Upcoming deadlines",
+              deadlineDescription: "Closest due dates across actions and assessments in the active organization.",
+              activityTitle: "Recent activity",
+              activityDescription: "Latest dashboard-relevant updates from the active organization.",
+              statLabels: {
+                activeAssessments: "Active assessments",
+                overdueActions: "Overdue actions",
+                openFindings: "Open findings",
+                pendingEvidenceReviews: "Pending evidence review",
+              },
+              scopeLabel: "Organization scope" as const,
+              viewModeLabel: "Org-wide operational view" as const,
+            };
 
   return (
     <div className="mx-auto max-w-7xl space-y-8">
@@ -269,10 +377,10 @@ export default function Dashboard({
                 {roleLabel}
               </Badge>
               <Badge
-                variant={mode === "assessor" ? "default" : "outline"}
+                variant={mode === "assigned-only" ? "default" : "outline"}
                 className="px-3 py-1"
               >
-                {mode === "assessor" ? "Assigned scope" : "Organization scope"}
+                {hero.scopeLabel}
               </Badge>
             </div>
             <div className="space-y-2">
@@ -289,22 +397,28 @@ export default function Dashboard({
           </div>
 
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-auto lg:min-w-[320px]">
-            <div className="rounded-xl border border-border bg-background px-4 py-4">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                Active org
-              </p>
-              <p className="mt-2 text-sm font-semibold text-foreground">{orgName}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Change this from the organization switcher in the header.
-              </p>
-            </div>
-            <div className="rounded-xl border border-border bg-background px-4 py-4">
+            {hasMultipleOrgs && (
+              <div className="rounded-xl border border-border bg-background px-4 py-4">
+                <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  Active org
+                </p>
+                <p className="mt-2 text-sm font-semibold text-foreground">{orgName}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Change organization from the switcher in the header.
+                </p>
+              </div>
+            )}
+            <div
+              className={
+                hasMultipleOrgs
+                  ? "rounded-xl border border-border bg-background px-4 py-4"
+                  : "rounded-xl border border-border bg-background px-4 py-4 sm:col-span-2"
+              }
+            >
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
                 View mode
               </p>
-              <p className="mt-2 text-sm font-semibold text-foreground">
-                {mode === "assessor" ? "Only your assigned work" : "Org-wide operational view"}
-              </p>
+              <p className="mt-2 text-sm font-semibold text-foreground">{hero.viewModeLabel}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Role-aware results keep the dashboard relevant to your permissions.
               </p>
@@ -318,7 +432,7 @@ export default function Dashboard({
           label={hero.statLabels.activeAssessments}
           value={summary.kpis.active_assessments}
           icon={ClipboardCheck}
-          trend={mode === "assessor" ? "Currently assigned" : "In flight"}
+          trend={mode === "assigned-only" ? "Currently assigned" : "In flight"}
         />
         <StatCard
           label={hero.statLabels.overdueActions}
@@ -358,7 +472,7 @@ export default function Dashboard({
           </SectionCard>
 
           <QuickLinks
-            title={mode === "assessor" ? "Useful shortcuts" : "Operational shortcuts"}
+            title={mode === "assigned-only" ? "Useful shortcuts" : "Operational shortcuts"}
             links={quickLinks}
           />
         </div>

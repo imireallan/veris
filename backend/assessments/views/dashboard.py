@@ -26,7 +26,9 @@ class DashboardSummaryView(APIView):
         assessment_ids = list(assessments.values_list("id", flat=True))
 
         tasks = (
-            Task.objects.filter(organization_id__in=org_ids, assessment_id__in=assessment_ids)
+            Task.objects.filter(
+                organization_id__in=org_ids, assessment_id__in=assessment_ids
+            )
             if org_ids
             else Task.objects.none()
         ).select_related("assessment", "organization", "assigned_to")
@@ -76,7 +78,9 @@ class DashboardSummaryView(APIView):
         open_findings = findings.filter(
             status__in=[Finding.Status.OPEN, Finding.Status.IN_PROGRESS]
         )
-        pending_review_count = sum(1 for response in responses if response.evidence_files)
+        pending_review_count = sum(
+            1 for response in responses if response.evidence_files
+        )
 
         payload = {
             "viewer": viewer,
@@ -142,23 +146,35 @@ class DashboardSummaryView(APIView):
             return {
                 "role": "SUPERADMIN",
                 "scope": "organization",
-                "organization_id": str(organization.id) if organization else (org_ids[0] if org_ids else None),
-                "organization_name": organization.name if organization else "All organizations",
+                "organization_id": (
+                    str(organization.id)
+                    if organization
+                    else (org_ids[0] if org_ids else None)
+                ),
+                "organization_name": (
+                    organization.name if organization else "All organizations"
+                ),
             }
 
         role = (
-            membership.fallback_role
-            if membership and membership.fallback_role
-            else getattr(membership.role, "name", None)
+            getattr(membership.role, "name", None)
             if membership and membership.role
-            else "UNKNOWN"
+            else (
+                membership.fallback_role
+                if membership and membership.fallback_role
+                else "UNKNOWN"
+            )
         )
         scope = self._resolve_scope(membership)
 
         return {
             "role": role,
             "scope": scope,
-            "organization_id": str(organization.id) if organization else (org_ids[0] if org_ids else None),
+            "organization_id": (
+                str(organization.id)
+                if organization
+                else (org_ids[0] if org_ids else None)
+            ),
             "organization_name": organization.name if organization else None,
         }
 
@@ -184,11 +200,32 @@ class DashboardSummaryView(APIView):
         if not membership:
             return "organization"
 
-        if membership.has_permission("org:settings") or membership.has_permission("user:invite"):
+        # Prefer custom role name, fall back to system fallback_role
+        role_name = (
+            getattr(membership.role, "name", None)
+            if membership.role
+            else membership.fallback_role
+        )
+
+        # Org-wide operators: can see everything in the active org
+        if role_name in {
+            "ADMIN",
+            "COORDINATOR",
+            "CONSULTANT",
+            "EXECUTIVE",
+            "SUPERADMIN",
+        }:
             return "organization"
 
-        if membership.fallback_role in {"ASSESSOR", "OPERATOR"}:
+        # Individual contributors: only assigned work
+        if role_name in {"ASSESSOR", "OPERATOR"}:
             return "assigned"
+
+        # Default fallback for unknown/custom roles
+        if membership.has_permission("org:settings") or membership.has_permission(
+            "user:invite"
+        ):
+            return "organization"
 
         return "organization"
 
@@ -231,9 +268,9 @@ class DashboardSummaryView(APIView):
     ) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
 
-        for task in open_tasks.filter(due_date__isnull=False, due_date__lte=now).order_by(
-            "due_date"
-        )[:6]:
+        for task in open_tasks.filter(
+            due_date__isnull=False, due_date__lte=now
+        ).order_by("due_date")[:6]:
             items.append(
                 {
                     "id": str(task.id),
@@ -263,14 +300,18 @@ class DashboardSummaryView(APIView):
                         "assessment_id": str(assessment.id),
                         "assessment_name": self._assessment_label(assessment),
                         "site_name": getattr(assessment.site, "name", None),
-                        "status": "overdue" if assessment.due_date < now else "due_soon",
+                        "status": (
+                            "overdue" if assessment.due_date < now else "due_soon"
+                        ),
                         "priority": assessment.risk_level,
                         "due_date": assessment.due_date.isoformat(),
                         "url": f"/assessments/{assessment.id}",
                     }
                 )
 
-        items.sort(key=lambda item: (item["status"] != "overdue", item["due_date"] or ""))
+        items.sort(
+            key=lambda item: (item["status"] != "overdue", item["due_date"] or "")
+        )
         return items[:6]
 
     def _build_upcoming_deadlines(
@@ -290,7 +331,11 @@ class DashboardSummaryView(APIView):
                     "organization_name": task.organization.name,
                     "assessment_id": str(task.assessment_id),
                     "due_date": task.due_date.isoformat() if task.due_date else None,
-                    "status": "overdue" if task.due_date and task.due_date < now else "upcoming",
+                    "status": (
+                        "overdue"
+                        if task.due_date and task.due_date < now
+                        else "upcoming"
+                    ),
                     "url": f"/assessments/{task.assessment_id}",
                 }
             )
@@ -312,7 +357,9 @@ class DashboardSummaryView(APIView):
         items.sort(key=lambda item: item["due_date"] or "")
         return items[:8]
 
-    def _build_recent_activity(self, assessments, tasks, findings, documents) -> list[dict[str, Any]]:
+    def _build_recent_activity(
+        self, assessments, tasks, findings, documents
+    ) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
 
         for assessment in assessments.order_by("-created_at")[:4]:

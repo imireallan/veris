@@ -15,6 +15,7 @@ class TestDashboardSummaryApi:
     def test_returns_p0_dashboard_summary_for_selected_organization(
         self, make_user, make_org, make_membership
     ):
+        """ADMIN gets org-wide view."""
         user = make_user(email="dashboard@test.com")
         org = make_org(name="Alpha Org", slug="alpha-org")
         other_org = make_org(name="Beta Org", slug="beta-org")
@@ -163,11 +164,15 @@ class TestDashboardSummaryApi:
         assert any(
             item["title"] == overdue_task.title for item in data["attention_items"]
         )
-        assert all(item["organization_name"] == org.name for item in data["attention_items"])
+        assert all(
+            item["organization_name"] == org.name for item in data["attention_items"]
+        )
 
         deadline_titles = {item["title"] for item in data["upcoming_deadlines"]}
         assert overdue_task.title in deadline_titles
-        assert any(item["type"] == "assessment_due" for item in data["upcoming_deadlines"])
+        assert any(
+            item["type"] == "assessment_due" for item in data["upcoming_deadlines"]
+        )
 
         activity_types = {item["type"] for item in data["recent_activity"]}
         assert "document_uploaded" in activity_types
@@ -285,9 +290,16 @@ class TestDashboardSummaryApi:
             "open_findings": 1,
             "pending_evidence_reviews": 1,
         }
-        assert [item["title"] for item in data["attention_items"]] == [assigned_task.title]
-        assert all(item["organization_name"] == org.name for item in data["attention_items"])
-        assert all(item["assessment_id"] == str(assigned_assessment.id) for item in data["attention_items"])
+        assert [item["title"] for item in data["attention_items"]] == [
+            assigned_task.title
+        ]
+        assert all(
+            item["organization_name"] == org.name for item in data["attention_items"]
+        )
+        assert all(
+            item["assessment_id"] == str(assigned_assessment.id)
+            for item in data["attention_items"]
+        )
 
     def test_rejects_dashboard_access_for_unrelated_organization(
         self, make_user, make_org, make_membership
@@ -304,3 +316,129 @@ class TestDashboardSummaryApi:
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_coordinator_gets_org_wide_scope(
+        self, make_user, make_org, make_membership
+    ):
+        user = make_user(email="coordinator@test.com")
+        org = make_org(name="Coordinator Org", slug="coordinator-org")
+        make_membership(user=user, organization=org, fallback_role="COORDINATOR")
+
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=timezone.now() - timezone.timedelta(days=1),
+            due_date=timezone.now() + timezone.timedelta(days=5),
+            created_by=user,
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["viewer"]["role"] == "COORDINATOR"
+        assert data["viewer"]["scope"] == "organization"
+        assert data["kpis"]["active_assessments"] == 1
+
+    def test_operator_gets_assigned_scope(self, make_user, make_org, make_membership):
+        user = make_user(email="operator@test.com")
+        org = make_org(name="Operator Org", slug="operator-org")
+        make_membership(user=user, organization=org, fallback_role="OPERATOR")
+
+        assigned = Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=timezone.now() - timezone.timedelta(days=1),
+            due_date=timezone.now() + timezone.timedelta(days=5),
+            created_by=user,
+            assigned_to=user,
+        )
+        unassigned = Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=timezone.now() - timezone.timedelta(days=1),
+            due_date=timezone.now() + timezone.timedelta(days=5),
+            created_by=user,
+        )
+
+        Task.objects.create(
+            organization=org,
+            assessment=assigned,
+            title="Assigned action",
+            status=Task.Status.PENDING,
+            assigned_to=user,
+            due_date=timezone.now() - timezone.timedelta(days=1),
+        )
+        Task.objects.create(
+            organization=org,
+            assessment=unassigned,
+            title="Unassigned action",
+            status=Task.Status.PENDING,
+            due_date=timezone.now() - timezone.timedelta(days=1),
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["viewer"]["role"] == "OPERATOR"
+        assert data["viewer"]["scope"] == "assigned"
+
+        overdue_actions = data["kpis"]["overdue_actions"]
+        assert overdue_actions == 1
+
+    def test_executive_gets_org_wide_scope(self, make_user, make_org, make_membership):
+        user = make_user(email="exec@test.com")
+        org = make_org(name="Exec Org", slug="exec-org")
+        make_membership(user=user, organization=org, fallback_role="EXECUTIVE")
+
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=timezone.now() - timezone.timedelta(days=1),
+            due_date=timezone.now() + timezone.timedelta(days=5),
+            created_by=user,
+            assigned_to=user,
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["viewer"]["role"] == "EXECUTIVE"
+        assert data["viewer"]["scope"] == "organization"
+        assert data["kpis"]["active_assessments"] == 1
+
+    def test_consultant_gets_org_wide_scope(self, make_user, make_org, make_membership):
+        user = make_user(email="consultant@test.com")
+        org = make_org(name="Consultant Org", slug="consultant-org")
+        make_membership(user=user, organization=org, fallback_role="CONSULTANT")
+
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=timezone.now() - timezone.timedelta(days=1),
+            due_date=timezone.now() + timezone.timedelta(days=5),
+            created_by=user,
+            assigned_to=user,
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["viewer"]["role"] == "CONSULTANT"
+        assert data["viewer"]["scope"] == "organization"
+        assert data["kpis"]["active_assessments"] == 1

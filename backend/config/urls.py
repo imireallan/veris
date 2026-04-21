@@ -22,6 +22,7 @@ from assessments.views import (
     SiteViewSet,
     TaskViewSet,
 )
+from assessments.views.dashboard import DashboardSummaryView
 from assessments.views.flat_views import (
     FlatAssessmentPlanViewSet,
     FlatAssessmentQuestionViewSet,
@@ -37,7 +38,6 @@ from assessments.views.template_views import (
     AssessmentTemplateViewSet,
     TemplateQuestionViewSet,
 )
-from assessments.views.dashboard import DashboardSummaryView
 from assessments.views.upload_evidence import upload_evidence_document
 from assessments.views.upload_image import upload_image
 from knowledge.views import KnowledgeDocumentViewSet
@@ -152,7 +152,11 @@ urlpatterns = [
     # Redoc UI (alternative)
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     path("api/health/", health_check, name="health-check"),
-    path("api/dashboard/summary/", DashboardSummaryView.as_view(), name="dashboard-summary"),
+    path(
+        "api/dashboard/summary/",
+        DashboardSummaryView.as_view(),
+        name="dashboard-summary",
+    ),
     path("", include("settings.urls")),
     path("api/", include("users.urls")),
     *router.urls,

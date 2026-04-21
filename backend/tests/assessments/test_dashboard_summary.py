@@ -442,3 +442,229 @@ class TestDashboardSummaryApi:
         assert data["viewer"]["role"] == "CONSULTANT"
         assert data["viewer"]["scope"] == "organization"
         assert data["kpis"]["active_assessments"] == 1
+
+    def test_p1_analytics_fields_present_for_org_wide_roles(
+        self, make_user, make_org, make_membership
+    ):
+        """ADMIN sees assessment breakdown, findings severity, invitations, evidence pipeline."""
+        from organizations.models import Invitation
+
+        user = make_user(email="admin-analytics@test.com")
+        org = make_org(name="Analytics Org", slug="analytics-org")
+        make_membership(user=user, organization=org, fallback_role="ADMIN")
+
+        now = timezone.now()
+
+        # Assessments for status breakdown
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.DRAFT,
+            start_date=now - timezone.timedelta(days=10),
+            due_date=now + timezone.timedelta(days=5),
+            created_by=user,
+        )
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=now - timezone.timedelta(days=8),
+            due_date=now + timezone.timedelta(days=6),
+            created_by=user,
+        )
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.COMPLETED,
+            start_date=now - timezone.timedelta(days=20),
+            due_date=now - timezone.timedelta(days=1),
+            created_by=user,
+        )
+
+        active = Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=now - timezone.timedelta(days=5),
+            due_date=now + timezone.timedelta(days=3),
+            created_by=user,
+        )
+
+        # Findings for severity breakdown
+        Finding.objects.create(
+            organization=org,
+            assessment=active,
+            topic="Critical safety gap",
+            severity=Finding.Severity.CRITICAL,
+            status=Finding.Status.OPEN,
+        )
+        Finding.objects.create(
+            organization=org,
+            assessment=active,
+            topic="High risk finding",
+            severity=Finding.Severity.HIGH,
+            status=Finding.Status.OPEN,
+        )
+        Finding.objects.create(
+            organization=org,
+            assessment=active,
+            topic="Medium finding",
+            severity=Finding.Severity.MEDIUM,
+            status=Finding.Status.OPEN,
+        )
+
+        # Pending invitation
+        Invitation.objects.create(
+            organization=org,
+            email="pending1@example.com",
+            invited_by=user,
+            fallback_role="OPERATOR",
+            expires_at=timezone.now() + timezone.timedelta(days=7),
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Assessment status breakdown
+        breakdown = data["assessment_status_breakdown"]
+        assert breakdown["draft"] == 1
+        assert breakdown["in_progress"] == 2
+        assert breakdown["completed"] == 1
+
+        # Findings by severity
+        severity = data["findings_by_severity"]
+        assert severity["critical"] == 1
+        assert severity["high"] == 1
+        assert severity["medium"] == 1
+        assert severity["low"] == 0
+
+        # Evidence pipeline (mostly empty in this minimal set)
+        pipeline = data["evidence_pipeline"]
+        assert "uploaded_this_month" in pipeline
+        assert "mapped" in pipeline
+        assert "unmapped" in pipeline
+        assert "awaiting_review" in pipeline
+        assert "total_uploaded" in pipeline
+
+        # Site progress
+        site_progress = data["site_progress"]
+        assert isinstance(site_progress, list)
+        # All assessments here are org-level (no site), so at least one entry
+        assert any(sp["site_name"] == "Organization-level" for sp in site_progress)
+
+        # Pending invitations
+        invitations = data["pending_invitations"]
+        assert invitations["pending_count"] == 1
+        assert invitations["expired_count"] == 0
+        assert len(invitations["invitations"]) == 1
+        assert invitations["invitations"][0]["email"] == "pending1@example.com"
+
+    def test_p1_invitations_hidden_for_assigned_scope_roles(
+        self, make_user, make_org, make_membership
+    ):
+        from organizations.models import Invitation
+
+        user = make_user(email="operator@test.com")
+        org = make_org(name="Op Org", slug="op-org")
+        make_membership(user=user, organization=org, fallback_role="OPERATOR")
+
+        Invitation.objects.create(
+            organization=org,
+            email="pending@example.com",
+            invited_by=user,
+            fallback_role="OPERATOR",
+            expires_at=timezone.now() + timezone.timedelta(days=7),
+        )
+
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=timezone.now() - timezone.timedelta(days=5),
+            due_date=timezone.now() + timezone.timedelta(days=5),
+            created_by=user,
+            assigned_to=user,
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        assert data["viewer"]["scope"] == "assigned"
+        invitations = data["pending_invitations"]
+        assert invitations["pending_count"] == 0
+        assert invitations["expired_count"] == 0
+        assert invitations["invitations"] == []
+
+    def test_p1_site_progress_groups_by_site(
+        self, make_user, make_org, make_membership
+    ):
+        from assessments.models import Site
+
+        user = make_user(email="site-progress@test.com")
+        org = make_org(name="Site Org", slug="site-org")
+        make_membership(user=user, organization=org, fallback_role="ADMIN")
+
+        site_a = Site.objects.create(
+            organization=org,
+            name="Mine A",
+            type=Site.SiteType.MINE,
+            country_code="ZA",
+        )
+        site_b = Site.objects.create(
+            organization=org,
+            name="Mine B",
+            type=Site.SiteType.MINE,
+            country_code="ZA",
+        )
+        now = timezone.now()
+
+        Assessment.objects.create(
+            organization=org,
+            site=site_a,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=now - timezone.timedelta(days=5),
+            due_date=now + timezone.timedelta(days=5),
+            created_by=user,
+        )
+        Assessment.objects.create(
+            organization=org,
+            site=site_a,
+            status=Assessment.Status.COMPLETED,
+            start_date=now - timezone.timedelta(days=20),
+            due_date=now - timezone.timedelta(days=1),
+            created_by=user,
+        )
+        Assessment.objects.create(
+            organization=org,
+            site=site_b,
+            status=Assessment.Status.DRAFT,
+            start_date=now - timezone.timedelta(days=2),
+            due_date=now + timezone.timedelta(days=10),
+            created_by=user,
+        )
+
+        self.client.force_authenticate(user=user)
+        response = self.client.get(
+            "/api/dashboard/summary/", HTTP_X_ORGANIZATION_ID=str(org.id)
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        site_progress = data["site_progress"]
+        assert len(site_progress) == 2
+
+        mine_a = next(sp for sp in site_progress if sp["site_name"] == "Mine A")
+        assert mine_a["total"] == 2
+        assert mine_a["completed"] == 1
+        assert mine_a["completion_pct"] == 50.0
+
+        mine_b = next(sp for sp in site_progress if sp["site_name"] == "Mine B")
+        assert mine_b["total"] == 1
+        assert mine_b["draft"] == 1
+        assert mine_b["completion_pct"] == 0.0

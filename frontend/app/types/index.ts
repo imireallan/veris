@@ -240,6 +240,51 @@ export interface DashboardSummary {
   attention_items: DashboardAttentionItem[];
   upcoming_deadlines: DashboardDeadlineItem[];
   recent_activity: DashboardActivityItem[];
+  // P1 Analytics
+  assessment_status_breakdown: {
+    draft: number;
+    in_progress: number;
+    under_review: number;
+    completed: number;
+    archived: number;
+  };
+  findings_by_severity: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  pending_invitations: {
+    pending_count: number;
+    expired_count: number;
+    invitations: {
+      id: string;
+      email: string;
+      invited_name: string;
+      fallback_role: string;
+      organization_name: string;
+      expires_at: string;
+      is_expired: boolean;
+      url: string;
+    }[];
+  };
+  evidence_pipeline: {
+    uploaded_this_month: number;
+    mapped: number;
+    unmapped: number;
+    awaiting_review: number;
+    total_uploaded: number;
+  };
+  site_progress: {
+    site_id: string | null;
+    site_name: string;
+    total: number;
+    completed: number;
+    in_progress: number;
+    draft: number;
+    under_review: number;
+    completion_pct: number;
+  }[];
 }
 
 /* ───────── Assessment & Related Models ───────── */

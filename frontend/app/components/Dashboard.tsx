@@ -1,10 +1,14 @@
 import {
   AlertTriangle,
   ArrowRight,
+  BarChart3,
   Building2,
   ClipboardCheck,
   FileSearch,
   FolderClock,
+  Mail,
+  MapPin,
+  PieChart,
   ShieldAlert,
   UserCircle2,
 } from "lucide-react";
@@ -155,6 +159,287 @@ function DeadlineList({ items }: { items: DashboardDeadlineItem[] }) {
 }
 
 type DashboardMode = "org-wide" | "assigned-only" | "consultant-aggregate" | "executive-summary";
+
+function AnalyticsSection({
+  title,
+  icon: Icon,
+  children,
+  className = "",
+}: {
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <SectionCard
+      title={title}
+      className={className}
+      headerAction={
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      }
+    >
+      {children}
+    </SectionCard>
+  );
+}
+
+function AssessmentStatusChart({
+  data,
+}: {
+  data: DashboardSummary["assessment_status_breakdown"];
+}) {
+  const entries = [
+    { key: "draft", label: "Draft", color: "bg-muted-foreground/30" },
+    { key: "in_progress", label: "In Progress", color: "bg-primary" },
+    { key: "under_review", label: "Under Review", color: "bg-warning" },
+    { key: "completed", label: "Completed", color: "bg-success" },
+    { key: "archived", label: "Archived", color: "bg-muted-foreground/20" },
+  ] as const;
+
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
+
+  if (total === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No assessments in this organization yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {entries.map((entry) => {
+        const value = data[entry.key as keyof typeof data];
+        const pct = total ? Math.round((value / total) * 100) : 0;
+        return (
+          <div key={entry.key} className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-medium text-foreground">{entry.label}</span>
+              <span className="text-muted-foreground">
+                {value} ({pct}%)
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full ${entry.color}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function FindingsSeverityChart({
+  data,
+}: {
+  data: DashboardSummary["findings_by_severity"];
+}) {
+  const entries = [
+    { key: "critical", label: "Critical", color: "bg-destructive" },
+    { key: "high", label: "High", color: "bg-warning" },
+    { key: "medium", label: "Medium", color: "bg-primary" },
+    { key: "low", label: "Low", color: "bg-muted-foreground/40" },
+  ] as const;
+
+  const total = Object.values(data).reduce((a, b) => a + b, 0);
+
+  if (total === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No findings recorded in this organization.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-6">
+      <div className="relative h-24 w-24 shrink-0">
+        <svg viewBox="0 0 36 36" className="h-full w-full -rotate-90">
+          {entries.reduce(
+            (acc, entry) => {
+              const value = data[entry.key as keyof typeof data];
+              const pct = total ? (value / total) * 100 : 0;
+              const dashArray = `${pct} ${100 - pct}`;
+              const el = (
+                <circle
+                  key={entry.key}
+                  cx="18"
+                  cy="18"
+                  r="15.9"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  strokeDasharray={dashArray}
+                  strokeDashoffset={-acc.offset}
+                  className={entry.color.replace("bg-", "text-")}
+                />
+              );
+              return { offset: acc.offset + pct, elements: [...acc.elements, el] };
+            },
+            { offset: 0, elements: [] as React.ReactNode[] }
+          ).elements}
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-lg font-semibold text-foreground">{total}</span>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {entries.map((entry) => {
+          const value = data[entry.key as keyof typeof data];
+          return (
+            <div key={entry.key} className="flex items-center gap-2 text-xs">
+              <span className={`inline-block h-2 w-2 rounded-full ${entry.color}`} />
+              <span className="text-muted-foreground">
+                {entry.label}: <span className="font-medium text-foreground">{value}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function EvidencePipelineWidget({
+  data,
+}: {
+  data: DashboardSummary["evidence_pipeline"];
+}) {
+  const items = [
+    { label: "This month", value: data.uploaded_this_month },
+    { label: "Mapped", value: data.mapped },
+    { label: "Unmapped", value: data.unmapped },
+    { label: "Awaiting review", value: data.awaiting_review },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Total uploaded</span>
+        <span className="font-semibold text-foreground">{data.total_uploaded}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {items.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-lg border border-border bg-muted/30 px-3 py-2"
+          >
+            <p className="text-xs text-muted-foreground">{item.label}</p>
+            <p className="text-lg font-semibold text-foreground">{item.value}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SiteProgressList({
+  data,
+}: {
+  data: DashboardSummary["site_progress"];
+}) {
+  if (data.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No site-level assessments yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {data.map((site) => (
+        <Link
+          key={site.site_name}
+          to="#"
+          className="block rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-accent hover:bg-accent/5"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">
+                {site.site_name}
+              </span>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {site.completed}/{site.total}
+            </span>
+          </div>
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-success"
+                style={{ width: `${site.completion_pct}%` }}
+              />
+            </div>
+            <span className="text-[11px] tabular-nums text-muted-foreground">
+              {site.completion_pct}%
+            </span>
+          </div>
+          <div className="mt-1 flex gap-2 text-[10px] text-muted-foreground">
+            {site.in_progress > 0 && <span>{site.in_progress} in progress</span>}
+            {site.draft > 0 && <span>{site.draft} draft</span>}
+            {site.under_review > 0 && <span>{site.under_review} under review</span>}
+          </div>
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function PendingInvitationsWidget({
+  data,
+}: {
+  data: DashboardSummary["pending_invitations"];
+}) {
+  if (data.pending_count === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No pending invitations. Everyone is onboarded.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 text-sm">
+        <span className="text-muted-foreground">Pending</span>
+        <Badge variant="secondary">{data.pending_count}</Badge>
+        {data.expired_count > 0 && (
+          <Badge variant="destructive">{data.expired_count} expired</Badge>
+        )}
+      </div>
+      <div className="space-y-2">
+        {data.invitations.map((inv) => (
+          <Link
+            key={inv.id}
+            to={inv.url}
+            className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2 transition-colors hover:border-accent hover:bg-accent/5"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <Mail className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate text-sm text-foreground">{inv.email}</span>
+            </div>
+            <div className="shrink-0 flex items-center gap-2">
+              {inv.is_expired && (
+                <Badge variant="destructive" className="text-[10px]">
+                  Expired
+                </Badge>
+              )}
+              <Badge variant="outline" className="text-[10px]">
+                {inv.fallback_role}
+              </Badge>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Resolve dashboard display mode from the server-provided viewer context.
@@ -510,6 +795,39 @@ export default function Dashboard({
           </ul>
         )}
       </SectionCard>
+
+      {/* P1 Analytics Section — only for org-wide viewers */}
+      {summary.viewer?.scope === "organization" && (
+        <section className="space-y-5">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Portfolio snapshot
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            <AnalyticsSection title="Assessment status" icon={PieChart}>
+              <AssessmentStatusChart data={summary.assessment_status_breakdown} />
+            </AnalyticsSection>
+
+            <AnalyticsSection title="Findings by severity" icon={ShieldAlert}>
+              <FindingsSeverityChart data={summary.findings_by_severity} />
+            </AnalyticsSection>
+
+            <AnalyticsSection title="Evidence pipeline" icon={FileSearch}>
+              <EvidencePipelineWidget data={summary.evidence_pipeline} />
+            </AnalyticsSection>
+
+            <AnalyticsSection title="Site progress" icon={MapPin}>
+              <SiteProgressList data={summary.site_progress} />
+            </AnalyticsSection>
+
+            <AnalyticsSection title="Pending invitations" icon={Mail}>
+              <PendingInvitationsWidget data={summary.pending_invitations} />
+            </AnalyticsSection>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

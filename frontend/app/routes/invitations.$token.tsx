@@ -32,7 +32,7 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     const invitation = await api.get<any>(`/api/invitations/${token}/`, null, request);
 
     if (sessionToken && invitation.status === "ACCEPTED" && !invitation.needs_onboarding) {
-      throw redirect("/");
+      throw redirect("/app");
     }
 
     return { invitation, token, hasSession: Boolean(sessionToken) };

@@ -24,7 +24,7 @@ export async function action({ request }: ActionFunctionArgs) {
     const result = await loginUser(email, password);
     if ("error" in result) return { error: result.error, field: "password" };
 
-    const redirectTo = (formData.get("redirectTo") as string) || "/";
+    const redirectTo = (formData.get("redirectTo") as string) || "/app";
     return createTokenSession({
       accessToken: result.accessToken,
       redirectTo,
@@ -44,7 +44,7 @@ export default function LoginRoute() {
   const [searchParams] = useSearchParams();
   const navigation = useNavigation();
   const isSubmitting = navigation.state === "submitting";
-  const redirectTo = searchParams.get("redirectTo") ?? "/";
+  const redirectTo = searchParams.get("redirectTo") ?? "/app";
   const isInvitationLogin = redirectTo.startsWith("/invitations/") || redirectTo.startsWith("/onboarding/set-password/");
   const heading = isInvitationLogin ? "Sign in to accept your invitation" : "Sign in to your workspace";
   const description = isInvitationLogin

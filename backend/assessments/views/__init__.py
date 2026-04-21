@@ -44,10 +44,11 @@ from users.permissions import (
     CanManageSites,
     CanManageTasks,
     CanManageTemplates,
+    CanViewReports,
     IsAssessmentOwner,
     IsOrganizationMember,
+    IsOrganizationOwnerOrAdmin,
 )
-
 
 def get_request_organization_id(request, kwargs=None):
     organization = getattr(request, "organization", None)
@@ -56,6 +57,10 @@ def get_request_organization_id(request, kwargs=None):
 
     if kwargs and kwargs.get("org_pk"):
         return str(kwargs.get("org_pk"))
+
+    meta_org_id = getattr(request, "META", {}).get("HTTP_X_ORGANIZATION_ID")
+    if meta_org_id:
+        return str(meta_org_id)
 
     if hasattr(request, "query_params"):
         return request.query_params.get("organization") or request.query_params.get(
@@ -346,7 +351,7 @@ class SiteViewSet(viewsets.ModelViewSet):
 
 class AssessmentReportViewSet(ReportExportMixin, viewsets.ModelViewSet):
     serializer_class = AssessmentReportSerializer
-    permission_classes = [IsAuthenticated, IsOrganizationMember]
+    permission_classes = [IsAuthenticated, CanViewReports]
 
     def get_queryset(self):
         qs = AssessmentReport.objects.select_related("assessment", "organization")

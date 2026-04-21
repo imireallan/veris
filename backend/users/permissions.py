@@ -20,6 +20,10 @@ def _get_request_org_id(request, view):
         if org_pk:
             return str(org_pk)
 
+    meta_org_id = getattr(request, "META", {}).get("HTTP_X_ORGANIZATION_ID")
+    if meta_org_id:
+        return str(meta_org_id)
+
     if hasattr(request, "query_params"):
         return request.query_params.get("organization") or request.query_params.get(
             "org"
@@ -243,3 +247,19 @@ class CanManageTemplates(permissions.BasePermission):
         if request.method == "DELETE":
             return has_membership_permission(request, "template:delete", view)
         return False
+
+
+class CanViewReports(permissions.BasePermission):
+    """Read access to report records requires explicit report:view permission."""
+
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+
+        if request.user.is_superuser:
+            return True
+
+        if request.method not in SAFE_METHODS:
+            return False
+
+        return has_membership_permission(request, "report:view", view)

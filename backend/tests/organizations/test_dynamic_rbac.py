@@ -339,7 +339,7 @@ class TestDefaultRolePermissionMappings:
     """Test that default role permissions are correctly defined."""
 
     def test_assessor_permissions(self, make_user, make_org, make_membership):
-        """ASSESSOR role should have assessment and evidence permissions."""
+        """Standard ASSESSOR role should not export reports by default."""
         user = make_user()
         org = make_org()
         membership = make_membership(
@@ -351,10 +351,27 @@ class TestDefaultRolePermissionMappings:
         assert membership.has_permission("evidence:upload") is True
         assert membership.has_permission("evidence:review") is True
         assert membership.has_permission("report:view") is True
+        assert membership.has_permission("report:export") is False
 
         # Should NOT have admin permissions
         assert membership.has_permission("user:invite") is False
         assert membership.has_permission("assessment:delete") is False
+
+    def test_lead_assessor_can_export_reports(
+        self, make_user, make_org, make_membership
+    ):
+        """Lead assessor flag should grant report export without broadening all assessors."""
+        user = make_user()
+        org = make_org()
+        membership = make_membership(
+            user=user,
+            organization=org,
+            fallback_role="ASSESSOR",
+            is_lead_assessor=True,
+        )
+
+        assert membership.has_permission("report:view") is True
+        assert membership.has_permission("report:export") is True
 
     def test_consultant_permissions(self, make_user, make_org, make_membership):
         """CONSULTANT role should have basic assessment permissions."""

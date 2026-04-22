@@ -30,7 +30,7 @@ def is_valid_hsl(hsl: str) -> bool:
     """
     if not hsl:
         return False
-    parts = hsl.replace("%", "").strip().split()
+    parts = hsl.replace("%", "").replace(",", " ").strip().split()
     if len(parts) != 3:
         return False
     try:
@@ -40,6 +40,27 @@ def is_valid_hsl(hsl: str) -> bool:
         return 0 <= h <= 360 and 0 <= s <= 100 and 0 <= l <= 100
     except (ValueError, TypeError):
         return False
+
+
+def normalize_hsl_triplet(hsl: str) -> str:
+    """Normalize HSL input to model storage format: 'h s l' without percent signs."""
+    if not is_valid_hsl(hsl):
+        raise ValueError(f"Invalid HSL format: {hsl}")
+
+    parts = hsl.replace("%", "").replace(",", " ").strip().split()
+    h, s, l = (round(float(part)) for part in parts)  # noqa: E741
+    return f"{h} {s} {l}"
+
+
+def format_hsl_triplet(hsl: str) -> str:
+    """Format stored HSL triplets for frontend CSS usage: 'h s% l%' ."""
+    if not hsl:
+        return ""
+    if not is_valid_hsl(hsl):
+        return "0 0% 0%"
+
+    h, s, l = normalize_hsl_triplet(hsl).split()  # noqa: E741
+    return f"{h} {s}% {l}%"
 
 
 def hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:

@@ -110,6 +110,9 @@ function applyThemeVars(theme: ThemeConfig) {
 function applyBranding(theme: ThemeConfig) {
   if (typeof document === "undefined") return;
   
+  const root = document.documentElement;
+  const isDark = root.classList.contains("dark");
+  
   // Apply favicon
   if (theme.favicon_url) {
     let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
@@ -122,15 +125,17 @@ function applyBranding(theme: ThemeConfig) {
   }
   
   // Apply custom CSS
-  if (theme.custom_css) {
-    let style = document.getElementById("custom-theme-css");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "custom-theme-css";
-      document.head.appendChild(style);
-    }
-    style.textContent = theme.custom_css;
+  const activeCustomCss = isDark
+    ? (theme.custom_css_dark || theme.custom_css || "")
+    : (theme.custom_css || "");
+
+  let style = document.getElementById("custom-theme-css");
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "custom-theme-css";
+    document.head.appendChild(style);
   }
+  style.textContent = activeCustomCss;
 }
 
 /* ─────────────── context + provider ─────────────── */
@@ -171,6 +176,7 @@ export function ThemeProvider({ initialTheme, children }: ThemeProviderProps) {
   useEffect(() => {
     const observer = new MutationObserver(() => {
       applyThemeVars(theme);
+      applyBranding(theme);
     });
     
     if (typeof document !== "undefined") {

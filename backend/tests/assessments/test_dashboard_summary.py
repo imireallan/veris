@@ -264,7 +264,9 @@ class TestDashboardSummaryApi:
             item["type"] == "questionnaire_due" for item in data["upcoming_deadlines"]
         )
         finding_attention_item = next(
-            item for item in data["attention_items"] if item["type"] == "finding_follow_up"
+            item
+            for item in data["attention_items"]
+            if item["type"] == "finding_follow_up"
         )
         assert finding_attention_item["due_date"] == finding_due_at.isoformat()
         finding_deadline_item = next(

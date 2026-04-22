@@ -1072,7 +1072,9 @@ class DashboardSummaryView(APIView):
 
     def _get_due_soon_findings(self, open_findings, due_soon_cutoff):
         due_soon_findings = []
-        for finding in open_findings.select_related("assessment", "organization", "site"):
+        for finding in open_findings.select_related(
+            "assessment", "organization", "site"
+        ):
             finding_due_at = self._resolve_finding_due_at(finding)
             if finding_due_at <= due_soon_cutoff:
                 due_soon_findings.append((finding_due_at, finding))
@@ -1094,7 +1096,9 @@ class DashboardSummaryView(APIView):
             Finding.Severity.LOW: 1,
         }.get(severity, 0)
 
-    def _resolve_report_due_date(self, report: AssessmentReport, report_deadlines) -> Any:
+    def _resolve_report_due_date(
+        self, report: AssessmentReport, report_deadlines
+    ) -> Any:
         plan_dates = report_deadlines.get(str(report.assessment_id), {})
         if report.status == AssessmentReport.ReportStatus.UNDER_REVIEW:
             return plan_dates.get("final") or report.assessment.due_date.date()

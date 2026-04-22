@@ -687,7 +687,8 @@ class TestDashboardSummaryApi:
             created_by=user,
         )
 
-        # Response with framework mappings and AI validation
+        # Responses intentionally span multiple validation states.
+        # P1/P2 analytics must use all scoped responses, not only pending-review ones.
         AssessmentResponse.objects.create(
             organization=org,
             assessment=active,
@@ -697,6 +698,8 @@ class TestDashboardSummaryApi:
                 {"framework_id": str(active.id), "provision_code": "P2.3"},
             ],
             citations=["doc-1"],
+            evidence_files=[{"name": "validated-evidence.pdf"}],
+            validation_status="validated",
             ai_validated=True,
             ai_score_suggestion=0.8,
             created_by=user,
@@ -709,6 +712,8 @@ class TestDashboardSummaryApi:
                 {"framework_id": str(active.id), "provision_code": "P1.2"}
             ],
             citations=["doc-2"],
+            evidence_files=[{"name": "flagged-evidence.pdf"}],
+            validation_status="flagged",
             ai_score_suggestion=0.6,
             created_by=user,
         )
@@ -716,6 +721,7 @@ class TestDashboardSummaryApi:
             organization=org,
             assessment=active,
             answer_text="Unmapped response",
+            validation_status="pending",
             created_by=user,
         )
 
@@ -745,13 +751,21 @@ class TestDashboardSummaryApi:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
 
-        # Cross-framework reuse
+        # Cross-framework reuse must include validated/flagged responses too.
         reuse = data["cross_framework_reuse"]
-        assert "reusable_answers" in reuse
-        assert "mapped_answers" in reuse
-        assert "unmapped_answers" in reuse
-        assert "reuse_opportunity_pct" in reuse
-        assert "top_frameworks_by_coverage" in reuse
+        assert reuse == {
+            "reusable_answers": 1,
+            "mapped_answers": 2,
+            "unmapped_answers": 1,
+            "reuse_opportunity_pct": 50.0,
+            "top_frameworks_by_coverage": [
+                {
+                    "framework_id": str(active.id),
+                    "framework_name": "Unknown",
+                    "mapped_answers": 3,
+                }
+            ],
+        }
 
         # Risk trend
         trend = data["risk_trend"]
@@ -762,7 +776,14 @@ class TestDashboardSummaryApi:
         assert "open_high" in trend
         assert len(trend["trend"]) == 3
 
-        # Evidence pipeline AI fields
+        # Evidence pipeline must include all scoped responses, not just pending ones.
         pipeline = data["evidence_pipeline"]
-        assert "ai_suggested" in pipeline
-        assert "ai_validated" in pipeline
+        assert pipeline == {
+            "uploaded_this_month": 0,
+            "mapped": 2,
+            "unmapped": 1,
+            "awaiting_review": 2,
+            "ai_suggested": 1,
+            "ai_validated": 1,
+            "total_uploaded": 0,
+        }

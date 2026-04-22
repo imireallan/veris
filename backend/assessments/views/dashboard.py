@@ -47,7 +47,6 @@ class DashboardSummaryView(APIView):
             AssessmentResponse.objects.filter(
                 organization_id__in=org_ids,
                 assessment_id__in=assessment_ids,
-                validation_status="pending",
             )
             if org_ids
             else AssessmentResponse.objects.none()
@@ -78,6 +77,7 @@ class DashboardSummaryView(APIView):
             responses=responses,
             documents=documents,
         )
+        pending_review_responses = responses.filter(validation_status="pending")
 
         now = timezone.now()
         active_assessments = assessments.exclude(
@@ -90,7 +90,7 @@ class DashboardSummaryView(APIView):
             status__in=[Finding.Status.OPEN, Finding.Status.IN_PROGRESS]
         )
         pending_review_count = sum(
-            1 for response in responses if response.evidence_files
+            1 for response in pending_review_responses if response.evidence_files
         )
 
         payload = {

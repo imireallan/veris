@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from themes.models import OrganizationTheme
-from themes.utils import hex_to_hsl, hsl_to_hex, is_valid_hex
+from themes.utils import format_hsl_triplet, is_valid_hsl, normalize_hsl_triplet
 
 
 class ThemeSerializer(serializers.ModelSerializer):
@@ -218,9 +218,9 @@ class ThemeSerializer(serializers.ModelSerializer):
             "success_dark",
         ]
 
-    def _get_hsl(self, hex_value: str) -> str:
-        """Convert HEX to HSL string."""
-        return hex_to_hsl(hex_value)
+    def _get_hsl(self, stored_hsl: str) -> str:
+        """Format stored HSL triplets for frontend CSS variables."""
+        return format_hsl_triplet(stored_hsl)
 
     # Light mode getters
     def get_primary(self, obj: OrganizationTheme) -> str:
@@ -228,21 +228,21 @@ class ThemeSerializer(serializers.ModelSerializer):
 
     def get_primary_foreground(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_primary(obj))
-        return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
+        return "0 0% 100%" if lightness < 50 else "0 0% 0%"
 
     def get_secondary(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.secondary_color)
 
     def get_secondary_foreground(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_secondary(obj))
-        return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
+        return "0 0% 100%" if lightness < 50 else "0 0% 0%"
 
     def get_accent(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.accent_color)
 
     def get_accent_foreground(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_accent(obj))
-        return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
+        return "0 0% 100%" if lightness < 50 else "0 0% 0%"
 
     def get_background(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.background_color)
@@ -280,21 +280,21 @@ class ThemeSerializer(serializers.ModelSerializer):
 
     def get_primary_foreground_dark(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_primary_dark(obj))
-        return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
+        return "0 0% 100%" if lightness < 50 else "0 0% 0%"
 
     def get_secondary_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.secondary_color_dark)
 
     def get_secondary_foreground_dark(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_secondary_dark(obj))
-        return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
+        return "0 0% 100%" if lightness < 50 else "0 0% 0%"
 
     def get_accent_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.accent_color_dark)
 
     def get_accent_foreground_dark(self, obj: OrganizationTheme) -> str:
         h, s, lightness = self._parse_hsl(self.get_accent_dark(obj))
-        return self._get_hsl("#FFFFFF") if lightness < 50 else self._get_hsl("#000000")
+        return "0 0% 100%" if lightness < 50 else "0 0% 0%"
 
     def get_background_dark(self, obj: OrganizationTheme) -> str:
         return self._get_hsl(obj.background_color_dark)
@@ -340,224 +340,112 @@ class ThemeSerializer(serializers.ModelSerializer):
         except (IndexError, ValueError):
             return (0, 0, 50)
 
+    LIGHT_HSL_FIELDS = {
+        "primary_hsl": "primary_color",
+        "primary_foreground_hsl": "primary_foreground_color",
+        "secondary_hsl": "secondary_color",
+        "secondary_foreground_hsl": "secondary_foreground_color",
+        "accent_hsl": "accent_color",
+        "accent_foreground_hsl": "accent_foreground_color",
+        "background_hsl": "background_color",
+        "foreground_hsl": "text_color",
+        "muted_hsl": "muted_color",
+        "muted_foreground_hsl": "muted_foreground_color",
+        "card_hsl": "card_color",
+        "card_foreground_hsl": "card_foreground_color",
+        "border_hsl": "border_color",
+        "destructive_hsl": "destructive_color",
+        "destructive_foreground_hsl": "destructive_foreground_color",
+        "success_hsl": "success_color",
+    }
+
+    DARK_HSL_FIELDS = {
+        "primary_hsl_dark": "primary_color_dark",
+        "primary_foreground_hsl_dark": "primary_foreground_color_dark",
+        "secondary_hsl_dark": "secondary_color_dark",
+        "secondary_foreground_hsl_dark": "secondary_foreground_color_dark",
+        "accent_hsl_dark": "accent_color_dark",
+        "accent_foreground_hsl_dark": "accent_foreground_color_dark",
+        "background_hsl_dark": "background_color_dark",
+        "foreground_hsl_dark": "text_color_dark",
+        "muted_hsl_dark": "muted_color_dark",
+        "muted_foreground_hsl_dark": "muted_foreground_color_dark",
+        "card_hsl_dark": "card_color_dark",
+        "card_foreground_hsl_dark": "card_foreground_color_dark",
+        "border_hsl_dark": "border_color_dark",
+        "destructive_hsl_dark": "destructive_color_dark",
+        "destructive_foreground_hsl_dark": "destructive_foreground_color_dark",
+        "success_hsl_dark": "success_color_dark",
+    }
+
+    COLOR_FIELDS = [
+        "primary_color",
+        "primary_foreground_color",
+        "secondary_color",
+        "secondary_foreground_color",
+        "accent_color",
+        "accent_foreground_color",
+        "background_color",
+        "text_color",
+        "muted_color",
+        "muted_foreground_color",
+        "card_color",
+        "card_foreground_color",
+        "border_color",
+        "destructive_color",
+        "destructive_foreground_color",
+        "success_color",
+        "primary_color_dark",
+        "primary_foreground_color_dark",
+        "secondary_color_dark",
+        "secondary_foreground_color_dark",
+        "accent_color_dark",
+        "accent_foreground_color_dark",
+        "background_color_dark",
+        "text_color_dark",
+        "muted_color_dark",
+        "muted_foreground_color_dark",
+        "card_color_dark",
+        "card_foreground_color_dark",
+        "border_color_dark",
+        "destructive_color_dark",
+        "destructive_foreground_color_dark",
+        "success_color_dark",
+    ]
+
+    def _normalize_color_payload(self, validated_data):
+        for hsl_field, model_field in {
+            **self.LIGHT_HSL_FIELDS,
+            **self.DARK_HSL_FIELDS,
+        }.items():
+            if hsl_field in validated_data:
+                hsl_value = validated_data.pop(hsl_field)
+                if hsl_value:
+                    validated_data[model_field] = normalize_hsl_triplet(hsl_value)
+
+        errors = {}
+        for field in self.COLOR_FIELDS:
+            if field not in validated_data:
+                continue
+            value = validated_data[field]
+            if value in (None, ""):
+                continue
+            if not is_valid_hsl(str(value)):
+                errors[field] = (
+                    f"Must be HSL format (e.g., '160 84 39' or '160 84% 39%'), got '{value}'."
+                )
+            else:
+                validated_data[field] = normalize_hsl_triplet(str(value))
+
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return validated_data
+
     def create(self, validated_data):
-        """Create theme, converting HSL input to HEX for storage.
-
-        Validates that color fields are in correct format before saving.
-        Prevents HSL strings from being stored in HEX fields.
-        """
-        # Light mode fields
-        hsl_fields = {
-            "primary_hsl": "primary_color",
-            "primary_foreground_hsl": "primary_foreground_color",
-            "secondary_hsl": "secondary_color",
-            "secondary_foreground_hsl": "secondary_foreground_color",
-            "accent_hsl": "accent_color",
-            "accent_foreground_hsl": "accent_foreground_color",
-            "background_hsl": "background_color",
-            "foreground_hsl": "text_color",
-            "muted_hsl": "muted_color",
-            "muted_foreground_hsl": "muted_foreground_color",
-            "card_hsl": "card_color",
-            "card_foreground_hsl": "card_foreground_color",
-            "border_hsl": "border_color",
-            "destructive_hsl": "destructive_color",
-            "destructive_foreground_hsl": "destructive_foreground_color",
-            "success_hsl": "success_color",
-        }
-
-        # Dark mode fields
-        hsl_fields_dark = {
-            "primary_hsl_dark": "primary_color_dark",
-            "primary_foreground_hsl_dark": "primary_foreground_color_dark",
-            "secondary_hsl_dark": "secondary_color_dark",
-            "secondary_foreground_hsl_dark": "secondary_foreground_color_dark",
-            "accent_hsl_dark": "accent_color_dark",
-            "accent_foreground_hsl_dark": "accent_foreground_color_dark",
-            "background_hsl_dark": "background_color_dark",
-            "foreground_hsl_dark": "text_color_dark",
-            "muted_hsl_dark": "muted_color_dark",
-            "muted_foreground_hsl_dark": "muted_foreground_color_dark",
-            "card_hsl_dark": "card_color_dark",
-            "card_foreground_hsl_dark": "card_foreground_color_dark",
-            "border_hsl_dark": "border_color_dark",
-            "destructive_hsl_dark": "destructive_color_dark",
-            "destructive_foreground_hsl_dark": "destructive_foreground_color_dark",
-            "success_hsl_dark": "success_color_dark",
-        }
-
-        # Convert HSL fields to HEX
-        for hsl_field, model_field in hsl_fields.items():
-            if hsl_field in validated_data:
-                hsl_value = validated_data.pop(hsl_field)
-                if hsl_value:
-                    validated_data[model_field] = hsl_to_hex(hsl_value)
-
-        for hsl_field, model_field in hsl_fields_dark.items():
-            if hsl_field in validated_data:
-                hsl_value = validated_data.pop(hsl_field)
-                if hsl_value:
-                    validated_data[model_field] = hsl_to_hex(hsl_value)
-
-        # Validate that any direct color fields (not from HSL conversion) are valid HEX
-        # This prevents accidental storage of HSL strings in HEX fields
-        color_fields = [
-            "primary_color",
-            "primary_foreground_color",
-            "secondary_color",
-            "secondary_foreground_color",
-            "accent_color",
-            "accent_foreground_color",
-            "background_color",
-            "text_color",
-            "muted_color",
-            "muted_foreground_color",
-            "card_color",
-            "card_foreground_color",
-            "border_color",
-            "destructive_color",
-            "destructive_foreground_color",
-            "success_color",
-            "primary_color_dark",
-            "primary_foreground_color_dark",
-            "secondary_color_dark",
-            "secondary_foreground_color_dark",
-            "accent_color_dark",
-            "accent_foreground_color_dark",
-            "background_color_dark",
-            "text_color_dark",
-            "muted_color_dark",
-            "muted_foreground_color_dark",
-            "card_color_dark",
-            "card_foreground_color_dark",
-            "border_color_dark",
-            "destructive_color_dark",
-            "destructive_foreground_color_dark",
-            "success_color_dark",
-        ]
-
-        for field in color_fields:
-            if field in validated_data:
-                value = validated_data[field]
-                if value and not is_valid_hex(value):
-                    # If it looks like HSL (contains spaces), reject it
-                    if " " in str(value):
-                        raise serializers.ValidationError(
-                            {
-                                field: f"Must be HEX format (e.g., '#10b981'), not HSL ('{value}'). "
-                                f"Use the _hsl fields for HSL input."
-                            }
-                        )
-
-        return super().create(validated_data)
+        """Create theme, normalizing HSL input to model triplet storage."""
+        return super().create(self._normalize_color_payload(validated_data))
 
     def update(self, instance, validated_data):
-        """Update theme, converting HSL input to HEX for storage.
-
-        Validates that color fields are in correct format before saving.
-        Prevents HSL strings from being stored in HEX fields.
-        """
-        # Light mode fields
-        hsl_fields = {
-            "primary_hsl": "primary_color",
-            "primary_foreground_hsl": "primary_foreground_color",
-            "secondary_hsl": "secondary_color",
-            "secondary_foreground_hsl": "secondary_foreground_color",
-            "accent_hsl": "accent_color",
-            "accent_foreground_hsl": "accent_foreground_color",
-            "background_hsl": "background_color",
-            "foreground_hsl": "text_color",
-            "muted_hsl": "muted_color",
-            "muted_foreground_hsl": "muted_foreground_color",
-            "card_hsl": "card_color",
-            "card_foreground_hsl": "card_foreground_color",
-            "border_hsl": "border_color",
-            "destructive_hsl": "destructive_color",
-            "destructive_foreground_hsl": "destructive_foreground_color",
-            "success_hsl": "success_color",
-        }
-
-        # Dark mode fields
-        hsl_fields_dark = {
-            "primary_hsl_dark": "primary_color_dark",
-            "primary_foreground_hsl_dark": "primary_foreground_color_dark",
-            "secondary_hsl_dark": "secondary_color_dark",
-            "secondary_foreground_hsl_dark": "secondary_foreground_color_dark",
-            "accent_hsl_dark": "accent_color_dark",
-            "accent_foreground_hsl_dark": "accent_foreground_color_dark",
-            "background_hsl_dark": "background_color_dark",
-            "foreground_hsl_dark": "text_color_dark",
-            "muted_hsl_dark": "muted_color_dark",
-            "muted_foreground_hsl_dark": "muted_foreground_color_dark",
-            "card_hsl_dark": "card_color_dark",
-            "card_foreground_hsl_dark": "card_foreground_color_dark",
-            "border_hsl_dark": "border_color_dark",
-            "destructive_hsl_dark": "destructive_color_dark",
-            "destructive_foreground_hsl_dark": "destructive_foreground_color_dark",
-            "success_hsl_dark": "success_color_dark",
-        }
-
-        # Convert HSL fields to HEX
-        for hsl_field, model_field in hsl_fields.items():
-            if hsl_field in validated_data:
-                hsl_value = validated_data.pop(hsl_field)
-                if hsl_value:
-                    validated_data[model_field] = hsl_to_hex(hsl_value)
-
-        for hsl_field, model_field in hsl_fields_dark.items():
-            if hsl_field in validated_data:
-                hsl_value = validated_data.pop(hsl_field)
-                if hsl_value:
-                    validated_data[model_field] = hsl_to_hex(hsl_value)
-
-        # Validate that any direct color fields (not from HSL conversion) are valid HEX
-        # This prevents accidental storage of HSL strings in HEX fields
-        color_fields = [
-            "primary_color",
-            "primary_foreground_color",
-            "secondary_color",
-            "secondary_foreground_color",
-            "accent_color",
-            "accent_foreground_color",
-            "background_color",
-            "text_color",
-            "muted_color",
-            "muted_foreground_color",
-            "card_color",
-            "card_foreground_color",
-            "border_color",
-            "destructive_color",
-            "destructive_foreground_color",
-            "success_color",
-            "primary_color_dark",
-            "primary_foreground_color_dark",
-            "secondary_color_dark",
-            "secondary_foreground_color_dark",
-            "accent_color_dark",
-            "accent_foreground_color_dark",
-            "background_color_dark",
-            "text_color_dark",
-            "muted_color_dark",
-            "muted_foreground_color_dark",
-            "card_color_dark",
-            "card_foreground_color_dark",
-            "border_color_dark",
-            "destructive_color_dark",
-            "destructive_foreground_color_dark",
-            "success_color_dark",
-        ]
-
-        for field in color_fields:
-            if field in validated_data:
-                value = validated_data[field]
-                if value and not is_valid_hex(value):
-                    # If it looks like HSL (contains spaces), reject it
-                    if " " in str(value):
-                        raise serializers.ValidationError(
-                            {
-                                field: f"Must be HEX format (e.g., '#10b981'), not HSL ('{value}'). "
-                                f"Use the _hsl fields for HSL input."
-                            }
-                        )
-
-        return super().update(instance, validated_data)
+        """Update theme, normalizing HSL input to model triplet storage."""
+        return super().update(instance, self._normalize_color_payload(validated_data))

@@ -72,7 +72,7 @@ class ThemeViewSet(viewsets.ModelViewSet):
             )
 
         theme, _ = OrganizationTheme.objects.get_or_create(organization_id=org_id)
-        serializer = self.get_serializer(theme, data=request.data, partial=False)
+        serializer = self.get_serializer(theme, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save(organization_id=org_id)
         return Response(serializer.data)

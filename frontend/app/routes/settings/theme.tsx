@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useFetcher, useLoaderData } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { data, redirect } from "react-router";
@@ -6,26 +6,32 @@ import { useTheme } from "~/providers/ThemeProvider";
 import type { ThemeConfig } from "~/types";
 import { Button, Input, Label, Card, CardContent, CardHeader, Alert, AlertDescription } from "~/components/ui";
 import { RBAC } from "~/types/rbac";
-import { Paintbrush, Save, RotateCcw } from "lucide-react";
+import { Paintbrush, Save, RotateCcw, Sun, Moon } from "lucide-react";
 import { useToast } from "~/hooks/use-toast";
 import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { requireUser } = await import("~/.server/sessions");
+  const { requireUser, getUserToken } = await import("~/.server/sessions");
   const { api } = await import("~/.server/lib/api");
   const user = await requireUser(request);
+  const token = await getUserToken(request);
   const selectedOrg = user.activeOrganization ?? null;
   if (!selectedOrg) {
     throw redirect("/organizations");
   }
   
   // Only ADMIN and SUPERADMIN can manage theme settings
-  if (!RBAC.canManageOrg(user)) {
+  if (!RBAC.canManageOrg(user, selectedOrg.id)) {
     throw redirect("/app");
   }
   
   try {
-    const theme = await api.get<ThemeConfig>(`/api/themes/${selectedOrg.id}`);
+    const theme = await api.withOrganization.get<ThemeConfig>(
+      `/api/themes/${selectedOrg.id}`,
+      selectedOrg.id,
+      token,
+      request,
+    );
     return data({ theme, orgId: selectedOrg.id, orgName: selectedOrg.name });
   } catch {
     return data({ theme: null, orgId: selectedOrg.id, orgName: selectedOrg.name });
@@ -129,7 +135,13 @@ export async function action({ request }: ActionFunctionArgs) {
   }
   
   try {
-    await api.put(`/api/themes/${selectedOrg.id}`, themeData, token, request);
+    await api.withOrganization.put(
+      `/api/themes/${selectedOrg.id}`,
+      themeData,
+      selectedOrg.id,
+      token,
+      request,
+    );
     // Return success data instead of redirect - fetcher will handle it
     return { success: true };
   } catch (error: any) {
@@ -295,6 +307,11 @@ export default function ThemeSettingsRoute() {
   
   const theme = loaderData.theme;
   const isSaving = fetcher.state === "submitting";
+  const initialDarkModeRef = useRef<boolean | null>(null);
+  const [previewMode, setPreviewMode] = useState<"light" | "dark">(() => {
+    if (typeof document === "undefined") return "light";
+    return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  });
   
   // Show success toast when fetcher completes
   useEffect(() => {
@@ -303,6 +320,31 @@ export default function ThemeSettingsRoute() {
       error: (data) => toastError("Save failed", data.error),
     });
   }, [fetcher, toastSuccess, toastError]);
+
+  // Theme preview toggle for this page only.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    const html = document.documentElement;
+    if (initialDarkModeRef.current === null) {
+      initialDarkModeRef.current = html.classList.contains("dark");
+    }
+
+    if (previewMode === "dark") {
+      html.classList.add("dark");
+    } else {
+      html.classList.remove("dark");
+    }
+
+    return () => {
+      if (initialDarkModeRef.current === null) return;
+      if (initialDarkModeRef.current) {
+        html.classList.add("dark");
+      } else {
+        html.classList.remove("dark");
+      }
+    };
+  }, [previewMode]);
   
   // Local state for live preview
   const [localTheme, setLocalTheme] = useState<Partial<ThemeConfig>>({});
@@ -333,7 +375,27 @@ export default function ThemeSettingsRoute() {
             Customize colors, logo, and styling for your organization
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center rounded-lg border border-border bg-background p-1">
+            <Button
+              type="button"
+              variant={previewMode === "light" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPreviewMode("light")}
+            >
+              <Sun className="w-4 h-4 mr-2" />
+              Light preview
+            </Button>
+            <Button
+              type="button"
+              variant={previewMode === "dark" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPreviewMode("dark")}
+            >
+              <Moon className="w-4 h-4 mr-2" />
+              Dark preview
+            </Button>
+          </div>
           <Button
             type="button"
             variant="outline"
@@ -485,6 +547,136 @@ export default function ThemeSettingsRoute() {
           </CardContent>
         </Card>
         
+        {/* Dark Mode Colors */}
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Dark Mode · Primary Colors</h3>
+            <p className="text-sm text-muted-foreground">
+              Brand colors used when users are in dark mode
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ColorPicker
+              name="primary_dark"
+              label="Primary (Dark)"
+              value={currentTheme.primary_dark || ""}
+              onChange={(v) => updateTheme({ primary_dark: v })}
+            />
+            <ColorPicker
+              name="primary_foreground_dark"
+              label="Primary Text (Dark)"
+              value={currentTheme.primary_foreground_dark || ""}
+              onChange={(v) => updateTheme({ primary_foreground_dark: v })}
+            />
+            <ColorPicker
+              name="secondary_dark"
+              label="Secondary (Dark)"
+              value={currentTheme.secondary_dark || ""}
+              onChange={(v) => updateTheme({ secondary_dark: v })}
+            />
+            <ColorPicker
+              name="secondary_foreground_dark"
+              label="Secondary Text (Dark)"
+              value={currentTheme.secondary_foreground_dark || ""}
+              onChange={(v) => updateTheme({ secondary_foreground_dark: v })}
+            />
+            <ColorPicker
+              name="accent_dark"
+              label="Accent (Dark)"
+              value={currentTheme.accent_dark || ""}
+              onChange={(v) => updateTheme({ accent_dark: v })}
+            />
+            <ColorPicker
+              name="accent_foreground_dark"
+              label="Accent Text (Dark)"
+              value={currentTheme.accent_foreground_dark || ""}
+              onChange={(v) => updateTheme({ accent_foreground_dark: v })}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Dark Mode · Surface Colors</h3>
+            <p className="text-sm text-muted-foreground">
+              Background and content area colors for dark mode
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ColorPicker
+              name="background_dark"
+              label="Background (Dark)"
+              value={currentTheme.background_dark || ""}
+              onChange={(v) => updateTheme({ background_dark: v })}
+            />
+            <ColorPicker
+              name="foreground_dark"
+              label="Text (Dark)"
+              value={currentTheme.foreground_dark || ""}
+              onChange={(v) => updateTheme({ foreground_dark: v })}
+            />
+            <ColorPicker
+              name="card_dark"
+              label="Card (Dark)"
+              value={currentTheme.card_dark || ""}
+              onChange={(v) => updateTheme({ card_dark: v })}
+            />
+            <ColorPicker
+              name="card_foreground_dark"
+              label="Card Text (Dark)"
+              value={currentTheme.card_foreground_dark || ""}
+              onChange={(v) => updateTheme({ card_foreground_dark: v })}
+            />
+            <ColorPicker
+              name="muted_dark"
+              label="Muted (Dark)"
+              value={currentTheme.muted_dark || ""}
+              onChange={(v) => updateTheme({ muted_dark: v })}
+            />
+            <ColorPicker
+              name="muted_foreground_dark"
+              label="Muted Text (Dark)"
+              value={currentTheme.muted_foreground_dark || ""}
+              onChange={(v) => updateTheme({ muted_foreground_dark: v })}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Dark Mode · State Colors</h3>
+            <p className="text-sm text-muted-foreground">
+              Border, error, and success colors for dark mode
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ColorPicker
+              name="border_dark"
+              label="Border (Dark)"
+              value={currentTheme.border_dark || ""}
+              onChange={(v) => updateTheme({ border_dark: v })}
+            />
+            <ColorPicker
+              name="destructive_dark"
+              label="Destructive/Error (Dark)"
+              value={currentTheme.destructive_dark || ""}
+              onChange={(v) => updateTheme({ destructive_dark: v })}
+            />
+            <ColorPicker
+              name="destructive_foreground_dark"
+              label="Error Text (Dark)"
+              value={currentTheme.destructive_foreground_dark || ""}
+              onChange={(v) => updateTheme({ destructive_foreground_dark: v })}
+            />
+            <ColorPicker
+              name="success_dark"
+              label="Success (Dark)"
+              value={currentTheme.success_dark || ""}
+              onChange={(v) => updateTheme({ success_dark: v })}
+            />
+          </CardContent>
+        </Card>
+        
         {/* Branding */}
         <Card>
           <CardHeader>
@@ -503,6 +695,16 @@ export default function ThemeSettingsRoute() {
                   type="url"
                   placeholder="https://example.com/logo.png"
                   defaultValue={theme?.logo_url || ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="logo_url_dark">Logo URL (Dark)</Label>
+                <Input
+                  id="logo_url_dark"
+                  name="logo_url_dark"
+                  type="url"
+                  placeholder="https://example.com/logo-dark.png"
+                  defaultValue={theme?.logo_url_dark || ""}
                 />
               </div>
               <div className="space-y-2">
@@ -558,7 +760,22 @@ export default function ThemeSettingsRoute() {
                 defaultValue={theme?.custom_css || ""}
               />
               <p className="text-xs text-muted-foreground">
-                Advanced: Add custom CSS that will be injected into the page head
+                Advanced: Add custom CSS that will be injected into the page head for light mode
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="custom_css_dark">Custom CSS (Dark)</Label>
+              <textarea
+                id="custom_css_dark"
+                name="custom_css_dark"
+                rows={6}
+                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground font-mono text-xs resize-y"
+                placeholder="/* Custom dark mode CSS styles */"
+                defaultValue={theme?.custom_css_dark || ""}
+              />
+              <p className="text-xs text-muted-foreground">
+                Advanced: Applied only while dark preview or dark mode is active
               </p>
             </div>
           </CardContent>

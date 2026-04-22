@@ -107,28 +107,28 @@ html {
 }
 
 /* ───────── Dark mode (manual toggle) ───────── */
-/* Using !important to override Tailwind layer cascade */
+/* Boot defaults only — ThemeProvider applies final runtime tokens. */
 html.dark {
-  --background: 222.2 84% 4.9% !important;
-  --foreground: 210 40% 98% !important;
-  --card: 222.2 84% 4.9% !important;
-  --card-foreground: 210 40% 98% !important;
-  --popover: 222.2 84% 4.9% !important;
-  --popover-foreground: 210 40% 98% !important;
-  --primary: 160 84% 39% !important;
-  --primary-foreground: 0 0% 100% !important;
-  --secondary: 217.2 32.6% 17.5% !important;
-  --secondary-foreground: 210 40% 98% !important;
-  --muted: 217.2 32.6% 17.5% !important;
-  --muted-foreground: 215 20.2% 65.1% !important;
-  --accent: 38 92% 50% !important;
-  --accent-foreground: 0 0% 0% !important;
-  --destructive: 0 62.8% 30.6% !important;
-  --destructive-foreground: 210 40% 98% !important;
-  --success: 142 70% 45% !important;
-  --border: 217.2 32.6% 17.5% !important;
-  --input: 217.2 32.6% 17.5% !important;
-  --ring: 160 84% 39% !important;
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 160 84% 39%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 38 92% 50%;
+  --accent-foreground: 0 0% 0%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 142 70% 45%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 160 84% 39%;
 }
 
 /* ───────── Global resets ───────── */

@@ -48,9 +48,8 @@ def normalize_hsl_triplet(hsl: str) -> str:
         raise ValueError(f"Invalid HSL format: {hsl}")
 
     parts = hsl.replace("%", "").replace(",", " ").strip().split()
-    h, s, l = (round(float(part)) for part in parts)
+    h, s, l = (round(float(part)) for part in parts)  # noqa: E741
     return f"{h} {s} {l}"
-
 
 
 def format_hsl_triplet(hsl: str) -> str:
@@ -60,7 +59,7 @@ def format_hsl_triplet(hsl: str) -> str:
     if not is_valid_hsl(hsl):
         return "0 0% 0%"
 
-    h, s, l = normalize_hsl_triplet(hsl).split()
+    h, s, l = normalize_hsl_triplet(hsl).split()  # noqa: E741
     return f"{h} {s}% {l}%"
 
 

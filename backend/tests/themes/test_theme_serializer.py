@@ -28,7 +28,9 @@ class TestThemeSerializer:
         assert data["border"] == "214 32% 91%"
 
     def test_update_accepts_percent_hsl_and_stores_triplets_without_percent(self):
-        org = Organization.objects.create(name="Theme Update Org", slug="theme-update-org")
+        org = Organization.objects.create(
+            name="Theme Update Org", slug="theme-update-org"
+        )
         theme = OrganizationTheme.objects.create(organization=org)
 
         serializer = ThemeSerializer(

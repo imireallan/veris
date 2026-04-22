@@ -242,7 +242,14 @@ class AssessmentReportAdmin(admin.ModelAdmin):
 
 @admin.register(Finding)
 class FindingAdmin(admin.ModelAdmin):
-    list_display = ("topic", "severity", "status", "assessment", "responsible_party")
+    list_display = (
+        "topic",
+        "severity",
+        "status",
+        "due_date",
+        "assessment",
+        "responsible_party",
+    )
     list_filter = ("severity", "status")
     search_fields = ("topic", "summary", "recommended_actions")
     readonly_fields = ("id", "created_at", "updated_at")

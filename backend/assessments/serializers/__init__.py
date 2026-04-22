@@ -409,6 +409,7 @@ class FindingSerializer(serializers.ModelSerializer):
             "responsible_party",
             "supplier_response",
             "assessor_comments",
+            "due_date",
             "marked_as_completed",
             "created_at",
             "updated_at",

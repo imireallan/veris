@@ -131,6 +131,15 @@ class DashboardSummaryView(APIView):
                 responses=responses,
             ),
             "site_progress": self._build_site_progress(assessments=assessments),
+            # --- P2 AI & Risk Insights ---
+            "cross_framework_reuse": self._build_cross_framework_reuse(
+                responses=responses,
+                assessments=assessments,
+            ),
+            "risk_trend": self._build_risk_trend(
+                findings=findings,
+                now=now,
+            ),
         }
         return Response(payload)
 
@@ -283,6 +292,156 @@ class DashboardSummaryView(APIView):
         documents = documents.filter(created_by=user)
         return assessments, tasks, findings, responses, documents
 
+    # ─────────── P2 AI & Risk Insights ───────────
+
+    def _build_cross_framework_reuse(
+        self,
+        responses,
+        assessments,
+    ) -> dict[str, Any]:
+        """Cross-framework reuse: how much evidence answers map to multiple frameworks."""
+        # Count responses with framework mappings (AI or manual)
+        reusable_count = 0
+        total_responses_with_mappings = 0
+        framework_hit_counts: dict[str, int] = {}
+
+        for resp in responses:
+            mapped = resp.frameworks_mapped_to or []
+            if mapped:
+                total_responses_with_mappings += 1
+                if len(mapped) > 1:
+                    reusable_count += 1
+                for m in mapped:
+                    fw_id = m.get("framework_id") if isinstance(m, dict) else str(m)
+                    if fw_id:
+                        framework_hit_counts[fw_id] = (
+                            framework_hit_counts.get(fw_id, 0) + 1
+                        )
+
+        # Map framework IDs to names for display
+        assessment_fw_ids = set(
+            assessments.exclude(framework_id=None)
+            .values_list("framework_id", flat=True)
+            .distinct()
+        )
+        framework_names: dict[str, str] = {}
+        if assessment_fw_ids:
+            from assessments.models import Framework
+
+            for fw in Framework.objects.filter(id__in=list(assessment_fw_ids)):
+                framework_names[str(fw.id)] = fw.name
+
+        top_frameworks = sorted(
+            [
+                {
+                    "framework_id": fw_id,
+                    "framework_name": framework_names.get(fw_id, "Unknown"),
+                    "mapped_answers": count,
+                }
+                for fw_id, count in framework_hit_counts.items()
+            ],
+            key=lambda x: x["mapped_answers"],
+            reverse=True,
+        )[:5]
+
+        # Suggest reuse opportunities: unmapped responses in frameworks that share provisions
+        unmapped_responses = responses.filter(frameworks_mapped_to=[]).count()
+
+        return {
+            "reusable_answers": reusable_count,
+            "mapped_answers": total_responses_with_mappings,
+            "unmapped_answers": unmapped_responses,
+            "reuse_opportunity_pct": (
+                round((reusable_count / total_responses_with_mappings) * 100, 1)
+                if total_responses_with_mappings
+                else 0.0
+            ),
+            "top_frameworks_by_coverage": top_frameworks,
+        }
+
+    def _build_risk_trend(
+        self,
+        findings,
+        now,
+    ) -> dict[str, Any]:
+        """Risk trend over the last 90 days — new vs resolved findings by severity."""
+        from datetime import timedelta
+
+        now - timedelta(days=90)
+
+        # Bucket by 30-day windows
+        windows = [
+            (now - timedelta(days=90), now - timedelta(days=60), "day_61_90"),
+            (now - timedelta(days=60), now - timedelta(days=30), "day_31_60"),
+            (now - timedelta(days=30), now, "day_0_30"),
+        ]
+        trend = []
+
+        for start, end, label in windows:
+            created = findings.filter(created_at__gte=start, created_at__lt=end)
+            resolved = findings.filter(
+                updated_at__gte=start,
+                updated_at__lt=end,
+                status__in=[Finding.Status.RESOLVED, Finding.Status.CLOSED],
+            )
+            created_severity = {
+                "critical": created.filter(severity=Finding.Severity.CRITICAL).count(),
+                "high": created.filter(severity=Finding.Severity.HIGH).count(),
+                "medium": created.filter(severity=Finding.Severity.MEDIUM).count(),
+                "low": created.filter(severity=Finding.Severity.LOW).count(),
+            }
+            resolved_by_severity = {
+                "critical": resolved.filter(severity=Finding.Severity.CRITICAL).count(),
+                "high": resolved.filter(severity=Finding.Severity.HIGH).count(),
+                "medium": resolved.filter(severity=Finding.Severity.MEDIUM).count(),
+                "low": resolved.filter(severity=Finding.Severity.LOW).count(),
+            }
+            trend.append(
+                {
+                    "label": label,
+                    "period_start": start.isoformat(),
+                    "period_end": end.isoformat(),
+                    "created_total": created.count(),
+                    "created_by_severity": created_severity,
+                    "resolved_total": resolved.count(),
+                    "resolved_by_severity": resolved_by_severity,
+                    "net_change": created.count() - resolved.count(),
+                }
+            )
+
+        # Current open findings risk score (weighted by severity)
+        open_findings = findings.filter(
+            status__in=[Finding.Status.OPEN, Finding.Status.IN_PROGRESS]
+        )
+        severity_weights = {
+            Finding.Severity.CRITICAL: 4,
+            Finding.Severity.HIGH: 3,
+            Finding.Severity.MEDIUM: 2,
+            Finding.Severity.LOW: 1,
+        }
+        risk_score = sum(severity_weights.get(f.severity, 0) for f in open_findings)
+        # Normalize to 0-100 scale (approximate max)
+        max_possible = max(open_findings.count() * 4, 1)
+        risk_index = round((risk_score / max_possible) * 100, 1)
+
+        return {
+            "trend": trend,
+            "current_risk_index": risk_index,
+            "risk_level": (
+                "critical"
+                if risk_index >= 75
+                else (
+                    "high"
+                    if risk_index >= 50
+                    else "medium" if risk_index >= 25 else "low"
+                )
+            ),
+            "open_critical": open_findings.filter(
+                severity=Finding.Severity.CRITICAL
+            ).count(),
+            "open_high": open_findings.filter(severity=Finding.Severity.HIGH).count(),
+        }
+
     # ─────────── P1 Analytics Builders ───────────
 
     def _build_assessment_status_breakdown(self, assessments) -> dict[str, int]:
@@ -365,7 +524,7 @@ class DashboardSummaryView(APIView):
         }
 
     def _build_evidence_pipeline(self, documents, responses) -> dict[str, Any]:
-        """Evidence mapping health: uploaded, mapped, unmapped, awaiting review."""
+        """Evidence mapping health: uploaded, mapped, unmapped, awaiting review, AI suggestions."""
         # Documents uploaded this calendar month
         now = timezone.now()
         uploaded_this_month = documents.filter(
@@ -376,14 +535,21 @@ class DashboardSummaryView(APIView):
         # Mapped = responses with framework mappings or citations
         mapped = 0
         unmapped = 0
+        awaiting_review = 0
+        ai_suggested = 0
+        ai_validated = 0
+
         for resp in responses:
             if resp.frameworks_mapped_to or resp.citations:
                 mapped += 1
             else:
                 unmapped += 1
-
-        # Awaiting review = pending evidence responses (same logic as KPI)
-        awaiting_review = sum(1 for response in responses if response.evidence_files)
+            if resp.evidence_files:
+                awaiting_review += 1
+            if resp.ai_validated:
+                ai_validated += 1
+            if resp.ai_score_suggestion is not None and not resp.ai_validated:
+                ai_suggested += 1
 
         # Also count ALL unreviewed knowledge documents as unreviewed evidence
         total_docs = documents.count()
@@ -393,6 +559,8 @@ class DashboardSummaryView(APIView):
             "mapped": mapped,
             "unmapped": unmapped,
             "awaiting_review": awaiting_review,
+            "ai_suggested": ai_suggested,
+            "ai_validated": ai_validated,
             "total_uploaded": total_docs,
         }
 

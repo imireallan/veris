@@ -1,4 +1,5 @@
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   BarChart3,
@@ -10,7 +11,9 @@ import {
   MapPin,
   PieChart,
   ShieldAlert,
+  TrendingUp,
   UserCircle2,
+  Zap,
 } from "lucide-react";
 import { Link } from "react-router";
 
@@ -315,9 +318,13 @@ function EvidencePipelineWidget({
     { label: "Unmapped", value: data.unmapped },
     { label: "Awaiting review", value: data.awaiting_review },
   ];
+  const aiItems = [
+    { label: "AI suggested", value: data.ai_suggested },
+    { label: "AI validated", value: data.ai_validated },
+  ];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm">
         <span className="text-muted-foreground">Total uploaded</span>
         <span className="font-semibold text-foreground">{data.total_uploaded}</span>
@@ -333,6 +340,23 @@ function EvidencePipelineWidget({
           </div>
         ))}
       </div>
+      {/* P2 AI stats */}
+      {data.ai_suggested + data.ai_validated > 0 && (
+        <div className="space-y-2 rounded-lg border border-border bg-muted/20 px-3 py-3">
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+            <Zap className="h-3.5 w-3.5" />
+            AI Pipeline
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {aiItems.map((item) => (
+              <div key={item.label} className="space-y-1">
+                <p className="text-[11px] text-muted-foreground">{item.label}</p>
+                <p className="text-sm font-semibold text-foreground">{item.value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -387,6 +411,152 @@ function SiteProgressList({
           </div>
         </Link>
       ))}
+    </div>
+  );
+}
+
+function CrossFrameworkReuseWidget({
+  data,
+}: {
+  data: DashboardSummary["cross_framework_reuse"];
+}) {
+  if (data.mapped_answers === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No mapped evidence yet. Upload evidence and use AI mapping to see cross-framework reuse.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <p className="text-xs text-muted-foreground">Reusable answers</p>
+          <p className="text-lg font-semibold text-foreground">{data.reusable_answers}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <p className="text-xs text-muted-foreground">Reuse %</p>
+          <p className="text-lg font-semibold text-foreground">{data.reuse_opportunity_pct}%</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <p className="text-xs text-muted-foreground">Mapped</p>
+          <p className="text-lg font-semibold text-foreground">{data.mapped_answers}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <p className="text-xs text-muted-foreground">Unmapped</p>
+          <p className="text-lg font-semibold text-foreground">{data.unmapped_answers}</p>
+        </div>
+      </div>
+
+      {data.top_frameworks_by_coverage.length > 0 && (
+        <details className="rounded-lg border border-border bg-background">
+          <summary className="flex cursor-pointer items-center gap-2 px-3 py-2 text-xs font-medium text-foreground">
+            <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+            Top frameworks by coverage
+          </summary>
+          <ul className="divide-y divide-border px-3 pb-2">
+            {data.top_frameworks_by_coverage.map((fw) => (
+              <li key={fw.framework_id} className="py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-foreground">{fw.framework_name}</span>
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {fw.mapped_answers} mapped
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function getRiskColor(level: string) {
+  switch (level) {
+    case "critical":
+      return "text-destructive";
+    case "high":
+      return "text-warning";
+    case "medium":
+      return "text-primary";
+    default:
+      return "text-muted-foreground";
+  }
+}
+
+function RiskTrendWidget({
+  data,
+}: {
+  data: DashboardSummary["risk_trend"];
+}) {
+  const labels: Record<string, string> = {
+    day_0_30: "Last 30 days",
+    day_31_60: "31–60 days",
+    day_61_90: "61–90 days",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <details className="group">
+          <summary className="flex cursor-pointer items-center gap-2">
+            <Activity className={`h-5 w-5 ${getRiskColor(data.risk_level)}`} />
+            <span className="text-sm font-semibold capitalize text-foreground">
+              {data.risk_level} risk
+            </span>
+          </summary>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Risk index: {data.current_risk_index}/100. Based on weighted open findings.
+          </p>
+        </details>
+        <div className="text-right">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Open critical / high
+          </p>
+          <p className="text-lg font-semibold text-foreground">
+            {data.open_critical} / {data.open_high}
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {data.trend.map((t, i) => (
+          <div key={i} className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <p className="text-[11px] font-medium text-muted-foreground">{labels[t.label] ?? t.label}</p>
+            <div className="mt-1.5 flex items-center justify-between">
+              <span className="flex items-center gap-1 text-sm text-foreground">
+                <ArrowRight className="h-3 w-3 rotate-45 text-success" />
+                +{t.created_total} created
+              </span>
+              <span className="flex items-center gap-1 text-sm text-foreground">
+                <ArrowRight className="h-3 w-3 -rotate-45 text-primary" />
+                -{t.resolved_total} resolved
+              </span>
+            </div>
+            <div className="mt-1.5">
+              <div
+                className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                style={{
+                  background: `linear-gradient(to right, ${
+                    t.net_change > 0 ? "var(--color-destructive)" : "var(--color-success)"
+                  } ${
+                    Math.min(Math.max(Math.abs(t.net_change) * 5, 10), 100)
+                  }%, var(--color-muted) ${
+                    Math.min(Math.max(Math.abs(t.net_change) * 5, 10), 100)
+                  }%)`,
+                }}
+              />
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {t.net_change > 0
+                ? `+${t.net_change} net increase`
+                : `${t.net_change} net decrease`}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -824,6 +994,15 @@ export default function Dashboard({
 
             <AnalyticsSection title="Pending invitations" icon={Mail}>
               <PendingInvitationsWidget data={summary.pending_invitations} />
+            </AnalyticsSection>
+
+            {/* ───────── P2 Analytics ───────── */}
+            <AnalyticsSection title="Cross-framework reuse" icon={Zap}>
+              <CrossFrameworkReuseWidget data={summary.cross_framework_reuse} />
+            </AnalyticsSection>
+
+            <AnalyticsSection title="Risk trend" icon={TrendingUp}>
+              <RiskTrendWidget data={summary.risk_trend} />
             </AnalyticsSection>
           </div>
         </section>

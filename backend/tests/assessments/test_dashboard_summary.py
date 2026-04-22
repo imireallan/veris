@@ -705,7 +705,9 @@ class TestDashboardSummaryApi:
             organization=org,
             assessment=active,
             answer_text="Mapped to one",
-            frameworks_mapped_to=[{"framework_id": str(active.id), "provision_code": "P1.2"}],
+            frameworks_mapped_to=[
+                {"framework_id": str(active.id), "provision_code": "P1.2"}
+            ],
             citations=["doc-2"],
             ai_score_suggestion=0.6,
             created_by=user,

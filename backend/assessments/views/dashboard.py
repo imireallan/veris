@@ -314,7 +314,9 @@ class DashboardSummaryView(APIView):
                 for m in mapped:
                     fw_id = m.get("framework_id") if isinstance(m, dict) else str(m)
                     if fw_id:
-                        framework_hit_counts[fw_id] = framework_hit_counts.get(fw_id, 0) + 1
+                        framework_hit_counts[fw_id] = (
+                            framework_hit_counts.get(fw_id, 0) + 1
+                        )
 
         # Map framework IDs to names for display
         assessment_fw_ids = set(
@@ -325,12 +327,17 @@ class DashboardSummaryView(APIView):
         framework_names: dict[str, str] = {}
         if assessment_fw_ids:
             from assessments.models import Framework
+
             for fw in Framework.objects.filter(id__in=list(assessment_fw_ids)):
                 framework_names[str(fw.id)] = fw.name
 
         top_frameworks = sorted(
             [
-                {"framework_id": fw_id, "framework_name": framework_names.get(fw_id, "Unknown"), "mapped_answers": count}
+                {
+                    "framework_id": fw_id,
+                    "framework_name": framework_names.get(fw_id, "Unknown"),
+                    "mapped_answers": count,
+                }
                 for fw_id, count in framework_hit_counts.items()
             ],
             key=lambda x: x["mapped_answers"],
@@ -346,7 +353,8 @@ class DashboardSummaryView(APIView):
             "unmapped_answers": unmapped_responses,
             "reuse_opportunity_pct": (
                 round((reusable_count / total_responses_with_mappings) * 100, 1)
-                if total_responses_with_mappings else 0.0
+                if total_responses_with_mappings
+                else 0.0
             ),
             "top_frameworks_by_coverage": top_frameworks,
         }
@@ -357,10 +365,9 @@ class DashboardSummaryView(APIView):
         now,
     ) -> dict[str, Any]:
         """Risk trend over the last 90 days — new vs resolved findings by severity."""
-        from django.db.models import Count
         from datetime import timedelta
 
-        cutoff = now - timedelta(days=90)
+        now - timedelta(days=90)
 
         # Bucket by 30-day windows
         windows = [
@@ -389,16 +396,18 @@ class DashboardSummaryView(APIView):
                 "medium": resolved.filter(severity=Finding.Severity.MEDIUM).count(),
                 "low": resolved.filter(severity=Finding.Severity.LOW).count(),
             }
-            trend.append({
-                "label": label,
-                "period_start": start.isoformat(),
-                "period_end": end.isoformat(),
-                "created_total": created.count(),
-                "created_by_severity": created_severity,
-                "resolved_total": resolved.count(),
-                "resolved_by_severity": resolved_by_severity,
-                "net_change": created.count() - resolved.count(),
-            })
+            trend.append(
+                {
+                    "label": label,
+                    "period_start": start.isoformat(),
+                    "period_end": end.isoformat(),
+                    "created_total": created.count(),
+                    "created_by_severity": created_severity,
+                    "resolved_total": resolved.count(),
+                    "resolved_by_severity": resolved_by_severity,
+                    "net_change": created.count() - resolved.count(),
+                }
+            )
 
         # Current open findings risk score (weighted by severity)
         open_findings = findings.filter(
@@ -410,9 +419,7 @@ class DashboardSummaryView(APIView):
             Finding.Severity.MEDIUM: 2,
             Finding.Severity.LOW: 1,
         }
-        risk_score = sum(
-            severity_weights.get(f.severity, 0) for f in open_findings
-        )
+        risk_score = sum(severity_weights.get(f.severity, 0) for f in open_findings)
         # Normalize to 0-100 scale (approximate max)
         max_possible = max(open_findings.count() * 4, 1)
         risk_index = round((risk_score / max_possible) * 100, 1)
@@ -421,12 +428,17 @@ class DashboardSummaryView(APIView):
             "trend": trend,
             "current_risk_index": risk_index,
             "risk_level": (
-                "critical" if risk_index >= 75 else
-                "high" if risk_index >= 50 else
-                "medium" if risk_index >= 25 else
-                "low"
+                "critical"
+                if risk_index >= 75
+                else (
+                    "high"
+                    if risk_index >= 50
+                    else "medium" if risk_index >= 25 else "low"
+                )
             ),
-            "open_critical": open_findings.filter(severity=Finding.Severity.CRITICAL).count(),
+            "open_critical": open_findings.filter(
+                severity=Finding.Severity.CRITICAL
+            ).count(),
             "open_high": open_findings.filter(severity=Finding.Severity.HIGH).count(),
         }
 

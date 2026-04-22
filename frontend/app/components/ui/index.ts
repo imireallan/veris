@@ -33,6 +33,7 @@ export { Separator } from "./separator"
 
 /* ─── Navigation ─── */
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
+export { Combobox } from "./combobox"
 export {
   NavigationMenu,
   NavigationMenuList,
@@ -60,6 +61,14 @@ export {
   SheetDescription,
   SheetFooter,
 } from "./sheet"
+export {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselPrevious,
+  CarouselNext,
+  CarouselIndicators,
+} from "./carousel"
 
 /* ─── Tooltip ─── */
 export {

@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
   Activity,
   AlertTriangle,
@@ -24,6 +25,13 @@ import {
   AccordionTrigger,
   Badge,
   Button,
+  Carousel,
+  CarouselContent,
+  CarouselIndicators,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  Combobox,
   QuickLinks,
   SectionCard,
   Sheet,
@@ -129,6 +137,20 @@ function formatPriorityLabel(priority: string) {
   return priority.replaceAll("_", " ").toLowerCase();
 }
 
+function formatTypeLabel(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replaceAll("due", "deadline")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildTypeOptions(values: string[]) {
+  return [
+    { value: "all", label: "All types" },
+    ...values.map((value) => ({ value, label: formatTypeLabel(value) })),
+  ];
+}
+
 function getActivityBadge(item: DashboardActivityItem) {
   switch (item.type) {
     case "document_uploaded":
@@ -205,93 +227,260 @@ function AttentionList({
   );
 }
 
-function DeadlineList({ items }: { items: DashboardDeadlineItem[] }) {
-  if (items.length === 0) {
-    return <p className="text-sm text-muted-foreground">No upcoming deadlines in the active organization.</p>;
-  }
+function DeadlineList({
+  items,
+  selectedType,
+  onTypeChange,
+}: {
+  items: DashboardDeadlineItem[];
+  selectedType: string;
+  onTypeChange: (value: string) => void;
+}) {
+  const typeOptions = buildTypeOptions(
+    Array.from(new Set(items.map((item) => item.type))).sort()
+  );
+  const filteredItems =
+    selectedType === "all"
+      ? items
+      : items.filter((item) => item.type === selectedType)
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Type</TableHead>
-          <TableHead>Title</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead className="text-right">Due</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map((item) => {
-          const badge = getDeadlineBadge(item);
-          const meta = getDeadlineMeta(item);
-          const MetaIcon = meta.icon;
-          return (
-            <TableRow key={item.id}>
-              <TableCell>
-                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                  <MetaIcon className="h-3.5 w-3.5" />
-                  <span>{meta.label}</span>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Link to={item.url} className="block min-w-0 hover:text-accent">
-                  <p className="font-medium text-foreground">{item.title}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {item.organization_name}
-                    {item.missing_required ? ` • ${item.missing_required} required answers missing` : ""}
-                  </p>
-                </Link>
-              </TableCell>
-              <TableCell>
-                <Badge variant={badge.variant}>{badge.label}</Badge>
-              </TableCell>
-              <TableCell className="text-right text-xs text-muted-foreground">
-                {formatDate(item.due_date)}
-              </TableCell>
+    <div className="space-y-3">
+      <div className="max-w-xs">
+        <Combobox
+          value={selectedType}
+          onValueChange={onTypeChange}
+          options={typeOptions}
+          placeholder="Filter deadlines by type"
+        />
+      </div>
+      {filteredItems.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No deadlines match the selected type.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Type</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Due</TableHead>
             </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+          </TableHeader>
+          <TableBody>
+            {filteredItems.map((item) => {
+              const badge = getDeadlineBadge(item);
+              const meta = getDeadlineMeta(item);
+              const MetaIcon = meta.icon;
+              return (
+                <TableRow key={item.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                      <MetaIcon className="h-3.5 w-3.5" />
+                      <span>{meta.label}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <Link to={item.url} className="block min-w-0 hover:text-accent">
+                      <p className="font-medium text-foreground">{item.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {item.organization_name}
+                        {item.missing_required ? ` • ${item.missing_required} required answers missing` : ""}
+                      </p>
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={badge.variant}>{badge.label}</Badge>
+                  </TableCell>
+                  <TableCell className="text-right text-xs text-muted-foreground">
+                    {formatDate(item.due_date)}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
 }
 
-function RecentActivityAccordion({ items }: { items: DashboardActivityItem[] }) {
-  if (items.length === 0) {
-    return <p className="text-sm text-muted-foreground">No recent activity yet.</p>;
-  }
+function RecentActivityAccordion({
+  items,
+  selectedType,
+  onTypeChange,
+}: {
+  items: DashboardActivityItem[];
+  selectedType: string;
+  onTypeChange: (value: string) => void;
+}) {
+  const typeOptions = buildTypeOptions(
+    Array.from(new Set(items.map((item) => item.type))).sort()
+  );
+  const filteredItems =
+    selectedType === "all"
+      ? items
+      : items.filter((item) => item.type === selectedType)
 
   return (
-    <Accordion defaultValue={[items[0].id]}>
-      {items.map((item) => (
-        <AccordionItem key={item.id} value={item.id}>
-          <AccordionTrigger className="py-3 hover:no-underline">
-            <div className="min-w-0 pr-4 text-left">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">{getActivityBadge(item)}</Badge>
-                <span className="text-xs text-muted-foreground">{formatDateTime(item.timestamp)}</span>
-              </div>
-              <p className="mt-2 truncate text-sm font-medium text-foreground">{item.title}</p>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent>
-            <Link to={item.url} className="block rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40">
-              <TimelineItem
-                text={`${item.title} — ${item.description}`}
-                badge={getActivityBadge(item)}
-                className="px-0"
-                dotColor={item.type === "document_uploaded" ? "bg-accent" : "bg-primary"}
-              />
-              <div className="pt-1 text-xs text-muted-foreground">Open related record</div>
-            </Link>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
+    <div className="space-y-3">
+      <div className="max-w-xs">
+        <Combobox
+          value={selectedType}
+          onValueChange={onTypeChange}
+          options={typeOptions}
+          placeholder="Filter activity by type"
+        />
+      </div>
+      {filteredItems.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No activity matches the selected type.</p>
+      ) : (
+        <Accordion defaultValue={[filteredItems[0].id]}>
+          {filteredItems.map((item) => (
+            <AccordionItem key={item.id} value={item.id}>
+              <AccordionTrigger className="py-3 hover:no-underline">
+                <div className="min-w-0 pr-4 text-left">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{getActivityBadge(item)}</Badge>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(item.timestamp)}</span>
+                  </div>
+                  <p className="mt-2 truncate text-sm font-medium text-foreground">{item.title}</p>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <Link to={item.url} className="block rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40">
+                  <TimelineItem
+                    text={`${item.title} — ${item.description}`}
+                    badge={getActivityBadge(item)}
+                    className="px-0"
+                    dotColor={item.type === "document_uploaded" ? "bg-accent" : "bg-primary"}
+                  />
+                  <div className="pt-1 text-xs text-muted-foreground">Open related record</div>
+                </Link>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      )}
+    </div>
   );
 }
 
 type DashboardMode = "org-wide" | "assigned-only" | "consultant-aggregate" | "executive-summary";
+
+function KpiCarousel({
+  hero,
+  summary,
+  mode,
+}: {
+  hero: {
+    statLabels: {
+      activeAssessments: string;
+      overdueActions: string;
+      openFindings: string;
+      pendingEvidenceReviews: string;
+    };
+  };
+  summary: DashboardSummary;
+  mode: DashboardMode;
+}) {
+  return (
+    <div className="md:hidden">
+      <Carousel>
+        <CarouselContent>
+          <CarouselItem>
+            <StatCard
+              label={hero.statLabels.activeAssessments}
+              value={summary.kpis.active_assessments}
+              icon={ClipboardCheck}
+              trend={mode === "assigned-only" ? "Currently assigned" : "In flight"}
+            />
+          </CarouselItem>
+          <CarouselItem>
+            <StatCard
+              label={hero.statLabels.overdueActions}
+              value={summary.kpis.overdue_actions}
+              icon={AlertTriangle}
+              trend={summary.kpis.overdue_actions > 0 ? "Needs action" : "All clear"}
+              change={summary.kpis.overdue_actions > 0 ? "down" : "neutral"}
+            />
+          </CarouselItem>
+          <CarouselItem>
+            <StatCard
+              label={hero.statLabels.openFindings}
+              value={summary.kpis.open_findings}
+              icon={ShieldAlert}
+              trend={summary.kpis.open_findings > 0 ? "Still unresolved" : "No blockers"}
+              change={summary.kpis.open_findings > 0 ? "down" : "neutral"}
+            />
+          </CarouselItem>
+          <CarouselItem>
+            <StatCard
+              label={hero.statLabels.pendingEvidenceReviews}
+              value={summary.kpis.pending_evidence_reviews}
+              icon={FileSearch}
+              trend={summary.kpis.pending_evidence_reviews > 0 ? "Awaiting validation" : "Queue empty"}
+              change={summary.kpis.pending_evidence_reviews > 0 ? "down" : "neutral"}
+            />
+          </CarouselItem>
+        </CarouselContent>
+        <div className="flex items-center justify-between">
+          <CarouselPrevious />
+          <CarouselIndicators />
+          <CarouselNext />
+        </div>
+      </Carousel>
+    </div>
+  );
+}
+
+function DesktopKpiGrid({
+  hero,
+  summary,
+  mode,
+}: {
+  hero: {
+    statLabels: {
+      activeAssessments: string;
+      overdueActions: string;
+      openFindings: string;
+      pendingEvidenceReviews: string;
+    };
+  };
+  summary: DashboardSummary;
+  mode: DashboardMode;
+}) {
+  return (
+    <section className="hidden grid-cols-1 gap-4 md:grid md:grid-cols-2 xl:grid-cols-4">
+      <StatCard
+        label={hero.statLabels.activeAssessments}
+        value={summary.kpis.active_assessments}
+        icon={ClipboardCheck}
+        trend={mode === "assigned-only" ? "Currently assigned" : "In flight"}
+      />
+      <StatCard
+        label={hero.statLabels.overdueActions}
+        value={summary.kpis.overdue_actions}
+        icon={AlertTriangle}
+        trend={summary.kpis.overdue_actions > 0 ? "Needs action" : "All clear"}
+        change={summary.kpis.overdue_actions > 0 ? "down" : "neutral"}
+      />
+      <StatCard
+        label={hero.statLabels.openFindings}
+        value={summary.kpis.open_findings}
+        icon={ShieldAlert}
+        trend={summary.kpis.open_findings > 0 ? "Still unresolved" : "No blockers"}
+        change={summary.kpis.open_findings > 0 ? "down" : "neutral"}
+      />
+      <StatCard
+        label={hero.statLabels.pendingEvidenceReviews}
+        value={summary.kpis.pending_evidence_reviews}
+        icon={FileSearch}
+        trend={summary.kpis.pending_evidence_reviews > 0 ? "Awaiting validation" : "Queue empty"}
+        change={summary.kpis.pending_evidence_reviews > 0 ? "down" : "neutral"}
+      />
+    </section>
+  );
+}
 
 function AnalyticsSection({
   title,
@@ -894,6 +1083,8 @@ export default function Dashboard({
 
   const orgCount = user.organizationCount ?? 1;
   const hasMultipleOrgs = orgCount > 1;
+  const [deadlineType, setDeadlineType] = React.useState("all");
+  const [activityType, setActivityType] = React.useState("all");
 
   const hero =
     mode === "assigned-only"
@@ -1059,35 +1250,8 @@ export default function Dashboard({
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label={hero.statLabels.activeAssessments}
-          value={summary.kpis.active_assessments}
-          icon={ClipboardCheck}
-          trend={mode === "assigned-only" ? "Currently assigned" : "In flight"}
-        />
-        <StatCard
-          label={hero.statLabels.overdueActions}
-          value={summary.kpis.overdue_actions}
-          icon={AlertTriangle}
-          trend={summary.kpis.overdue_actions > 0 ? "Needs action" : "All clear"}
-          change={summary.kpis.overdue_actions > 0 ? "down" : "neutral"}
-        />
-        <StatCard
-          label={hero.statLabels.openFindings}
-          value={summary.kpis.open_findings}
-          icon={ShieldAlert}
-          trend={summary.kpis.open_findings > 0 ? "Still unresolved" : "No blockers"}
-          change={summary.kpis.open_findings > 0 ? "down" : "neutral"}
-        />
-        <StatCard
-          label={hero.statLabels.pendingEvidenceReviews}
-          value={summary.kpis.pending_evidence_reviews}
-          icon={FileSearch}
-          trend={summary.kpis.pending_evidence_reviews > 0 ? "Awaiting validation" : "Queue empty"}
-          change={summary.kpis.pending_evidence_reviews > 0 ? "down" : "neutral"}
-        />
-      </section>
+      <KpiCarousel hero={hero} summary={summary} mode={mode} />
+      <DesktopKpiGrid hero={hero} summary={summary} mode={mode} />
 
       <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,2fr)_360px]">
         <SectionCard
@@ -1100,7 +1264,11 @@ export default function Dashboard({
 
         <div className="space-y-5">
           <SectionCard title={hero.deadlineTitle} description={hero.deadlineDescription}>
-            <DeadlineList items={summary.upcoming_deadlines} />
+            <DeadlineList
+              items={summary.upcoming_deadlines}
+              selectedType={deadlineType}
+              onTypeChange={setDeadlineType}
+            />
           </SectionCard>
 
           <QuickLinks
@@ -1120,7 +1288,11 @@ export default function Dashboard({
           </div>
         }
       >
-        <RecentActivityAccordion items={summary.recent_activity} />
+        <RecentActivityAccordion
+          items={summary.recent_activity}
+          selectedType={activityType}
+          onTypeChange={setActivityType}
+        />
       </SectionCard>
 
       {/* P1 Analytics Section — only for org-wide viewers */}

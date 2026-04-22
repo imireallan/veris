@@ -1,6 +1,8 @@
 import type { ThemeConfig, ThemeContextValue } from "~/types";
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 
+import { getThemeCssVars } from "~/lib/theme-vars";
+
 /* ─────────────── default fallback theme ─────────────── */
 const DEFAULT_THEME: ThemeConfig = {
   // Primary colors
@@ -35,72 +37,20 @@ const DEFAULT_THEME: ThemeConfig = {
 
 /* ─────────────── apply CSS custom properties (HSL values) ─────────────── */
 function applyThemeVars(theme: ThemeConfig) {
-  // Only run on client side (document doesn't exist on server)
   if (typeof document === "undefined") return;
-  
+
   const root = document.documentElement;
   const isDark = root.classList.contains("dark");
-  
-  // Light mode variables
-  const lightVars: Record<string, string> = {
-    "--background": theme.background,
-    "--foreground": theme.foreground,
-    "--card": theme.card,
-    "--card-foreground": theme.card_foreground,
-    "--popover": theme.background,
-    "--popover-foreground": theme.foreground,
-    "--primary": theme.primary,
-    "--primary-foreground": theme.primary_foreground,
-    "--secondary": theme.secondary,
-    "--secondary-foreground": theme.secondary_foreground,
-    "--muted": theme.muted,
-    "--muted-foreground": theme.muted_foreground,
-    "--accent": theme.accent,
-    "--accent-foreground": theme.accent_foreground,
-    "--destructive": theme.destructive,
-    "--destructive-foreground": theme.destructive_foreground,
-    "--success": theme.success,
-    "--border": theme.border,
-    "--input": theme.border,
-    "--ring": theme.primary,
-  };
-  
-  // Dark mode variables (fall back to light mode if not specified)
-  const darkVars: Record<string, string> = {
-    "--background": theme.background_dark || theme.background,
-    "--foreground": theme.foreground_dark || theme.foreground,
-    "--card": theme.card_dark || theme.card,
-    "--card-foreground": theme.card_foreground_dark || theme.card_foreground,
-    "--popover": theme.background_dark || theme.background,
-    "--popover-foreground": theme.foreground_dark || theme.foreground,
-    "--primary": theme.primary_dark || theme.primary,
-    "--primary-foreground": theme.primary_foreground_dark || theme.primary_foreground,
-    "--secondary": theme.secondary_dark || theme.secondary,
-    "--secondary-foreground": theme.secondary_foreground_dark || theme.secondary_foreground,
-    "--muted": theme.muted_dark || theme.muted,
-    "--muted-foreground": theme.muted_foreground_dark || theme.muted_foreground,
-    "--accent": theme.accent_dark || theme.accent,
-    "--accent-foreground": theme.accent_foreground_dark || theme.accent_foreground,
-    "--destructive": theme.destructive_dark || theme.destructive,
-    "--destructive-foreground": theme.destructive_foreground_dark || theme.destructive_foreground,
-    "--success": theme.success_dark || theme.success,
-    "--border": theme.border_dark || theme.border,
-    "--input": theme.border_dark || theme.border,
-    "--ring": theme.primary_dark || theme.primary,
-  };
-  
-  // Apply appropriate variables based on theme mode
-  const vars = isDark ? darkVars : lightVars;
+  const vars = getThemeCssVars(theme, isDark);
+
   for (const [k, v] of Object.entries(vars)) {
     root.style.setProperty(k, v);
   }
-  
-  // Apply font family
+
   if (theme.font_family) {
     root.style.setProperty("--font-sans", theme.font_family);
   }
-  
-  // Apply button border radius
+
   if (theme.button_radius !== undefined) {
     root.style.setProperty("--radius", `${theme.button_radius}px`);
   }

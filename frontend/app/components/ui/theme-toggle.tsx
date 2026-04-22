@@ -11,9 +11,11 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     const current = html.classList.contains("dark")
     if (current) {
       html.classList.remove("dark")
+      html.classList.add("light")
       localStorage.setItem("theme", "light")
     } else {
       html.classList.add("dark")
+      html.classList.remove("light")
       localStorage.setItem("theme", "dark")
     }
   }

@@ -18,10 +18,31 @@ import {
 import { Link } from "react-router";
 
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
   Badge,
+  Button,
   QuickLinks,
   SectionCard,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
   StatCard,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   TimelineItem,
 } from "~/components/ui";
 import { RBAC, UserRole } from "~/types/rbac";
@@ -58,10 +79,54 @@ function getAttentionBadge(item: DashboardAttentionItem) {
     : { label: "Due soon", variant: "secondary" as const };
 }
 
+function getAttentionMeta(item: DashboardAttentionItem) {
+  switch (item.type) {
+    case "evidence_review":
+      return { label: "Evidence review", icon: FileSearch };
+    case "report_review":
+      return { label: "Report review", icon: ClipboardCheck };
+    case "report_finalize":
+      return { label: "Report finalization", icon: ClipboardCheck };
+    case "cip_cycle":
+      return { label: "CIP milestone", icon: FolderClock };
+    case "questionnaire":
+      return { label: "Questionnaire", icon: ClipboardCheck };
+    case "finding_follow_up":
+      return { label: "Finding follow-up", icon: ShieldAlert };
+    case "assessment":
+      return { label: "Assessment", icon: ClipboardCheck };
+    default:
+      return { label: "Action", icon: AlertTriangle };
+  }
+}
+
 function getDeadlineBadge(item: DashboardDeadlineItem) {
   return item.status === "overdue"
     ? { label: "Overdue", variant: "destructive" as const }
     : { label: "Upcoming", variant: "secondary" as const };
+}
+
+function getDeadlineMeta(item: DashboardDeadlineItem) {
+  switch (item.type) {
+    case "evidence_review_due":
+      return { label: "Evidence review", icon: FileSearch };
+    case "report_due":
+      return { label: "Report deadline", icon: ClipboardCheck };
+    case "cip_due":
+      return { label: "CIP deadline", icon: FolderClock };
+    case "questionnaire_due":
+      return { label: "Questionnaire", icon: ClipboardCheck };
+    case "finding_follow_up_due":
+      return { label: "Finding deadline", icon: ShieldAlert };
+    case "assessment_due":
+      return { label: "Assessment deadline", icon: ClipboardCheck };
+    default:
+      return { label: "Task deadline", icon: AlertTriangle };
+  }
+}
+
+function formatPriorityLabel(priority: string) {
+  return priority.replaceAll("_", " ").toLowerCase();
 }
 
 function getActivityBadge(item: DashboardActivityItem) {
@@ -96,6 +161,8 @@ function AttentionList({
     <div className="space-y-3">
       {items.map((item) => {
         const badge = getAttentionBadge(item);
+        const meta = getAttentionMeta(item);
+        const MetaIcon = meta.icon;
         return (
           <Link
             key={item.id}
@@ -105,19 +172,26 @@ function AttentionList({
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-sm font-semibold text-foreground">{item.title}</p>
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <MetaIcon className="h-3.5 w-3.5" />
+                    <span className="text-[11px] font-medium uppercase tracking-[0.18em]">
+                      {meta.label}
+                    </span>
+                  </div>
                   <Badge variant={badge.variant}>{badge.label}</Badge>
                 </div>
+                <p className="text-sm font-semibold text-foreground">{item.title}</p>
                 <p className="text-xs leading-5 text-muted-foreground">
                   {item.organization_name}
                   {item.site_name ? ` • ${item.site_name}` : ""}
                   {item.assessment_name ? ` • ${item.assessment_name}` : ""}
+                  {item.missing_required ? ` • ${item.missing_required} required answers missing` : ""}
                 </p>
               </div>
               <div className="flex items-center justify-between gap-4 lg:block lg:text-right">
                 <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {item.priority.replaceAll("_", " ")}
+                  <p className="text-[11px] font-medium capitalize tracking-[0.12em] text-muted-foreground">
+                    {formatPriorityLabel(item.priority)}
                   </p>
                   <p className="mt-1 text-sm text-foreground">{formatDate(item.due_date)}</p>
                 </div>
@@ -137,27 +211,83 @@ function DeadlineList({ items }: { items: DashboardDeadlineItem[] }) {
   }
 
   return (
-    <div className="space-y-3">
-      {items.map((item) => {
-        const badge = getDeadlineBadge(item);
-        return (
-          <Link
-            key={item.id}
-            to={item.url}
-            className="flex items-start justify-between gap-3 rounded-xl border border-border px-3 py-3 transition-colors hover:border-accent hover:bg-accent/5"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">{item.title}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{item.organization_name}</p>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Type</TableHead>
+          <TableHead>Title</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead className="text-right">Due</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => {
+          const badge = getDeadlineBadge(item);
+          const meta = getDeadlineMeta(item);
+          const MetaIcon = meta.icon;
+          return (
+            <TableRow key={item.id}>
+              <TableCell>
+                <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  <MetaIcon className="h-3.5 w-3.5" />
+                  <span>{meta.label}</span>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Link to={item.url} className="block min-w-0 hover:text-accent">
+                  <p className="font-medium text-foreground">{item.title}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {item.organization_name}
+                    {item.missing_required ? ` • ${item.missing_required} required answers missing` : ""}
+                  </p>
+                </Link>
+              </TableCell>
+              <TableCell>
+                <Badge variant={badge.variant}>{badge.label}</Badge>
+              </TableCell>
+              <TableCell className="text-right text-xs text-muted-foreground">
+                {formatDate(item.due_date)}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}
+
+function RecentActivityAccordion({ items }: { items: DashboardActivityItem[] }) {
+  if (items.length === 0) {
+    return <p className="text-sm text-muted-foreground">No recent activity yet.</p>;
+  }
+
+  return (
+    <Accordion defaultValue={[items[0].id]}>
+      {items.map((item) => (
+        <AccordionItem key={item.id} value={item.id}>
+          <AccordionTrigger className="py-3 hover:no-underline">
+            <div className="min-w-0 pr-4 text-left">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{getActivityBadge(item)}</Badge>
+                <span className="text-xs text-muted-foreground">{formatDateTime(item.timestamp)}</span>
+              </div>
+              <p className="mt-2 truncate text-sm font-medium text-foreground">{item.title}</p>
             </div>
-            <div className="shrink-0 text-right">
-              <Badge variant={badge.variant}>{badge.label}</Badge>
-              <p className="mt-2 text-xs text-muted-foreground">{formatDate(item.due_date)}</p>
-            </div>
-          </Link>
-        );
-      })}
-    </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <Link to={item.url} className="block rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40">
+              <TimelineItem
+                text={`${item.title} — ${item.description}`}
+                badge={getActivityBadge(item)}
+                className="px-0"
+                dotColor={item.type === "document_uploaded" ? "bg-accent" : "bg-primary"}
+              />
+              <div className="pt-1 text-xs text-muted-foreground">Open related record</div>
+            </Link>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 }
 
@@ -694,6 +824,52 @@ function getQuickLinks(
   return orgWideLinks;
 }
 
+function DashboardGuideSheet() {
+  return (
+    <Sheet>
+      <SheetTrigger>
+        <Button variant="outline" size="sm">Dashboard guide</Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>How to use this dashboard</SheetTitle>
+          <SheetDescription>
+            Quick reference for what each section means and how to act on it.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="px-5 py-4">
+          <Accordion defaultValue={["queue-guide"]}>
+            <AccordionItem value="queue-guide">
+              <AccordionTrigger>Priority queue</AccordionTrigger>
+              <AccordionContent>
+                Overdue work is ranked first, followed by evidence review, report work, CIP milestones, questionnaire gaps, and finding follow-up.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="deadline-guide">
+              <AccordionTrigger>Deadline table</AccordionTrigger>
+              <AccordionContent>
+                Use the deadline table to scan upcoming due dates across tasks, evidence review, questionnaires, reports, CIP cycles, and findings.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="analytics-guide">
+              <AccordionTrigger>Portfolio and AI tabs</AccordionTrigger>
+              <AccordionContent>
+                Portfolio groups operational progress views. AI &amp; risk groups evidence pipeline, reuse, and risk trend so the dashboard stays easier to scan.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="activity-guide">
+              <AccordionTrigger>Recent activity</AccordionTrigger>
+              <AccordionContent>
+                Expand an activity row to see the full update and jump directly to the related record.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function Dashboard({
   user,
   summary,
@@ -837,6 +1013,7 @@ export default function Dashboard({
               >
                 {hero.scopeLabel}
               </Badge>
+              <DashboardGuideSheet />
             </div>
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-[0.24em] text-muted-foreground">
@@ -943,27 +1120,7 @@ export default function Dashboard({
           </div>
         }
       >
-        {summary.recent_activity.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No recent activity yet.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {summary.recent_activity.map((item) => (
-              <li key={item.id}>
-                <Link to={item.url} className="block rounded-lg hover:bg-muted/40">
-                  <TimelineItem
-                    text={`${item.title} — ${item.description}`}
-                    badge={getActivityBadge(item)}
-                    className="px-2"
-                    dotColor={item.type === "document_uploaded" ? "bg-accent" : "bg-primary"}
-                  />
-                  <div className="pb-3 pl-9 text-xs text-muted-foreground">
-                    {formatDateTime(item.timestamp)}
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        <RecentActivityAccordion items={summary.recent_activity} />
       </SectionCard>
 
       {/* P1 Analytics Section — only for org-wide viewers */}
@@ -975,36 +1132,53 @@ export default function Dashboard({
               Portfolio snapshot
             </h2>
           </div>
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-            <AnalyticsSection title="Assessment status" icon={PieChart}>
-              <AssessmentStatusChart data={summary.assessment_status_breakdown} />
-            </AnalyticsSection>
+          <Tabs defaultValue="portfolio" className="gap-4">
+            <TabsList variant="line" className="w-full justify-start overflow-x-auto">
+              <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
+              <TabsTrigger value="ai-risk">AI & risk</TabsTrigger>
+              <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+            </TabsList>
 
-            <AnalyticsSection title="Findings by severity" icon={ShieldAlert}>
-              <FindingsSeverityChart data={summary.findings_by_severity} />
-            </AnalyticsSection>
+            <TabsContent value="portfolio">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <AnalyticsSection title="Assessment status" icon={PieChart}>
+                  <AssessmentStatusChart data={summary.assessment_status_breakdown} />
+                </AnalyticsSection>
 
-            <AnalyticsSection title="Evidence pipeline" icon={FileSearch}>
-              <EvidencePipelineWidget data={summary.evidence_pipeline} />
-            </AnalyticsSection>
+                <AnalyticsSection title="Findings by severity" icon={ShieldAlert}>
+                  <FindingsSeverityChart data={summary.findings_by_severity} />
+                </AnalyticsSection>
 
-            <AnalyticsSection title="Site progress" icon={MapPin}>
-              <SiteProgressList data={summary.site_progress} />
-            </AnalyticsSection>
+                <AnalyticsSection title="Site progress" icon={MapPin}>
+                  <SiteProgressList data={summary.site_progress} />
+                </AnalyticsSection>
+              </div>
+            </TabsContent>
 
-            <AnalyticsSection title="Pending invitations" icon={Mail}>
-              <PendingInvitationsWidget data={summary.pending_invitations} />
-            </AnalyticsSection>
+            <TabsContent value="ai-risk">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <AnalyticsSection title="Evidence pipeline" icon={FileSearch}>
+                  <EvidencePipelineWidget data={summary.evidence_pipeline} />
+                </AnalyticsSection>
 
-            {/* ───────── P2 Analytics ───────── */}
-            <AnalyticsSection title="Cross-framework reuse" icon={Zap}>
-              <CrossFrameworkReuseWidget data={summary.cross_framework_reuse} />
-            </AnalyticsSection>
+                <AnalyticsSection title="Cross-framework reuse" icon={Zap}>
+                  <CrossFrameworkReuseWidget data={summary.cross_framework_reuse} />
+                </AnalyticsSection>
 
-            <AnalyticsSection title="Risk trend" icon={TrendingUp}>
-              <RiskTrendWidget data={summary.risk_trend} />
-            </AnalyticsSection>
-          </div>
+                <AnalyticsSection title="Risk trend" icon={TrendingUp}>
+                  <RiskTrendWidget data={summary.risk_trend} />
+                </AnalyticsSection>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="onboarding">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+                <AnalyticsSection title="Pending invitations" icon={Mail} className="md:col-span-2 xl:col-span-1">
+                  <PendingInvitationsWidget data={summary.pending_invitations} />
+                </AnalyticsSection>
+              </div>
+            </TabsContent>
+          </Tabs>
         </section>
       )}
     </div>

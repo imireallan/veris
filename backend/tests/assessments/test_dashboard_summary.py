@@ -3,7 +3,17 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from assessments.models import Assessment, AssessmentResponse, Finding, Task
+from assessments.models import (
+    Assessment,
+    AssessmentPlan,
+    AssessmentQuestion,
+    AssessmentReport,
+    AssessmentResponse,
+    AssessmentTemplate,
+    CIPCycle,
+    Finding,
+    Task,
+)
 from knowledge.models import KnowledgeDocument
 
 
@@ -89,12 +99,14 @@ class TestDashboardSummaryApi:
             due_date=now - timezone.timedelta(days=5),
         )
 
+        finding_due_at = now + timezone.timedelta(days=1)
         Finding.objects.create(
             organization=org,
             assessment=active_assessment,
             topic="Missing incident register",
             severity=Finding.Severity.HIGH,
             status=Finding.Status.OPEN,
+            due_date=finding_due_at,
         )
         Finding.objects.create(
             organization=org,
@@ -111,9 +123,44 @@ class TestDashboardSummaryApi:
             status=Finding.Status.OPEN,
         )
 
-        AssessmentResponse.objects.create(
+        template = AssessmentTemplate.objects.create(
+            name="Alpha template",
+            organization=org,
+            owner_org=org,
+            created_by=user,
+        )
+        active_assessment.template = template
+        active_assessment.save(update_fields=["template"])
+
+        required_question = AssessmentQuestion.objects.create(
+            template=template,
+            organization=org,
+            text="Provide worker grievance mechanism evidence",
+            category="Labour",
+            order=1,
+            is_required=True,
+        )
+        AssessmentQuestion.objects.create(
+            template=template,
+            organization=org,
+            text="Describe supplier grievance escalation",
+            category="Labour",
+            order=2,
+            is_required=True,
+        )
+        AssessmentQuestion.objects.create(
+            template=template,
+            organization=org,
+            text="Optional context",
+            category="Context",
+            order=3,
+            is_required=False,
+        )
+
+        pending_review_response = AssessmentResponse.objects.create(
             organization=org,
             assessment=active_assessment,
+            question=required_question,
             answer_text="Waiting for reviewer validation",
             evidence_files=[{"name": "evidence.pdf"}],
             validation_status="pending",
@@ -134,6 +181,29 @@ class TestDashboardSummaryApi:
             evidence_files=[{"name": "other.pdf"}],
             validation_status="pending",
             created_by=user,
+        )
+
+        report = AssessmentReport.objects.create(
+            organization=org,
+            assessment=active_assessment,
+            title="Alpha Org draft report",
+            status=AssessmentReport.ReportStatus.UNDER_REVIEW,
+        )
+        AssessmentPlan.objects.create(
+            organization=org,
+            assessment=active_assessment,
+            site_assessment_start=(now - timezone.timedelta(days=3)).date(),
+            site_assessment_end=(now + timezone.timedelta(days=1)).date(),
+            draft_report_deadline=(now + timezone.timedelta(days=2)).date(),
+            final_report_deadline=(now + timezone.timedelta(days=4)).date(),
+        )
+        CIPCycle.objects.create(
+            organization=org,
+            assessment=active_assessment,
+            label="30-day remediation review",
+            status=CIPCycle.CycleStatus.ACTIVE,
+            start_date=(now - timezone.timedelta(days=15)).date(),
+            end_date=(now + timezone.timedelta(days=3)).date(),
         )
 
         KnowledgeDocument.objects.create(
@@ -161,18 +231,48 @@ class TestDashboardSummaryApi:
             "pending_evidence_reviews": 1,
         }
 
+        attention_titles = {item["title"] for item in data["attention_items"]}
+        assert overdue_task.title in attention_titles
         assert any(
-            item["title"] == overdue_task.title for item in data["attention_items"]
+            item["type"] == "evidence_review" for item in data["attention_items"]
         )
+        assert any(item["type"] == "report_review" for item in data["attention_items"])
+        assert any(item["type"] == "cip_cycle" for item in data["attention_items"])
+        assert any(item["type"] == "questionnaire" for item in data["attention_items"])
         assert all(
             item["organization_name"] == org.name for item in data["attention_items"]
         )
+        evidence_item = next(
+            item
+            for item in data["attention_items"]
+            if item["type"] == "evidence_review"
+        )
+        assert evidence_item["response_id"] == str(pending_review_response.id)
+        assert evidence_item["assessment_id"] == str(active_assessment.id)
 
         deadline_titles = {item["title"] for item in data["upcoming_deadlines"]}
         assert overdue_task.title in deadline_titles
         assert any(
             item["type"] == "assessment_due" for item in data["upcoming_deadlines"]
         )
+        assert any(
+            item["type"] == "report_due" and item["related_id"] == str(report.id)
+            for item in data["upcoming_deadlines"]
+        )
+        assert any(item["type"] == "cip_due" for item in data["upcoming_deadlines"])
+        assert any(
+            item["type"] == "questionnaire_due" for item in data["upcoming_deadlines"]
+        )
+        finding_attention_item = next(
+            item for item in data["attention_items"] if item["type"] == "finding_follow_up"
+        )
+        assert finding_attention_item["due_date"] == finding_due_at.isoformat()
+        finding_deadline_item = next(
+            item
+            for item in data["upcoming_deadlines"]
+            if item["type"] == "finding_follow_up_due"
+        )
+        assert finding_deadline_item["due_date"] == finding_due_at.isoformat()
 
         activity_types = {item["type"] for item in data["recent_activity"]}
         assert "document_uploaded" in activity_types
@@ -290,9 +390,15 @@ class TestDashboardSummaryApi:
             "open_findings": 1,
             "pending_evidence_reviews": 1,
         }
-        assert [item["title"] for item in data["attention_items"]] == [
-            assigned_task.title
-        ]
+        attention_titles = [item["title"] for item in data["attention_items"]]
+        assert assigned_task.title in attention_titles
+        assert "Admin-only org action" not in attention_titles
+        assert any(
+            item["type"] == "evidence_review" for item in data["attention_items"]
+        )
+        assert any(
+            item["type"] == "finding_follow_up" for item in data["attention_items"]
+        )
         assert all(
             item["organization_name"] == org.name for item in data["attention_items"]
         )

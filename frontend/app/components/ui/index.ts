@@ -34,6 +34,12 @@ export { Separator } from "./separator"
 /* ─── Navigation ─── */
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs"
 export {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuLink,
+} from "./navigation-menu"
+export {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
   DropdownMenuGroup, DropdownMenuShortcut
@@ -44,6 +50,16 @@ export {
   Dialog, DialogOverlay, DialogContent, DialogHeader, DialogFooter,
   DialogTitle, DialogDescription, DialogClose, DialogTrigger, DialogPortal
 } from "./dialog"
+export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetFooter,
+} from "./sheet"
 
 /* ─── Tooltip ─── */
 export {

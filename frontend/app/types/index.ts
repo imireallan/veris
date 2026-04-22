@@ -188,7 +188,15 @@ export type LoginResponse = {
 
 export interface DashboardAttentionItem {
   id: string;
-  type: "task" | "assessment";
+  type:
+    | "task"
+    | "assessment"
+    | "evidence_review"
+    | "report_review"
+    | "report_finalize"
+    | "cip_cycle"
+    | "questionnaire"
+    | "finding_follow_up";
   title: string;
   organization_name: string;
   assessment_id: string;
@@ -198,17 +206,29 @@ export interface DashboardAttentionItem {
   priority: string;
   due_date?: string | null;
   url: string;
+  related_id?: string;
+  response_id?: string;
+  missing_required?: number;
 }
 
 export interface DashboardDeadlineItem {
   id: string;
-  type: "task_due" | "assessment_due";
+  type:
+    | "task_due"
+    | "assessment_due"
+    | "evidence_review_due"
+    | "report_due"
+    | "cip_due"
+    | "questionnaire_due"
+    | "finding_follow_up_due";
   title: string;
   organization_name: string;
   assessment_id: string;
   due_date?: string | null;
   status: "overdue" | "upcoming";
   url: string;
+  related_id?: string;
+  missing_required?: number;
 }
 
 export interface DashboardActivityItem {
@@ -365,6 +385,7 @@ export interface Finding {
   responsible_party: string;
   supplier_response: string;
   assessor_comments: string;
+  due_date?: string | null;
   marked_as_completed: boolean;
   created_at: string;
   updated_at: string;

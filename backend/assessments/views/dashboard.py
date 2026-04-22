@@ -9,7 +9,15 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from assessments.models import Assessment, AssessmentResponse, Finding, Task
+from assessments.models import (
+    Assessment,
+    AssessmentPlan,
+    AssessmentReport,
+    AssessmentResponse,
+    CIPCycle,
+    Finding,
+    Task,
+)
 from assessments.services.access import AssessmentAccessService
 from assessments.views.flat_views import get_request_organization_id
 from knowledge.models import KnowledgeDocument
@@ -77,7 +85,32 @@ class DashboardSummaryView(APIView):
             responses=responses,
             documents=documents,
         )
+        scoped_assessment_ids = list(assessments.values_list("id", flat=True))
         pending_review_responses = responses.filter(validation_status="pending")
+        reports = (
+            AssessmentReport.objects.filter(
+                organization_id__in=org_ids,
+                assessment_id__in=scoped_assessment_ids,
+            )
+            if org_ids and scoped_assessment_ids
+            else AssessmentReport.objects.none()
+        ).select_related("assessment", "organization")
+        plans = (
+            AssessmentPlan.objects.filter(
+                organization_id__in=org_ids,
+                assessment_id__in=scoped_assessment_ids,
+            )
+            if org_ids and scoped_assessment_ids
+            else AssessmentPlan.objects.none()
+        ).select_related("assessment", "organization")
+        cip_cycles = (
+            CIPCycle.objects.filter(
+                organization_id__in=org_ids,
+                assessment_id__in=scoped_assessment_ids,
+            )
+            if org_ids and scoped_assessment_ids
+            else CIPCycle.objects.none()
+        ).select_related("assessment", "organization")
 
         now = timezone.now()
         active_assessments = assessments.exclude(
@@ -105,12 +138,24 @@ class DashboardSummaryView(APIView):
                 now=now,
                 open_tasks=open_tasks,
                 active_assessments=active_assessments,
+                open_findings=open_findings,
+                pending_review_responses=pending_review_responses,
+                reports=reports,
+                plans=plans,
+                cip_cycles=cip_cycles,
+                responses=responses,
                 scope=viewer["scope"],
             ),
             "upcoming_deadlines": self._build_upcoming_deadlines(
                 now=now,
                 open_tasks=open_tasks,
                 active_assessments=active_assessments,
+                open_findings=open_findings,
+                pending_review_responses=pending_review_responses,
+                reports=reports,
+                plans=plans,
+                cip_cycles=cip_cycles,
+                responses=responses,
             ),
             "recent_activity": self._build_recent_activity(
                 assessments=assessments,
@@ -610,9 +655,17 @@ class DashboardSummaryView(APIView):
         now,
         open_tasks,
         active_assessments,
+        open_findings,
+        pending_review_responses,
+        reports,
+        plans,
+        cip_cycles,
+        responses,
         scope,
     ) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
+        due_soon_cutoff = now + timezone.timedelta(days=14)
+        report_deadlines = self._build_report_deadline_map(plans)
 
         for task in open_tasks.filter(
             due_date__isnull=False, due_date__lte=now
@@ -633,9 +686,134 @@ class DashboardSummaryView(APIView):
                 }
             )
 
+        for response in pending_review_responses.select_related(
+            "assessment", "organization", "question"
+        ).order_by("assessment__due_date", "-updated_at")[:4]:
+            if not response.evidence_files:
+                continue
+            items.append(
+                {
+                    "id": str(response.id),
+                    "type": "evidence_review",
+                    "title": (
+                        response.question.text
+                        if response.question
+                        else "Review submitted evidence"
+                    ),
+                    "organization_name": response.organization.name,
+                    "assessment_id": str(response.assessment_id),
+                    "assessment_name": self._assessment_label(response.assessment),
+                    "site_name": getattr(response.assessment.site, "name", None),
+                    "status": self._attention_status(response.assessment.due_date, now),
+                    "priority": (
+                        "HIGH"
+                        if response.assessment.due_date <= now
+                        else response.assessment.risk_level
+                    ),
+                    "due_date": response.assessment.due_date.isoformat(),
+                    "url": f"/assessments/{response.assessment_id}",
+                    "response_id": str(response.id),
+                }
+            )
+
+        for finding in self._get_due_soon_findings(
+            open_findings=open_findings,
+            due_soon_cutoff=due_soon_cutoff,
+        )[:4]:
+            finding_due_at = self._resolve_finding_due_at(finding)
+            items.append(
+                {
+                    "id": str(finding.id),
+                    "type": "finding_follow_up",
+                    "title": finding.topic or "Finding follow-up required",
+                    "organization_name": finding.organization.name,
+                    "assessment_id": str(finding.assessment_id),
+                    "assessment_name": self._assessment_label(finding.assessment),
+                    "site_name": getattr(finding.site, "name", None)
+                    or getattr(finding.assessment.site, "name", None),
+                    "status": self._attention_status(finding_due_at, now),
+                    "priority": finding.severity,
+                    "due_date": finding_due_at.isoformat(),
+                    "url": f"/assessments/{finding.assessment_id}",
+                }
+            )
+
+        for cycle in (
+            cip_cycles.select_related("assessment", "organization")
+            .filter(
+                status__in=[CIPCycle.CycleStatus.ACTIVE, CIPCycle.CycleStatus.OVERDUE],
+                end_date__isnull=False,
+                end_date__lte=due_soon_cutoff.date(),
+            )
+            .order_by("end_date")[:4]
+        ):
+            cycle_due = cycle.end_date.isoformat() if cycle.end_date else None
+            items.append(
+                {
+                    "id": str(cycle.id),
+                    "type": "cip_cycle",
+                    "title": cycle.label,
+                    "organization_name": cycle.organization.name,
+                    "assessment_id": str(cycle.assessment_id),
+                    "assessment_name": self._assessment_label(cycle.assessment),
+                    "site_name": getattr(cycle.assessment.site, "name", None),
+                    "status": self._date_status(cycle.end_date, now.date()),
+                    "priority": (
+                        "HIGH"
+                        if cycle.status == CIPCycle.CycleStatus.OVERDUE
+                        else "MEDIUM"
+                    ),
+                    "due_date": cycle_due,
+                    "url": f"/assessments/{cycle.assessment_id}",
+                }
+            )
+
+        for report in reports.select_related("assessment", "organization").filter(
+            status__in=[
+                AssessmentReport.ReportStatus.DRAFT,
+                AssessmentReport.ReportStatus.IN_PROGRESS,
+                AssessmentReport.ReportStatus.UNDER_REVIEW,
+            ]
+        )[:6]:
+            report_due = self._resolve_report_due_date(report, report_deadlines)
+            if not report_due or report_due > due_soon_cutoff.date():
+                continue
+            items.append(
+                {
+                    "id": str(report.id),
+                    "type": (
+                        "report_review"
+                        if report.status == AssessmentReport.ReportStatus.UNDER_REVIEW
+                        else "report_finalize"
+                    ),
+                    "title": (
+                        f"Review report for {self._assessment_label(report.assessment)}"
+                        if report.status == AssessmentReport.ReportStatus.UNDER_REVIEW
+                        else f"Finalize report for {self._assessment_label(report.assessment)}"
+                    ),
+                    "organization_name": report.organization.name,
+                    "assessment_id": str(report.assessment_id),
+                    "assessment_name": self._assessment_label(report.assessment),
+                    "site_name": getattr(report.assessment.site, "name", None),
+                    "status": self._date_status(report_due, now.date()),
+                    "priority": report.assessment.risk_level,
+                    "due_date": report_due.isoformat(),
+                    "url": f"/assessments/{report.assessment_id}",
+                    "related_id": str(report.id),
+                }
+            )
+
+        questionnaire_items = self._build_questionnaire_queue_items(
+            active_assessments=active_assessments,
+            responses=responses,
+            now=now,
+            status_for_deadlines=False,
+        )
+        items.extend(questionnaire_items)
+
         if scope != "assigned":
             for assessment in active_assessments.filter(
-                due_date__lte=now + timezone.timedelta(days=14)
+                due_date__lte=due_soon_cutoff
             ).order_by("due_date")[:4]:
                 items.append(
                     {
@@ -646,17 +824,30 @@ class DashboardSummaryView(APIView):
                         "assessment_id": str(assessment.id),
                         "assessment_name": self._assessment_label(assessment),
                         "site_name": getattr(assessment.site, "name", None),
-                        "status": (
-                            "overdue" if assessment.due_date < now else "due_soon"
-                        ),
+                        "status": self._attention_status(assessment.due_date, now),
                         "priority": assessment.risk_level,
                         "due_date": assessment.due_date.isoformat(),
                         "url": f"/assessments/{assessment.id}",
                     }
                 )
 
+        attention_rank = {
+            "task": 0,
+            "evidence_review": 1,
+            "report_review": 2,
+            "report_finalize": 3,
+            "cip_cycle": 4,
+            "questionnaire": 5,
+            "finding_follow_up": 6,
+            "assessment": 7,
+        }
         items.sort(
-            key=lambda item: (item["status"] != "overdue", item["due_date"] or "")
+            key=lambda item: (
+                item["status"] != "overdue",
+                attention_rank.get(item["type"], 99),
+                item.get("due_date") or "",
+                item["title"],
+            )
         )
         return items[:6]
 
@@ -665,8 +856,16 @@ class DashboardSummaryView(APIView):
         now,
         open_tasks,
         active_assessments,
+        open_findings,
+        pending_review_responses,
+        reports,
+        plans,
+        cip_cycles,
+        responses,
     ) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
+        due_soon_cutoff = now + timezone.timedelta(days=14)
+        report_deadlines = self._build_report_deadline_map(plans)
 
         for task in open_tasks.filter(due_date__isnull=False).order_by("due_date")[:6]:
             items.append(
@@ -686,7 +885,9 @@ class DashboardSummaryView(APIView):
                 }
             )
 
-        for assessment in active_assessments.order_by("due_date")[:6]:
+        for assessment in active_assessments.filter(
+            due_date__lte=due_soon_cutoff
+        ).order_by("due_date")[:6]:
             items.append(
                 {
                     "id": str(assessment.id),
@@ -700,8 +901,216 @@ class DashboardSummaryView(APIView):
                 }
             )
 
+        for response in pending_review_responses.select_related(
+            "assessment", "organization", "question"
+        ).order_by("assessment__due_date")[:4]:
+            if (
+                not response.evidence_files
+                or response.assessment.due_date > due_soon_cutoff
+            ):
+                continue
+            items.append(
+                {
+                    "id": str(response.id),
+                    "type": "evidence_review_due",
+                    "title": (
+                        response.question.text
+                        if response.question
+                        else "Review submitted evidence"
+                    ),
+                    "organization_name": response.organization.name,
+                    "assessment_id": str(response.assessment_id),
+                    "due_date": response.assessment.due_date.isoformat(),
+                    "status": self._deadline_status(response.assessment.due_date, now),
+                    "url": f"/assessments/{response.assessment_id}",
+                    "related_id": str(response.id),
+                }
+            )
+
+        for finding in self._get_due_soon_findings(
+            open_findings=open_findings,
+            due_soon_cutoff=due_soon_cutoff,
+        )[:4]:
+            finding_due_at = self._resolve_finding_due_at(finding)
+            items.append(
+                {
+                    "id": str(finding.id),
+                    "type": "finding_follow_up_due",
+                    "title": finding.topic or "Finding follow-up required",
+                    "organization_name": finding.organization.name,
+                    "assessment_id": str(finding.assessment_id),
+                    "due_date": finding_due_at.isoformat(),
+                    "status": self._deadline_status(finding_due_at, now),
+                    "url": f"/assessments/{finding.assessment_id}",
+                }
+            )
+
+        for cycle in (
+            cip_cycles.select_related("assessment", "organization")
+            .filter(
+                status__in=[CIPCycle.CycleStatus.ACTIVE, CIPCycle.CycleStatus.OVERDUE],
+                end_date__isnull=False,
+                end_date__lte=due_soon_cutoff.date(),
+            )
+            .order_by("end_date")[:4]
+        ):
+            items.append(
+                {
+                    "id": str(cycle.id),
+                    "type": "cip_due",
+                    "title": cycle.label,
+                    "organization_name": cycle.organization.name,
+                    "assessment_id": str(cycle.assessment_id),
+                    "due_date": cycle.end_date.isoformat() if cycle.end_date else None,
+                    "status": self._date_deadline_status(cycle.end_date, now.date()),
+                    "url": f"/assessments/{cycle.assessment_id}",
+                    "related_id": str(cycle.id),
+                }
+            )
+
+        for report in reports.select_related("assessment", "organization")[:6]:
+            report_due = self._resolve_report_due_date(report, report_deadlines)
+            if not report_due or report_due > due_soon_cutoff.date():
+                continue
+            items.append(
+                {
+                    "id": str(report.id),
+                    "type": "report_due",
+                    "title": report.title,
+                    "organization_name": report.organization.name,
+                    "assessment_id": str(report.assessment_id),
+                    "due_date": report_due.isoformat(),
+                    "status": self._date_deadline_status(report_due, now.date()),
+                    "url": f"/assessments/{report.assessment_id}",
+                    "related_id": str(report.id),
+                }
+            )
+
+        items.extend(
+            self._build_questionnaire_queue_items(
+                active_assessments=active_assessments,
+                responses=responses,
+                now=now,
+                status_for_deadlines=True,
+            )
+        )
+
         items.sort(key=lambda item: item["due_date"] or "")
         return items[:8]
+
+    def _build_questionnaire_queue_items(
+        self,
+        active_assessments,
+        responses,
+        now,
+        status_for_deadlines: bool,
+    ) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        due_soon_cutoff = now + timezone.timedelta(days=14)
+
+        for assessment in active_assessments.select_related(
+            "template", "organization", "site"
+        ).filter(
+            due_date__lte=due_soon_cutoff,
+            template_id__isnull=False,
+        ):
+            required_questions = assessment.template.assessment_questions.filter(
+                is_required=True
+            )
+            required_total = required_questions.count()
+            if required_total == 0:
+                continue
+
+            answered_required_ids = set(
+                responses.filter(assessment_id=assessment.id)
+                .exclude(question_id=None)
+                .exclude(answer_text__exact="")
+                .values_list("question_id", flat=True)
+            )
+            answered_required = required_questions.filter(
+                id__in=answered_required_ids
+            ).count()
+            missing_required = required_total - answered_required
+            if missing_required <= 0:
+                continue
+
+            item = {
+                "id": f"questionnaire:{assessment.id}",
+                "type": (
+                    "questionnaire_due" if status_for_deadlines else "questionnaire"
+                ),
+                "title": f"Complete questionnaire for {self._assessment_label(assessment)}",
+                "organization_name": assessment.organization.name,
+                "assessment_id": str(assessment.id),
+                "due_date": assessment.due_date.isoformat(),
+                "url": f"/assessments/{assessment.id}",
+                "related_id": str(assessment.id),
+                "missing_required": missing_required,
+            }
+            if status_for_deadlines:
+                item["status"] = self._deadline_status(assessment.due_date, now)
+            else:
+                item["assessment_name"] = self._assessment_label(assessment)
+                item["site_name"] = getattr(assessment.site, "name", None)
+                item["status"] = self._attention_status(assessment.due_date, now)
+                item["priority"] = assessment.risk_level
+            items.append(item)
+
+        return items[:4]
+
+    def _build_report_deadline_map(self, plans) -> dict[str, dict[str, Any]]:
+        deadlines: dict[str, dict[str, Any]] = {}
+        for plan in plans:
+            deadlines[str(plan.assessment_id)] = {
+                "draft": plan.draft_report_deadline,
+                "final": plan.final_report_deadline,
+            }
+        return deadlines
+
+    def _resolve_finding_due_at(self, finding: Finding):
+        return finding.due_date or finding.assessment.due_date
+
+    def _get_due_soon_findings(self, open_findings, due_soon_cutoff):
+        due_soon_findings = []
+        for finding in open_findings.select_related("assessment", "organization", "site"):
+            finding_due_at = self._resolve_finding_due_at(finding)
+            if finding_due_at <= due_soon_cutoff:
+                due_soon_findings.append((finding_due_at, finding))
+
+        due_soon_findings.sort(
+            key=lambda item: (
+                item[0],
+                -self._severity_rank(item[1].severity),
+                -item[1].updated_at.timestamp(),
+            )
+        )
+        return [finding for _, finding in due_soon_findings]
+
+    def _severity_rank(self, severity: str) -> int:
+        return {
+            Finding.Severity.CRITICAL: 4,
+            Finding.Severity.HIGH: 3,
+            Finding.Severity.MEDIUM: 2,
+            Finding.Severity.LOW: 1,
+        }.get(severity, 0)
+
+    def _resolve_report_due_date(self, report: AssessmentReport, report_deadlines) -> Any:
+        plan_dates = report_deadlines.get(str(report.assessment_id), {})
+        if report.status == AssessmentReport.ReportStatus.UNDER_REVIEW:
+            return plan_dates.get("final") or report.assessment.due_date.date()
+        return plan_dates.get("draft") or report.assessment.due_date.date()
+
+    def _attention_status(self, due_at, now) -> str:
+        return "overdue" if due_at <= now else "due_soon"
+
+    def _deadline_status(self, due_at, now) -> str:
+        return "overdue" if due_at <= now else "upcoming"
+
+    def _date_status(self, due_on, today) -> str:
+        return "overdue" if due_on <= today else "due_soon"
+
+    def _date_deadline_status(self, due_on, today) -> str:
+        return "overdue" if due_on <= today else "upcoming"
 
     def _build_recent_activity(
         self, assessments, tasks, findings, documents

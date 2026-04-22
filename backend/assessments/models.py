@@ -767,6 +767,7 @@ class Finding(models.Model):
     responsible_party = models.CharField(max_length=255, blank=True, default="")
     supplier_response = models.TextField(blank=True, default="")
     assessor_comments = models.TextField(blank=True, default="")
+    due_date = models.DateTimeField(null=True, blank=True)
     marked_as_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

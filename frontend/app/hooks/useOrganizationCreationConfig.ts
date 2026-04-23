@@ -28,7 +28,7 @@ export function useOrganizationCreationConfig(accessToken?: string) {
       return;
     }
 
-    const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
     let mounted = true;
 
     fetch(`${API_URL}/api/creation-config/prerequisites/`, {

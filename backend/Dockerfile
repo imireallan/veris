@@ -60,14 +60,12 @@ CMD ["python", "-m", "debugpy","--listen", "0.0.0.0:5678","manage.py", "runserve
 # ─────────────────────────────────────────────
 FROM base AS production
 
-# Copy site-packages from builder (no dev tools included)
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+# Copy the uv-managed virtual environment from the builder stage.
+# UV_PROJECT_ENVIRONMENT points at /opt/venv, so copying /usr/local/* misses
+# installed dependencies and console entrypoints in production.
+COPY --from=builder /opt/venv /opt/venv
 
 COPY . .
-
-# Static files collection
-RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 ENV DJANGO_SETTINGS_MODULE=config.settings.production

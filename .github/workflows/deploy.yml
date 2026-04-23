@@ -1,0 +1,47 @@
+name: Deploy Veris
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: veris-production-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          command_timeout: 60m
+          script: |
+            set -euxo pipefail
+
+            APP_DIR=/home/${{ secrets.EC2_USER }}/veris
+
+            if [ ! -d "$APP_DIR/.git" ]; then
+              git clone ${{ secrets.REPO_URL }} "$APP_DIR"
+            fi
+
+            cd "$APP_DIR"
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+
+            printf "%s" '${{ secrets.PROD_ENV_FILE }}' > .env.production
+
+            docker compose --env-file .env.production -f docker-compose.prod.yml pull caddy db
+            docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker compose --env-file .env.production -f docker-compose.prod.yml ps
+            docker image prune -f

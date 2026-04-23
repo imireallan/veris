@@ -44,5 +44,22 @@ temp/
 *.log
 *.sqlite3
 
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+backend.tf
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
 backend/media/
 frontend/build/
+.env.prod
+
+# Terraform plan files
+*.tfplan
+tfplan

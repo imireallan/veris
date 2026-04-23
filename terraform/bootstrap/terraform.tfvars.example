@@ -1,0 +1,5 @@
+project_name      = "veris"
+environment       = "prod"
+aws_region        = "us-east-1"
+state_bucket_name = "veris-terraform-state-prod"
+lock_table_name   = "veris-terraform-locks"

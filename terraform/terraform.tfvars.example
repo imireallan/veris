@@ -1,0 +1,20 @@
+project_name             = "veris"
+environment              = "prod"
+aws_region               = "us-east-1"
+instance_type            = "t3.small"
+key_name                 = "replace-with-your-ec2-keypair"
+repo_url                 = "git@github.com:imireallan/veris.git"
+root_volume_size         = 30
+ssh_ingress_cidr_blocks  = ["203.0.113.10/32"]
+
+# Staging/no-domain mode: leave domain fields empty and use the EC2 public DNS or IP after apply.
+# Domain mode: fill these in and turn Route53 / SES DNS management on.
+app_domain               = null
+zone_id                  = null
+create_route53_records   = false
+manage_ses_dns           = false
+ses_domain               = null
+notification_email       = null
+
+s3_bucket_name           = "veris-media-prod"
+force_destroy_s3_bucket  = false

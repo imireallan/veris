@@ -1,0 +1,9 @@
+terraform {
+  backend "s3" {
+    bucket         = "replace-with-terraform-state-bucket"
+    key            = "veris/prod/terraform.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "replace-with-terraform-locks"
+    encrypt        = true
+  }
+}

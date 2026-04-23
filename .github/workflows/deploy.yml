@@ -29,12 +29,15 @@ jobs:
             set -euxo pipefail
 
             APP_DIR=/home/${{ secrets.EC2_USER }}/veris
+            REPO_URL="https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
 
             if [ ! -d "$APP_DIR/.git" ]; then
-              git clone ${{ secrets.REPO_URL }} "$APP_DIR"
+              rm -rf "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
+            git remote set-url origin "$REPO_URL"
             git fetch origin
             git checkout main
             git reset --hard origin/main

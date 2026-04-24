@@ -3,7 +3,26 @@
 import { createCookieSessionStorage, redirect } from "react-router";
 import type { MeResponse, User } from "~/types";
 
-const isProd = process.env.NODE_ENV === "production";
+function isProductionEnv(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
+function parseBooleanEnv(value: string | undefined): boolean | undefined {
+  if (!value) return undefined;
+
+  const normalized = value.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return undefined;
+}
+
+export function isSessionCookieSecure(): boolean {
+  return (
+    parseBooleanEnv(process.env.FRONTEND_SESSION_COOKIE_SECURE) ??
+    parseBooleanEnv(process.env.SESSION_COOKIE_SECURE) ??
+    isProductionEnv()
+  );
+}
 
 const sessionStorage = createCookieSessionStorage({
   cookie: {
@@ -12,7 +31,7 @@ const sessionStorage = createCookieSessionStorage({
     path: "/",
     sameSite: "lax",
     secrets: [process.env.SESSION_SECRET || "dev-secret-change-me"],
-    secure: isProd,
+    secure: isSessionCookieSecure(),
     maxAge: 60 * 60 * 24 * 7, // 7 days
   },
 });

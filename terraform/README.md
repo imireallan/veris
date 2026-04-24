@@ -105,5 +105,5 @@ terraform apply
 ## Suggested next step after apply
 Use the GitHub Actions deploy workflow already added in the repo to:
 - write `.env.production`
-- ssh into EC2
+- dispatch an AWS SSM Run Command to the EC2 instance
 - run `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build`

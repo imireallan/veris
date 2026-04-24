@@ -145,9 +145,11 @@ def main():
     for p in provisions:
         vc.execute(
             """
-            INSERT INTO assessment_questions (id, template_id, text, "order",
-                                category, scoring_criteria, is_required)
-            VALUES (%s, %s, %s, %s, %s, %s, true)
+            INSERT INTO assessment_questions (
+                id, template_id, text, "order", category, scoring_criteria,
+                framework_mappings, is_required
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, true)
             ON CONFLICT (id) DO NOTHING""",
             (
                 uuid.uuid4(),
@@ -156,6 +158,7 @@ def main():
                 p["sequence_number"],
                 f"{p['principle']} – {p['category']}".strip(),
                 "{}",
+                "[]",
             ),
         )
         total += 1
@@ -184,36 +187,59 @@ def main():
 
         uid = uuid.uuid4()
         user_map[u["id"]] = uid
-        role = "admin" if u["is_superuser"] else "viewer"
+        fallback_role = "ADMIN" if u["is_superuser"] else "OPERATOR"
         db_role = (u.get("role") or "").lower()
         if db_role in ("secretariat", "admin manager", "admin"):
-            role = "admin"
+            fallback_role = "ADMIN"
         elif db_role in ("assessor", "team assessor"):
-            role = "manager"
+            fallback_role = "ASSESSOR"
 
         vc.execute(
             """
-            INSERT INTO users (id, email, name, password, role, is_active,
-                               is_staff, is_superuser, organization_id,
-                               status, timezone, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+            INSERT INTO users (
+                id, email, name, password, is_active, is_staff, is_superuser,
+                status, timezone, biography, country, direct_phone_number,
+                region, created_at, updated_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
             ON CONFLICT (id) DO NOTHING""",
             (
                 uid,
                 u["email"],
                 u["name"] or "",
                 u["password"],
-                role,
                 u["is_active"],
                 u["is_staff"],
                 u["is_superuser"],
-                default_org,
-                "active",
+                "ACTIVE",
                 "UTC",
+                "",
+                "",
+                "",
+                "",
+            ),
+        )
+        vc.execute(
+            """
+            INSERT INTO organization_memberships (
+                id, user_id, organization_id, fallback_role, status,
+                is_default, is_lead_assessor, specializations, joined_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+            ON CONFLICT (user_id, organization_id) DO NOTHING""",
+            (
+                uuid.uuid4(),
+                uid,
+                default_org,
+                fallback_role,
+                "ACTIVE",
+                True,
+                fallback_role == "ASSESSOR",
+                "[]",
             ),
         )
         total += 1
-        print(f"  {u['name']} <{u['email']}> → {role}")
+        print(f"  {u['name']} <{u['email']}> → {fallback_role}")
     v.commit()
 
     # Helper: insert into sites with all NOT NULL columns
@@ -422,7 +448,7 @@ def main():
 
     tc.execute(
         """
-        SELECT id, lead_assessor_id, created, legacy_mining_assurance_claim
+        SELECT id, lead_assessor_id, created, bettercoal_claim
         FROM assurance_process_assuranceprocess
     """
     )
@@ -450,16 +476,17 @@ def main():
             if pp:
                 first_site = site_map.get(("port", pp["id"]))
 
-        summary = (
-            f"Imported assessment. Claim: {p.get('legacy_mining_assurance_claim', '')}"
-        )
+        summary = f"Imported assessment. Claim: {p.get('bettercoal_claim', '')}"
         vc.execute(
             """
-            INSERT INTO assessments (id, status, start_date, due_date,
-                                     overall_score, risk_level, ai_summary,
-                                     created_by_id, assigned_to_id, site_id,
-                                     organization_id, created_at, updated_at)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())
+            INSERT INTO assessments (
+                id, status, start_date, due_date,
+                overall_score, risk_level, ai_summary,
+                created_by_id, assigned_to_id, site_id,
+                organization_id, framework_id, template_id, template_version,
+                created_at, updated_at
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())
             ON CONFLICT (id) DO NOTHING""",
             (
                 aid,
@@ -477,6 +504,9 @@ def main():
                 assigned,
                 first_site,
                 default_org,
+                fw_id,
+                tmpl_id,
+                "1.0.0",
             ),
         )
         total += 1

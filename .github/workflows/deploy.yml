@@ -62,6 +62,7 @@ jobs:
           deploy_script = "\n".join(
               [
                   "set -euxo pipefail",
+                  "export HOME=/root",
                   f"DEPLOY_USER={shlex.quote(ec2_user)}",
                   f"APP_DIR=/home/{ec2_user}/veris",
                   f"REPO_URL={shlex.quote(repo_url)}",

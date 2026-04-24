@@ -62,8 +62,13 @@ jobs:
           deploy_script = "\n".join(
               [
                   "set -euxo pipefail",
+                  f"DEPLOY_USER={shlex.quote(ec2_user)}",
                   f"APP_DIR=/home/{ec2_user}/veris",
                   f"REPO_URL={shlex.quote(repo_url)}",
+                  'if id "$DEPLOY_USER" >/dev/null 2>&1; then',
+                  '  chown -R "$DEPLOY_USER":"$DEPLOY_USER" "$APP_DIR" || true',
+                  'fi',
+                  'git config --global --add safe.directory "$APP_DIR"',
                   'if [ ! -d "$APP_DIR/.git" ]; then',
                   '  rm -rf "$APP_DIR"',
                   '  git clone "$REPO_URL" "$APP_DIR"',
@@ -74,6 +79,9 @@ jobs:
                   "git checkout main",
                   "git reset --hard origin/main",
                   f"printf %s {shlex.quote(prod_env_b64)} | base64 --decode > .env.production",
+                  'if id "$DEPLOY_USER" >/dev/null 2>&1; then',
+                  '  chown "$DEPLOY_USER":"$DEPLOY_USER" .env.production || true',
+                  'fi',
                   "docker compose --env-file .env.production -f docker-compose.prod.yml pull caddy db",
                   "docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --remove-orphans",
                   "docker compose --env-file .env.production -f docker-compose.prod.yml ps",
@@ -100,7 +108,9 @@ jobs:
             --output text)
 
           echo "Command ID: $COMMAND_ID"
+          set +e
           aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$EC2_INSTANCE_ID"
+          set -e
 
           STATUS=$(aws ssm get-command-invocation \
             --command-id "$COMMAND_ID" \

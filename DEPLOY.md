@@ -179,10 +179,11 @@ Note:
 ## 6. GitHub secrets
 
 Set these repo secrets for `.github/workflows/deploy.yml`:
-- `EC2_HOST` -> public DNS, public IP, or custom domain
+- `AWS_ACCESS_KEY_ID` -> IAM access key for a deploy user/role bridge with SSM permissions
+- `AWS_SECRET_ACCESS_KEY` -> matching secret access key
+- `AWS_REGION` -> usually `us-east-1`
+- `EC2_INSTANCE_ID` -> target instance ID (for this staging box: `i-07b1e4c5f5aa78709`)
 - `EC2_USER` -> usually `ec2-user`
-- `EC2_SSH_KEY` -> private SSH key contents
-- `REPO_URL` -> git@github.com:imireallan/veris.git
 - `PROD_ENV_FILE` -> full contents of `.env.production`
 
 Recommended `PROD_ENV_FILE` values:
@@ -226,7 +227,15 @@ Custom-domain example:
 
 ## 7. First server check
 
-After Terraform apply, SSH into the EC2 box:
+After Terraform apply, verify the box is reachable through SSM first:
+
+```bash
+aws ssm describe-instance-information \
+  --region us-east-1 \
+  --filters Key=InstanceIds,Values=<instance-id>
+```
+
+Optional direct SSH check if your current IP is whitelisted:
 
 ```bash
 ssh -i /path/to/key ec2-user@<app_public_ip>
@@ -251,7 +260,9 @@ Expected:
 Push your branch or merge to main, then trigger the deploy workflow.
 
 What the workflow does:
-- SSH to EC2
+- authenticate to AWS from GitHub Actions
+- verify the EC2 instance is online in SSM
+- dispatch an SSM Run Command to the instance
 - clone/pull the repo into `/home/ec2-user/veris`
 - write `.env.production`
 - run `docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --remove-orphans`
@@ -275,7 +286,7 @@ Infra
 - [ ] bootstrap Terraform stack applied
 - [ ] main Terraform stack applied
 - [ ] Elastic IP assigned
-- [ ] SSH restricted to your IP
+- [ ] SSH restricted to your current IP (only needed for emergency/manual shell access)
 - [ ] app is reachable via public DNS/IP or custom domain
 
 Email
@@ -321,9 +332,10 @@ docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail
 
 Current deployment is intentionally simple:
 - Postgres runs in Docker on the same EC2 host
+- deploys use GitHub Actions + AWS SSM Run Command
 - no RDS yet
 - no CloudFront yet
-- no Secrets Manager / SSM integration yet
+- no Secrets Manager / SSM parameter-store env injection yet
 - single-node runtime
 
 This is fine for MVP speed.

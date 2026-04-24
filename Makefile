@@ -133,7 +133,7 @@ import-framework-dump: ## Import legacy framework data into Veris DB
 	@docker cp backend/framework.sql veris-db-1:/tmp/framework.sql
 	@docker exec veris-db-1 psql -U postgres -d framework_import -f /tmp/framework.sql
 	@echo "Temp DB loaded. Running migration..."
-	docker compose exec backend python migrate_framework_dump.py
+	docker compose run --rm backend python migrate_framework_dump.py
 	@echo "Framework import complete!"
 
 # ─────────────────────────────────────────────

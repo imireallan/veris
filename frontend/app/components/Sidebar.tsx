@@ -9,6 +9,7 @@ import {
     BookOpen,
     MessageSquare,
     Paintbrush,
+    Languages,
     LogOut,
     Leaf,
     Database,
@@ -22,6 +23,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     BookOpen,
     MessageSquare,
     Paintbrush,
+    Languages,
     Database,
     Building2,
 };

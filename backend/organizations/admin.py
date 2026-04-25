@@ -6,6 +6,7 @@ from organizations.models import (
     Organization,
     OrganizationCreationConfig,
     OrganizationMembership,
+    OrganizationTerminology,
 )
 
 
@@ -61,6 +62,21 @@ class InvitationAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         # Prevent manual token changes
         return False
+
+
+@admin.register(OrganizationTerminology)
+class OrganizationTerminologyAdmin(admin.ModelAdmin):
+    list_display = (
+        "organization",
+        "assessment_label",
+        "site_label",
+        "task_label",
+        "evidence_label",
+        "report_label",
+    )
+    search_fields = ("organization__name",)
+    readonly_fields = ("id", "created_at", "updated_at")
+    raw_id_fields = ("organization",)
 
 
 @admin.register(OrganizationCreationConfig)

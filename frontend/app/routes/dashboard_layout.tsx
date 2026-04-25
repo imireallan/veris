@@ -24,11 +24,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
   ];
 
   if (RBAC.canManageOrg(user)) {
-    navLinks.push({
-      to: "/settings/theme",
-      label: "Theme",
-      icon: "Paintbrush",
-    });
+    navLinks.push(
+      {
+        to: "/settings/theme",
+        label: "Theme",
+        icon: "Paintbrush",
+      },
+      {
+        to: "/settings/terminology",
+        label: "Terminology",
+        icon: "Languages",
+      },
+    );
   }
 
   return {

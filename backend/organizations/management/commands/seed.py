@@ -764,28 +764,8 @@ class Command(BaseCommand):
                     f"  [{membership_status}] E2E member: {user.email} ({fallback_role})"
                 )
 
-        # Summary
-
-        # Assign admin user to the first organization if not already assigned
-        admin_user = User.objects.filter(email="admin@example.com").first()
-        if admin_user:
-            # Check if admin has any membership
-            has_membership = OrganizationMembership.objects.filter(
-                user=admin_user
-            ).exists()
-            if not has_membership:
-                first_org = Organization.objects.first()
-                if first_org:
-                    OrganizationMembership.objects.create(
-                        user=admin_user,
-                        organization=first_org,
-                        fallback_role=UserRole.ADMIN,
-                    )
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            f"  [Updated] Assigned admin user to {first_org.name}"
-                        )
-                    )
+        # Platform admins/superusers intentionally do not receive tenant memberships.
+        # Tenant memberships are seeded only for delivery/client demo users above.
 
         # Summary
         self.stdout.write(self.style.SUCCESS("=" * 50))

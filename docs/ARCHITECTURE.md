@@ -13,6 +13,7 @@ Current reality:
 
 See also:
 - `docs/current-product-goal-alignment-review.md`
+- `docs/platform-admin-and-tenant-membership-policy.md`
 
 
 **Design Principle**: Generic Multi-Tenant Platform — Any sustainability consultancy can use it.
@@ -84,7 +85,18 @@ See also:
 
 ## 2. Access Control Matrix (RBAC)
 
-The system implements a strict multi-tenant isolation model. All data access is filtered by `organization_id` except for users with the `SUPERADMIN` role.
+The system implements a strict multi-tenant isolation model. All data access is filtered by `organization_id` except for platform-level users.
+
+Durable authority boundary:
+
+```text
+Platform authority = User.is_superuser / future platform_role
+Tenant authority = OrganizationMembership.fallback_role / custom role permissions
+```
+
+Platform admins/superusers do not need `OrganizationMembership` records to access or administer client tenants such as EO100, Bettercoal, or CGWG. Tenant memberships are for users participating in a specific client's business workflow: TDi delivery consultants/assessors, client admins, client operators, client assessors, and client executives.
+
+Tenant invitations must not be used to invite or attach platform admins to organizations. See `docs/platform-admin-and-tenant-membership-policy.md` for the full product policy.
 
 | Feature | Superadmin | Org Admin | End User |
 | :--- | :---: | :---: | :---: |

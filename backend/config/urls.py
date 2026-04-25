@@ -49,6 +49,7 @@ from organizations.views import (
     InvitationViewSet,
     OrganizationCreationConfigViewSet,
     OrganizationMembershipViewSet,
+    OrganizationTerminologyView,
     OrganizationViewSet,
 )
 from themes.views import ThemeViewSet
@@ -156,6 +157,11 @@ urlpatterns = [
         "api/dashboard/summary/",
         DashboardSummaryView.as_view(),
         name="dashboard-summary",
+    ),
+    path(
+        "api/organizations/<uuid:org_pk>/terminology/",
+        OrganizationTerminologyView.as_view(),
+        name="organization-terminology",
     ),
     path("", include("settings.urls")),
     path("api/", include("users.urls")),

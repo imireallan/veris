@@ -165,6 +165,79 @@ class TestUserViewSetMultiTenant:
         assert org_data[org1.name]["fallback_role"] == "SUPERADMIN"
         assert org_data[org2.name]["fallback_role"] == "SUPERADMIN"
 
+    def test_superuser_can_list_org_members_without_membership(
+        self, api_factory, make_org, make_user, make_membership, superuser
+    ):
+        """Platform admins can inspect org members without tenant membership."""
+        org = make_org(name="Bettercoal", slug="bettercoal")
+        member = make_user(email="client-admin@bettercoal.test")
+        make_membership(user=member, organization=org, fallback_role="ADMIN")
+
+        client = api_factory
+        client.force_authenticate(user=superuser)
+        response = client.get(f"/api/organizations/{org.id}/members/")
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.data["results"] if "results" in response.data else response.data
+        emails = [row["user_email"] for row in data]
+        assert "client-admin@bettercoal.test" in emails
+
+    def test_superuser_can_list_org_invitations_without_membership(
+        self, api_factory, make_org, superuser
+    ):
+        """Platform admins can inspect org invitations without tenant membership."""
+        org = make_org(name="EO100", slug="eo100")
+
+        client = api_factory
+        client.force_authenticate(user=superuser)
+        response = client.get(f"/api/organizations/{org.id}/invitations/")
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_cannot_invite_existing_superuser_to_org(
+        self, api_factory, make_org, make_user, make_membership, superuser
+    ):
+        """Tenant invitations must not attach platform admins to client orgs."""
+        org = make_org(name="CGWG", slug="cgwg")
+        admin = make_user(email="admin@cgwg.test")
+        make_membership(user=admin, organization=org, fallback_role="ADMIN")
+
+        client = api_factory
+        client.force_authenticate(user=admin)
+        response = client.post(
+            f"/api/organizations/{org.id}/invitations/",
+            {"email": superuser.email, "fallback_role": "OPERATOR"},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Platform admins cannot be invited" in str(response.data)
+
+    def test_superuser_cannot_accept_org_invitation(
+        self, api_factory, make_org, superuser
+    ):
+        """Even legacy/manual pending invites cannot create superuser memberships."""
+        from organizations.models import Invitation, OrganizationMembership
+
+        org = make_org(name="Legacy Invite Org", slug="legacy-invite-org")
+        invitation = Invitation.objects.create(
+            organization=org,
+            email=superuser.email,
+            invited_by=superuser,
+            fallback_role="OPERATOR",
+        )
+
+        client = api_factory
+        client.force_authenticate(user=superuser)
+        response = client.post(f"/api/invitations/{invitation.token}/accept/")
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert "Platform admins cannot accept tenant invitations" in str(response.data)
+        assert not OrganizationMembership.objects.filter(
+            user=superuser,
+            organization=org,
+        ).exists()
+
 
 @pytest.mark.django_db
 class TestAssessmentViewSetMultiTenant:

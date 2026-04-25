@@ -6,6 +6,7 @@ from organizations.models import (
     Organization,
     OrganizationCreationConfig,
     OrganizationMembership,
+    OrganizationTerminology,
 )
 from organizations.permissions import DEFAULT_ROLE_PERMISSIONS
 
@@ -92,11 +93,18 @@ class InvitationSerializer(serializers.ModelSerializer):
 
         org = self.context.get("organization")
 
-        if User.objects.filter(email__iexact=email).exists():
+        existing_user = User.objects.filter(email__iexact=email).first()
+        if existing_user:
+            if existing_user.is_superuser:
+                raise serializers.ValidationError(
+                    "Platform admins cannot be invited to client organizations. "
+                    "Use platform access for admin operations, or create a separate delivery user for tenant workflow participation."
+                )
+
             if (
                 org
                 and OrganizationMembership.objects.filter(
-                    user__email__iexact=email,
+                    user=existing_user,
                     organization=org,
                 ).exists()
             ):
@@ -258,6 +266,25 @@ class OrganizationDetailSerializer(OrganizationSerializer):
         return obj.memberships.filter(
             status=OrganizationMembership.Status.ACTIVE
         ).count()
+
+
+class OrganizationTerminologySerializer(serializers.ModelSerializer):
+    """Serializer for organization-specific UI terminology."""
+
+    class Meta:
+        model = OrganizationTerminology
+        fields = [
+            "id",
+            "organization",
+            "assessment_label",
+            "site_label",
+            "task_label",
+            "evidence_label",
+            "report_label",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "organization", "created_at", "updated_at"]
 
 
 class OrganizationCreationConfigSerializer(serializers.ModelSerializer):

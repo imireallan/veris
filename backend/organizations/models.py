@@ -393,6 +393,9 @@ class Invitation(models.Model):
         if user.email.lower() != self.email.lower():
             return False
 
+        if user.is_superuser:
+            return False
+
         OrganizationMembership.objects.get_or_create(
             user=user,
             organization=self.organization,

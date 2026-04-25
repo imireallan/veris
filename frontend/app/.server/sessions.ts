@@ -132,6 +132,7 @@ export async function requireUser(request: Request): Promise<User> {
     activeOrganization,
     activeMembership,
     activePermissions: data.active_permissions ?? [],
+    activeTerminology: data.active_terminology ?? null,
     organizationCount: data.organization_count ?? recentOrganizations.length,
     recentOrganizations,
     organizations: recentOrganizations,

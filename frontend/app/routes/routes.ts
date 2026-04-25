@@ -17,6 +17,7 @@ export default [
     route("assessments/:id/questionnaire", "routes/assessments.$id.questionnaire.tsx"),
     route("data", "routes/data.tsx"),
     route("settings/theme", "routes/settings/theme.tsx"),
+    route("settings/terminology", "routes/settings/terminology.tsx"),
     route("settings/profile", "routes/settings.profile.tsx"),
     route("knowledge", "routes/knowledge/index.tsx"),
     route("knowledge/chat", "routes/knowledge/chat.tsx"),

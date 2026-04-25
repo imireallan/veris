@@ -14,8 +14,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const token = await getUserToken(request);
   const orgId = params.orgId!;
 
-  // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
-  if (user.fallbackRole !== "SUPERADMIN") {
+  // Only platform admins can manage org settings (name, slug, status, subscription tier).
+  // A Django superuser may still have an org membership with a tenant role like OPERATOR;
+  // platform access must come from isSuperuser, not the active membership fallbackRole.
+  if (!user.isSuperuser && user.fallbackRole !== "SUPERADMIN") {
     // Return accessDenied instead of throwing - consistent with other routes
     return { org: null, orgId, accessDenied: true };
   }
@@ -30,8 +32,8 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const orgId = params.orgId!;
 
-  // Only SUPERADMIN can manage org settings (name, slug, status, subscription tier)
-  if (user.fallbackRole !== "SUPERADMIN") {
+  // Only platform admins can manage org settings (name, slug, status, subscription tier)
+  if (!user.isSuperuser && user.fallbackRole !== "SUPERADMIN") {
     return data({ error: "Access denied. Organization settings require SUPERADMIN privileges." }, { status: 403 });
   }
 

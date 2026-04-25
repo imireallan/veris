@@ -12,6 +12,7 @@ from organizations.models import (
     Organization,
     OrganizationCreationConfig,
     OrganizationMembership,
+    OrganizationTerminology,
 )
 from organizations.serializers import (
     CustomRoleSerializer,
@@ -20,6 +21,7 @@ from organizations.serializers import (
     OrganizationDetailSerializer,
     OrganizationMembershipSerializer,
     OrganizationSerializer,
+    OrganizationTerminologySerializer,
 )
 from users.permissions import IsOrganizationMember, IsOrganizationOwnerOrAdmin
 
@@ -193,6 +195,56 @@ class OrganizationViewSet(viewsets.ModelViewSet):
                 send_invitation_email(invitation)
 
 
+class OrganizationTerminologyView(APIView):
+    """Organization terminology endpoint — /api/organizations/:org_pk/terminology/."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _get_terminology(self, request):
+        organization = get_request_organization(request)
+        terminology, _ = OrganizationTerminology.objects.get_or_create(
+            organization=organization
+        )
+        return organization, terminology
+
+    def _can_manage_terminology(self, request):
+        if request.user.is_superuser:
+            return True
+
+        membership = get_request_membership(request)
+        return bool(membership and membership.has_permission("org:settings"))
+
+    def get(self, request, org_pk=None):
+        _, terminology = self._get_terminology(request)
+        serializer = OrganizationTerminologySerializer(terminology)
+        return Response(serializer.data)
+
+    def put(self, request, org_pk=None):
+        return self._update(request)
+
+    def patch(self, request, org_pk=None):
+        return self._update(request)
+
+    def _update(self, request):
+        if not self._can_manage_terminology(request):
+            return Response(
+                {
+                    "detail": "You do not have permission to manage organization terminology."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        organization, terminology = self._get_terminology(request)
+        serializer = OrganizationTerminologySerializer(
+            terminology,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(organization=organization)
+        return Response(serializer.data)
+
+
 class CustomRoleViewSet(viewsets.ModelViewSet):
     """
     Custom role management — /api/organizations/:org_pk/roles/
@@ -234,9 +286,14 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def update_role(self, request, pk=None, org_pk=None):
         membership = self.get_object()
-        requesting_membership = get_request_membership(request)
 
-        if not requesting_membership.has_permission("role:manage"):
+        if request.user.is_superuser:
+            can_manage_roles = True
+        else:
+            requesting_membership = get_request_membership(request)
+            can_manage_roles = requesting_membership.has_permission("role:manage")
+
+        if not can_manage_roles:
             return Response(
                 {"detail": "You do not have permission to manage roles."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -292,9 +349,14 @@ class OrganizationMembershipViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=["post"])
     def remove(self, request, pk=None, org_pk=None):
         membership = self.get_object()
-        requesting_membership = get_request_membership(request)
 
-        if not requesting_membership.has_permission("user:remove"):
+        if request.user.is_superuser:
+            can_remove_members = True
+        else:
+            requesting_membership = get_request_membership(request)
+            can_remove_members = requesting_membership.has_permission("user:remove")
+
+        if not can_remove_members:
             return Response(
                 {"detail": "You do not have permission to remove members."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -571,6 +633,14 @@ class InvitationAcceptView(APIView):
             return Response(
                 {
                     "detail": "Invitation email does not match your account email. Please login with the correct email or create an account."
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if request.user.is_superuser:
+            return Response(
+                {
+                    "detail": "Platform admins cannot accept tenant invitations. Use platform access for admin operations, or create a separate delivery user for tenant workflow participation."
                 },
                 status=status.HTTP_403_FORBIDDEN,
             )

@@ -54,6 +54,7 @@ export class RBAC {
    */
   static hasPermission(user: User | null, permission: string): boolean {
     if (!user) return false;
+    if (user.isSuperuser) return true;
     return user.activePermissions?.includes(permission) ?? false;
   }
 

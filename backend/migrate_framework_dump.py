@@ -219,27 +219,33 @@ def main():
                 "",
             ),
         )
-        vc.execute(
-            """
-            INSERT INTO organization_memberships (
-                id, user_id, organization_id, fallback_role, status,
-                is_default, is_lead_assessor, specializations, joined_at
+        if not u["is_superuser"]:
+            vc.execute(
+                """
+                INSERT INTO organization_memberships (
+                    id, user_id, organization_id, fallback_role, status,
+                    is_default, is_lead_assessor, specializations, joined_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                ON CONFLICT (user_id, organization_id) DO NOTHING""",
+                (
+                    uuid.uuid4(),
+                    uid,
+                    default_org,
+                    fallback_role,
+                    "ACTIVE",
+                    True,
+                    fallback_role == "ASSESSOR",
+                    "[]",
+                ),
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW())
-            ON CONFLICT (user_id, organization_id) DO NOTHING""",
-            (
-                uuid.uuid4(),
-                uid,
-                default_org,
-                fallback_role,
-                "ACTIVE",
-                True,
-                fallback_role == "ASSESSOR",
-                "[]",
-            ),
-        )
         total += 1
-        print(f"  {u['name']} <{u['email']}> → {fallback_role}")
+        membership_note = (
+            "platform admin; no tenant membership"
+            if u["is_superuser"]
+            else fallback_role
+        )
+        print(f"  {u['name']} <{u['email']}> → {membership_note}")
     v.commit()
 
     # Helper: insert into sites with all NOT NULL columns

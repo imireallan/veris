@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from organizations.models import OrganizationMembership
+from organizations.models import OrganizationMembership, OrganizationTerminology
 
 from .models import User
 
@@ -111,6 +111,7 @@ class MeSerializer(serializers.ModelSerializer):
     active_organization = serializers.SerializerMethodField()
     active_membership = serializers.SerializerMethodField()
     active_permissions = serializers.SerializerMethodField()
+    active_terminology = serializers.SerializerMethodField()
     recent_organizations = serializers.SerializerMethodField()
     organizations = serializers.SerializerMethodField()
 
@@ -131,6 +132,7 @@ class MeSerializer(serializers.ModelSerializer):
             "active_organization",
             "active_membership",
             "active_permissions",
+            "active_terminology",
             "recent_organizations",
             "organizations",
         )
@@ -200,11 +202,25 @@ class MeSerializer(serializers.ModelSerializer):
             "status": membership.status,
         }
 
-    def get_active_permissions(self, obj):
-        membership = self._get_active_membership(obj)
-        if not membership:
-            return []
+    def get_active_terminology(self, obj):
+        organization = self._get_active_organization(obj)
+        if not organization:
+            return None
 
+        terminology = OrganizationTerminology.objects.filter(
+            organization=organization
+        ).first()
+        return {
+            "assessment_label": (
+                terminology.assessment_label if terminology else "Assessment"
+            ),
+            "site_label": terminology.site_label if terminology else "Site",
+            "task_label": terminology.task_label if terminology else "Task",
+            "evidence_label": terminology.evidence_label if terminology else "Evidence",
+            "report_label": terminology.report_label if terminology else "Report",
+        }
+
+    def get_active_permissions(self, obj):
         permission_candidates = [
             "user:invite",
             "user:remove",
@@ -233,6 +249,13 @@ class MeSerializer(serializers.ModelSerializer):
             "evidence:review",
             "evidence:approve",
         ]
+
+        if obj.is_superuser:
+            return permission_candidates
+
+        membership = self._get_active_membership(obj)
+        if not membership:
+            return []
 
         return [
             permission

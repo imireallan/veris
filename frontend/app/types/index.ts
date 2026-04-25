@@ -67,6 +67,18 @@ export type ThemeContextValue = {
   setTheme: (theme: Partial<ThemeConfig>) => void;
 };
 
+export interface OrganizationTerminology {
+  id?: number;
+  organization?: string;
+  assessment_label: string;
+  site_label: string;
+  task_label: string;
+  evidence_label: string;
+  report_label: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 /**
  * Frontend auth / tenant types
  */
@@ -114,6 +126,7 @@ export type User = {
   activeOrganization?: ActiveOrganization | null;
   activeMembership?: ActiveMembership | null;
   activePermissions?: string[];
+  activeTerminology?: OrganizationTerminology | null;
 
   // Optional org switcher/bootstrap data
   organizationCount?: number;
@@ -154,6 +167,7 @@ export type MeResponse = {
     status?: string;
   } | null;
   active_permissions?: string[];
+  active_terminology?: OrganizationTerminology | null;
   recent_organizations?: Array<{
     id: string;
     name: string;

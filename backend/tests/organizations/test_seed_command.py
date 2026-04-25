@@ -43,3 +43,10 @@ class TestSeedCommand:
         assert (
             memberships["allanimire+veris-e2e-org-admin@gmail.com"].role == admin_role
         )
+
+    def test_seed_does_not_create_superuser_tenant_memberships(self):
+        call_command("seed")
+
+        admin_user = User.objects.get(email="admin@example.com")
+        assert admin_user.is_superuser is True
+        assert not OrganizationMembership.objects.filter(user=admin_user).exists()

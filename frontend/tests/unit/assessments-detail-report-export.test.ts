@@ -128,6 +128,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: true,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: true,
@@ -146,6 +148,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: true,
@@ -164,6 +168,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: true,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: false,
@@ -182,6 +188,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: false,

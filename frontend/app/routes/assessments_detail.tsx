@@ -79,9 +79,13 @@ export function getReportExportUiState({
 export function getReportViewUiState({
   user,
   hasReport,
+  reportLabel,
+  assessmentLabel,
 }: {
   user: User | null;
   hasReport: boolean;
+  reportLabel: string;
+  assessmentLabel: string;
 }) {
   const canViewReport = RBAC.canViewReports(user);
 
@@ -90,7 +94,7 @@ export function getReportViewUiState({
       canView: canViewReport,
       showTab: canViewReport,
       state: "empty" as const,
-      message: "No report has been generated for this assessment yet.",
+      message: `No ${reportLabel.toLowerCase()} has been generated for this ${assessmentLabel.toLowerCase()} yet.`,
     };
   }
 
@@ -99,7 +103,7 @@ export function getReportViewUiState({
       canView: false,
       showTab: true,
       state: "denied" as const,
-      message: "You don't have permission to view this report.",
+      message: `You don't have permission to view this ${reportLabel.toLowerCase()}.`,
     };
   }
 
@@ -256,6 +260,8 @@ export default function AssessmentDetailRoute() {
   const reportViewUiState = getReportViewUiState({
     user: data.user,
     hasReport: Boolean(data.report),
+    reportLabel,
+    assessmentLabel,
   });
 
   const handleSave = () => {

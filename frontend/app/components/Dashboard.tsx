@@ -53,6 +53,8 @@ import {
   TabsTrigger,
   TimelineItem,
 } from "~/components/ui";
+import { terminologyFromUser } from "~/lib/terminology";
+import type { TerminologyLabels } from "~/lib/terminology";
 import { RBAC, UserRole } from "~/types/rbac";
 import type {
   DashboardActivityItem,
@@ -87,14 +89,14 @@ function getAttentionBadge(item: DashboardAttentionItem) {
     : { label: "Due soon", variant: "secondary" as const };
 }
 
-function getAttentionMeta(item: DashboardAttentionItem) {
+function getAttentionMeta(item: DashboardAttentionItem, terminology: TerminologyLabels) {
   switch (item.type) {
     case "evidence_review":
-      return { label: "Evidence review", icon: FileSearch };
+      return { label: `${terminology.evidence} review`, icon: FileSearch };
     case "report_review":
-      return { label: "Report review", icon: ClipboardCheck };
+      return { label: `${terminology.report} review`, icon: ClipboardCheck };
     case "report_finalize":
-      return { label: "Report finalization", icon: ClipboardCheck };
+      return { label: `${terminology.report} finalization`, icon: ClipboardCheck };
     case "cip_cycle":
       return { label: "CIP milestone", icon: FolderClock };
     case "questionnaire":
@@ -102,9 +104,9 @@ function getAttentionMeta(item: DashboardAttentionItem) {
     case "finding_follow_up":
       return { label: "Finding follow-up", icon: ShieldAlert };
     case "assessment":
-      return { label: "Assessment", icon: ClipboardCheck };
+      return { label: terminology.assessment, icon: ClipboardCheck };
     default:
-      return { label: "Action", icon: AlertTriangle };
+      return { label: terminology.task, icon: AlertTriangle };
   }
 }
 
@@ -114,12 +116,12 @@ function getDeadlineBadge(item: DashboardDeadlineItem) {
     : { label: "Upcoming", variant: "secondary" as const };
 }
 
-function getDeadlineMeta(item: DashboardDeadlineItem) {
+function getDeadlineMeta(item: DashboardDeadlineItem, terminology: TerminologyLabels) {
   switch (item.type) {
     case "evidence_review_due":
-      return { label: "Evidence review", icon: FileSearch };
+      return { label: `${terminology.evidence} review`, icon: FileSearch };
     case "report_due":
-      return { label: "Report deadline", icon: ClipboardCheck };
+      return { label: `${terminology.report} deadline`, icon: ClipboardCheck };
     case "cip_due":
       return { label: "CIP deadline", icon: FolderClock };
     case "questionnaire_due":
@@ -127,9 +129,9 @@ function getDeadlineMeta(item: DashboardDeadlineItem) {
     case "finding_follow_up_due":
       return { label: "Finding deadline", icon: ShieldAlert };
     case "assessment_due":
-      return { label: "Assessment deadline", icon: ClipboardCheck };
+      return { label: `${terminology.assessment} deadline`, icon: ClipboardCheck };
     default:
-      return { label: "Task deadline", icon: AlertTriangle };
+      return { label: `${terminology.task} deadline`, icon: AlertTriangle };
   }
 }
 
@@ -151,25 +153,27 @@ function buildTypeOptions(values: string[]) {
   ];
 }
 
-function getActivityBadge(item: DashboardActivityItem) {
+function getActivityBadge(item: DashboardActivityItem, terminology: TerminologyLabels) {
   switch (item.type) {
     case "document_uploaded":
-      return "Evidence";
+      return terminology.evidence;
     case "task_created":
-      return "Action";
+      return terminology.task;
     case "finding_created":
       return "Finding";
     default:
-      return "Assessment";
+      return terminology.assessment;
   }
 }
 
 function AttentionList({
   items,
   emptyState,
+  terminology,
 }: {
   items: DashboardAttentionItem[];
   emptyState: string;
+  terminology: TerminologyLabels;
 }) {
   if (items.length === 0) {
     return (
@@ -183,7 +187,7 @@ function AttentionList({
     <div className="space-y-3">
       {items.map((item) => {
         const badge = getAttentionBadge(item);
-        const meta = getAttentionMeta(item);
+        const meta = getAttentionMeta(item, terminology);
         const MetaIcon = meta.icon;
         return (
           <Link
@@ -231,10 +235,12 @@ function DeadlineList({
   items,
   selectedType,
   onTypeChange,
+  terminology,
 }: {
   items: DashboardDeadlineItem[];
   selectedType: string;
   onTypeChange: (value: string) => void;
+  terminology: TerminologyLabels;
 }) {
   const typeOptions = buildTypeOptions(
     Array.from(new Set(items.map((item) => item.type))).sort()
@@ -269,7 +275,7 @@ function DeadlineList({
           <TableBody>
             {filteredItems.map((item) => {
               const badge = getDeadlineBadge(item);
-              const meta = getDeadlineMeta(item);
+              const meta = getDeadlineMeta(item, terminology);
               const MetaIcon = meta.icon;
               return (
                 <TableRow key={item.id}>
@@ -308,10 +314,12 @@ function RecentActivityAccordion({
   items,
   selectedType,
   onTypeChange,
+  terminology,
 }: {
   items: DashboardActivityItem[];
   selectedType: string;
   onTypeChange: (value: string) => void;
+  terminology: TerminologyLabels;
 }) {
   const typeOptions = buildTypeOptions(
     Array.from(new Set(items.map((item) => item.type))).sort()
@@ -340,7 +348,7 @@ function RecentActivityAccordion({
               <AccordionTrigger className="py-3 hover:no-underline">
                 <div className="min-w-0 pr-4 text-left">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{getActivityBadge(item)}</Badge>
+                    <Badge variant="outline">{getActivityBadge(item, terminology)}</Badge>
                     <span className="text-xs text-muted-foreground">{formatDateTime(item.timestamp)}</span>
                   </div>
                   <p className="mt-2 truncate text-sm font-medium text-foreground">{item.title}</p>
@@ -350,7 +358,7 @@ function RecentActivityAccordion({
                 <Link to={item.url} className="block rounded-lg border border-border bg-muted/20 px-4 py-3 hover:bg-muted/40">
                   <TimelineItem
                     text={`${item.title} — ${item.description}`}
-                    badge={getActivityBadge(item)}
+                    badge={getActivityBadge(item, terminology)}
                     className="px-0"
                     dotColor={item.type === "document_uploaded" ? "bg-accent" : "bg-primary"}
                   />
@@ -964,32 +972,39 @@ function getQuickLinks(
   mode: DashboardMode,
   user: User,
   activeOrgId?: string | null,
+  terminology?: ReturnType<typeof terminologyFromUser>,
 ) {
+  const assessmentLabel = terminology?.assessment ?? "Assessment";
+  const assessmentsLabel = terminology?.plural.assessment ?? "Assessments";
+  const reportLabel = terminology?.report ?? "Report";
+  const evidenceLabel = terminology?.evidence ?? "Evidence";
+  const lowerAssessments = assessmentsLabel.toLowerCase();
+
   const orgWideLinks = [
-    { label: "View assessments", href: "/assessments" },
-    { label: "Review templates", href: "/templates" },
-    { label: "Open knowledge base", href: "/knowledge" },
-    { label: "Ask AI", href: "/knowledge/chat" },
+    { label: `View ${lowerAssessments}`, href: "/assessments" },
+    { label: `Review templates`, href: "/templates" },
+    { label: `Open knowledge base`, href: "/knowledge" },
+    { label: `Ask AI`, href: "/knowledge/chat" },
   ];
 
   const assignedLinks = [
-    { label: "Open my assessments", href: "/assessments" },
-    { label: "Review evidence", href: "/knowledge" },
-    { label: "Ask AI for context", href: "/knowledge/chat" },
-    { label: "Update my profile", href: "/settings/profile" },
+    { label: `Open my ${lowerAssessments}`, href: "/assessments" },
+    { label: `Review ${evidenceLabel}`, href: "/knowledge" },
+    { label: `Ask AI for context`, href: "/knowledge/chat" },
+    { label: `Update my profile`, href: "/settings/profile" },
   ];
 
   const consultantLinks = [
-    { label: "Cross-client assessments", href: "/assessments" },
-    { label: "Review templates", href: "/templates" },
-    { label: "Open knowledge base", href: "/knowledge" },
-    { label: "Ask AI", href: "/knowledge/chat" },
+    { label: `Cross-client ${lowerAssessments}`, href: "/assessments" },
+    { label: `Review templates`, href: "/templates" },
+    { label: `Open knowledge base`, href: "/knowledge" },
+    { label: `Ask AI`, href: "/knowledge/chat" },
   ];
 
   const executiveLinks = [
-    { label: "View assessments", href: "/assessments" },
-    { label: "Export reports", href: "/reports" },
-    { label: "Open knowledge base", href: "/knowledge" },
+    { label: `View ${lowerAssessments}`, href: "/assessments" },
+    { label: `Export ${reportLabel}s`, href: "/reports" },
+    { label: `Open knowledge base`, href: "/knowledge" },
   ];
 
   if (mode === "assigned-only") return assignedLinks;
@@ -1079,7 +1094,11 @@ export default function Dashboard({
     user.orgName ??
     "your organization";
   const roleLabel = RBAC.getRoleLabel(viewer.role ?? user.role);
-  const quickLinks = getQuickLinks(mode, user, viewer.organization_id);
+  const terminology = terminologyFromUser(user);
+  const quickLinks = getQuickLinks(mode, user, viewer.organization_id, terminology);
+  const lowerAssessments = terminology.plural.assessment.toLowerCase();
+  const lowerEvidence = terminology.evidence.toLowerCase();
+  const lowerTasks = terminology.plural.task.toLowerCase();
 
   const orgCount = user.organizationCount ?? 1;
   const hasMultipleOrgs = orgCount > 1;
@@ -1101,15 +1120,15 @@ export default function Dashboard({
               ? "Nothing urgent is assigned to you right now. Use the org switcher if you need a different context."
               : "Nothing urgent is assigned to you right now. All caught up in your organization.",
           deadlineTitle: "My deadlines",
-          deadlineDescription: "Deadlines tied to your assigned assessments and actions.",
+          deadlineDescription: `Deadlines tied to your assigned ${lowerAssessments} and ${lowerTasks}.`,
           activityTitle: "Recent activity on my work",
           activityDescription:
-            "Latest updates connected to the assessments and evidence items relevant to you.",
+            `Latest updates connected to the ${lowerAssessments} and ${lowerEvidence} items relevant to you.`,
           statLabels: {
-            activeAssessments: "My assessments",
-            overdueActions: "My overdue actions",
+            activeAssessments: `My ${lowerAssessments}`,
+            overdueActions: `My overdue ${lowerTasks}`,
             openFindings: "My open findings",
-            pendingEvidenceReviews: "Evidence awaiting my review",
+            pendingEvidenceReviews: `${terminology.evidence} awaiting my review`,
           },
           scopeLabel: "Assigned scope" as const,
           viewModeLabel: "Only your assigned work" as const,
@@ -1127,10 +1146,10 @@ export default function Dashboard({
             activityTitle: "Recent highlights",
             activityDescription: "Significant updates from the active organization.",
             statLabels: {
-              activeAssessments: "Active assessments",
-              overdueActions: "Overdue actions",
+              activeAssessments: `Active ${lowerAssessments}`,
+              overdueActions: `Overdue ${lowerTasks}`,
               openFindings: "Open findings",
-              pendingEvidenceReviews: "Pending evidence review",
+              pendingEvidenceReviews: `Pending ${lowerEvidence} review`,
             },
             scopeLabel: "Executive scope" as const,
             viewModeLabel: "High-level summary" as const,
@@ -1143,17 +1162,17 @@ export default function Dashboard({
                 "Cross-program view for the active client organization. Access related client work from the org switcher.",
               attentionTitle: "Needs attention",
               attentionDescription:
-                "Priority actions and assessment deadlines for the active client.",
+                `Priority ${lowerTasks} and ${lowerAssessments} deadlines for the active client.`,
               attentionEmpty: "No urgent work right now. The active client organization is clear for the moment.",
               deadlineTitle: "Upcoming deadlines",
-              deadlineDescription: "Closest due dates across actions and assessments in the active client organization.",
+              deadlineDescription: `Closest due dates across ${lowerTasks} and ${lowerAssessments} in the active client organization.`,
               activityTitle: "Recent activity",
               activityDescription: "Latest dashboard-relevant updates from the active client organization.",
               statLabels: {
-                activeAssessments: "Active assessments",
-                overdueActions: "Overdue actions",
+                activeAssessments: `Active ${lowerAssessments}`,
+                overdueActions: `Overdue ${lowerTasks}`,
                 openFindings: "Open findings",
-                pendingEvidenceReviews: "Pending evidence review",
+                pendingEvidenceReviews: `Pending ${lowerEvidence} review`,
               },
               scopeLabel: "Consultant scope" as const,
               viewModeLabel: "Client-wide view" as const,
@@ -1165,20 +1184,20 @@ export default function Dashboard({
                 "Operational overview for the active organization. All work, assignments, and deadlines in one place.",
               attentionTitle: "Needs attention",
               attentionDescription:
-                "Priority actions and assessment deadlines for the active organization.",
+                `Priority ${lowerTasks} and ${lowerAssessments} deadlines for the active organization.`,
               attentionEmpty:
                 hasMultipleOrgs
                   ? "No urgent work right now. The active organization is clear for the moment."
                   : "No urgent work right now. Your organization is clear for the moment.",
               deadlineTitle: "Upcoming deadlines",
-              deadlineDescription: "Closest due dates across actions and assessments in the active organization.",
+              deadlineDescription: `Closest due dates across ${lowerTasks} and ${lowerAssessments} in the active organization.`,
               activityTitle: "Recent activity",
               activityDescription: "Latest dashboard-relevant updates from the active organization.",
               statLabels: {
-                activeAssessments: "Active assessments",
-                overdueActions: "Overdue actions",
+                activeAssessments: `Active ${lowerAssessments}`,
+                overdueActions: `Overdue ${lowerTasks}`,
                 openFindings: "Open findings",
-                pendingEvidenceReviews: "Pending evidence review",
+                pendingEvidenceReviews: `Pending ${lowerEvidence} review`,
               },
               scopeLabel: "Organization scope" as const,
               viewModeLabel: "Org-wide operational view" as const,
@@ -1259,7 +1278,7 @@ export default function Dashboard({
           description={hero.attentionDescription}
           className="min-w-0"
         >
-          <AttentionList items={summary.attention_items} emptyState={hero.attentionEmpty} />
+          <AttentionList items={summary.attention_items} emptyState={hero.attentionEmpty} terminology={terminology} />
         </SectionCard>
 
         <div className="space-y-5">
@@ -1268,6 +1287,7 @@ export default function Dashboard({
               items={summary.upcoming_deadlines}
               selectedType={deadlineType}
               onTypeChange={setDeadlineType}
+              terminology={terminology}
             />
           </SectionCard>
 
@@ -1292,6 +1312,7 @@ export default function Dashboard({
           items={summary.recent_activity}
           selectedType={activityType}
           onTypeChange={setActivityType}
+          terminology={terminology}
         />
       </SectionCard>
 
@@ -1313,7 +1334,7 @@ export default function Dashboard({
 
             <TabsContent value="portfolio">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                <AnalyticsSection title="Assessment status" icon={PieChart}>
+                <AnalyticsSection title={`${terminology.assessment} status`} icon={PieChart}>
                   <AssessmentStatusChart data={summary.assessment_status_breakdown} />
                 </AnalyticsSection>
 
@@ -1321,7 +1342,7 @@ export default function Dashboard({
                   <FindingsSeverityChart data={summary.findings_by_severity} />
                 </AnalyticsSection>
 
-                <AnalyticsSection title="Site progress" icon={MapPin}>
+                <AnalyticsSection title={`${terminology.site} progress`} icon={MapPin}>
                   <SiteProgressList data={summary.site_progress} />
                 </AnalyticsSection>
               </div>
@@ -1329,7 +1350,7 @@ export default function Dashboard({
 
             <TabsContent value="ai-risk">
               <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
-                <AnalyticsSection title="Evidence pipeline" icon={FileSearch}>
+                <AnalyticsSection title={`${terminology.evidence} pipeline`} icon={FileSearch}>
                   <EvidencePipelineWidget data={summary.evidence_pipeline} />
                 </AnalyticsSection>
 

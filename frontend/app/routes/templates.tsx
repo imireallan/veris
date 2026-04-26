@@ -8,6 +8,7 @@ import { Card, CardContent, Button, Badge, Input, Label } from "~/components/ui"
 import { TemplateCard } from "~/components/TemplateCard";
 import { useToast } from "~/hooks/use-toast";
 import { useFetcherToast } from "~/hooks/use-fetcher-toast";
+import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 import { RBAC } from "~/types/rbac";
 import { ConfirmDialog } from "~/components/ConfirmDialog";
 
@@ -178,24 +179,27 @@ export default function TemplatesRoute() {
   };
 
   const canManageTemplates = RBAC.canManageTemplates(user);
+  const terminology = terminologyFromUser(user);
+  const assessmentTemplateLabel = `${terminology.assessment} Template`;
+  const assessmentTemplatesLabel = `${terminology.assessment} Templates`;
 
   return (
     <div className="max-w-7xl mx-auto py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Assessment Templates</h1>
+          <h1 className="text-3xl font-bold">{assessmentTemplatesLabel}</h1>
           <p className="text-muted-foreground mt-1">
             {canManageTemplates
-              ? "Create and manage master assessment templates" 
-              : "Browse available assessment templates"}
+              ? `Create and manage master ${lowerFirst(assessmentTemplatesLabel)}` 
+              : `Browse available ${lowerFirst(assessmentTemplatesLabel)}`}
           </p>
         </div>
         {canManageTemplates && (
           <Link to="/templates/new" className="inline-flex">
             <Button variant="default">
               <Plus className="w-4 h-4 mr-2" />
-              New Template
+              New {assessmentTemplateLabel}
             </Button>
           </Link>
         )}
@@ -209,7 +213,7 @@ export default function TemplatesRoute() {
               <FileText className="w-8 h-8 text-primary" />
               <div>
                 <p className="text-2xl font-bold">{templates.length}</p>
-                <p className="text-sm text-muted-foreground">Total Templates</p>
+                <p className="text-sm text-muted-foreground">Total {assessmentTemplatesLabel}</p>
               </div>
             </div>
           </CardContent>

@@ -27,6 +27,8 @@ import {
 } from "~/components/ui";
 import { FrameworkMappingBadge, type FrameworkMapping } from "~/components/FrameworkMappingBadge";
 import { FrameworkMappingModal } from "~/components/FrameworkMappingModal";
+import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
+import type { User } from "~/types";
 
 interface QuestionnaireQuestion {
   id: string;
@@ -112,6 +114,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     orgId,
     questions: Array.isArray(questions) ? questions : (questions as any)?.results ?? [],
     responses: Array.isArray(responses) ? responses : (responses as any)?.results ?? [],
+    user,
   };
 }
 
@@ -429,11 +432,14 @@ function QuestionCard({
 }
 
 export default function QuestionnaireRoute() {
-  const { assessmentId, orgId, questions, responses } = useLoaderData<typeof loader>();
+  const { assessmentId, orgId, questions, responses, user } = useLoaderData<typeof loader>();
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [localQuestions, setLocalQuestions] = useState<QuestionnaireQuestion[]>(questions);
+
+  const terminology = terminologyFromUser(user);
+  const assessmentLabel = terminology.assessment;
 
   const handleAddMapping = (questionId: string) => {
     setSelectedQuestionId(questionId);
@@ -461,7 +467,7 @@ export default function QuestionnaireRoute() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href={`/assessments/${assessmentId}`}>Assessment</BreadcrumbLink>
+            <BreadcrumbLink href={`/assessments/${assessmentId}`}>{assessmentLabel}</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
@@ -476,14 +482,14 @@ export default function QuestionnaireRoute() {
           to={`/assessments/${assessmentId}`} 
           className="text-sm text-primary hover:underline"
         >
-          Back to Assessment
+          Back to {assessmentLabel}
         </Link>
       </div>
 
       <div className="grid gap-6">
         {localQuestions.length === 0 ? (
           <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed">
-            <p className="text-muted-foreground">No questions associated with this assessment.</p>
+            <p className="text-muted-foreground">No questions associated with this {lowerFirst(assessmentLabel)}.</p>
           </div>
         ) : (
           localQuestions.map((q: QuestionnaireQuestion, idx: number) => {

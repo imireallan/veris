@@ -5,6 +5,8 @@ import {
   ProgressBar
 } from "~/components/ui";
 import { Clock, Building2 } from "lucide-react";
+import { terminologyFromUser } from "~/lib/terminology";
+import type { User } from "~/types";
 
 const statusVariant = (
   s: string,
@@ -45,19 +47,22 @@ export function AssessmentCard({
   frameworkName,
   siteName,
   orgName,
+  user,
 }: {
   assessment: any;
   focusAreaName?: string;
   frameworkName?: string;
   siteName?: string;
   orgName?: string;
+  user?: User | null;
 }) {
+  const terminology = terminologyFromUser(user);
   // Use display_name from API if available, otherwise build from available data
   const name =
     assessment.display_name ||
     focusAreaName ||
     frameworkName ||
-    `Assessment ${assessment.id.slice(0, 8)}`;
+    `${terminology.assessment} ${assessment.id.slice(0, 8)}`;
 
   return (
     <Card className="hover:shadow-lg hover:-translate-y-1 hover:border-primary/50 hover:shadow-primary/10 transition-all duration-300 group">

@@ -3,10 +3,12 @@ import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { useState } from "react";
+import { terminologyFromUser } from "~/lib/terminology";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   await requireUser(request);
   const token = await getUserToken(request);
+  const user = await requireUser(request);
   const [findings, sites, reports, cipCycles, plans, frameworks, orgs] =
     await Promise.all([
       api.get("/api/findings/", token, request).catch(() => ({ count: 0, results: [] })),
@@ -18,18 +20,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
       api.get("/api/organizations/", token, request).catch(() => ({ count: 0, results: [] })),
     ]);
   
-  return { findings, sites, reports, cipCycles, plans, frameworks, orgs };
+  return { findings, sites, reports, cipCycles, plans, frameworks, orgs, user };
 }
-
-const TABS = [
-  { key: "findings", label: "Findings", icon: "⚠", color: "border-red-500" },
-  { key: "sites", label: "Sites", icon: "📍", color: "border-orange-500" },
-  { key: "reports", label: "Reports", icon: "📄", color: "border-blue-500" },
-  { key: "cipCycles", label: "CIP Cycles", icon: "🔄", color: "border-green-500" },
-  { key: "plans", label: "Assess. Plans", icon: "📅", color: "border-purple-500" },
-  { key: "frameworks", label: "Frameworks", icon: "📋", color: "border-teal-500" },
-  { key: "orgs", label: "Organizations", icon: "🏢", color: "border-indigo-500" },
-] as const;
 
 const SEVERITY_COLORS: Record<string, string> = {
   CRITICAL: "bg-red-100 text-red-800",
@@ -61,6 +53,17 @@ function truncate(s: string, n = 120) {
 export default function DataRoute() {
   const data = useLoaderData<typeof loader>();
   const [tab, setTab] = useState<string>("findings");
+  const terminology = terminologyFromUser(data.user);
+
+  const TABS = [
+    { key: "findings", label: "Findings", icon: "⚠", color: "border-red-500" },
+    { key: "sites", label: terminology.plural.site, icon: "📍", color: "border-orange-500" },
+    { key: "reports", label: terminology.plural.report, icon: "📄", color: "border-blue-500" },
+    { key: "cipCycles", label: "CIP Cycles", icon: "🔄", color: "border-green-500" },
+    { key: "plans", label: `Assess. Plans`, icon: "📅", color: "border-purple-500" },
+    { key: "frameworks", label: "Frameworks", icon: "📋", color: "border-teal-500" },
+    { key: "orgs", label: "Organizations", icon: "🏢", color: "border-indigo-500" },
+  ] as const;
 
   return (
     <div className="space-y-6">

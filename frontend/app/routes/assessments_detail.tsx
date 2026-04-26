@@ -25,6 +25,8 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "~/components/ui";
+import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
+import type { TerminologyLabels } from "~/lib/terminology";
 import type { AssessmentReport, User } from "~/types";
 import { RBAC } from "~/types/rbac";
 
@@ -32,10 +34,14 @@ export function getReportExportUiState({
   user,
   hasReport,
   generatingReport,
+  reportLabel,
+  assessmentLabel,
 }: {
   user: User | null;
   hasReport: boolean;
   generatingReport: boolean;
+  reportLabel: string;
+  assessmentLabel: string;
 }) {
   const canExportReport = RBAC.canExportReports(user);
 
@@ -43,7 +49,7 @@ export function getReportExportUiState({
     return {
       canClick: false,
       disabled: true,
-      tooltip: "Generating PDF report...",
+      tooltip: `Generating PDF ${reportLabel.toLowerCase()}...`,
     };
   }
 
@@ -51,7 +57,7 @@ export function getReportExportUiState({
     return {
       canClick: false,
       disabled: true,
-      tooltip: "No report generated yet. Complete the assessment and create a report first.",
+      tooltip: `No ${reportLabel.toLowerCase()} generated yet. Complete the ${assessmentLabel.toLowerCase()} and create a ${reportLabel.toLowerCase()} first.`,
     };
   }
 
@@ -59,23 +65,27 @@ export function getReportExportUiState({
     return {
       canClick: false,
       disabled: true,
-      tooltip: "You don't have permission to export reports. Contact your organization admin.",
+      tooltip: `You don't have permission to export ${reportLabel.toLowerCase()}s. Contact your organization admin.`,
     };
   }
 
   return {
     canClick: true,
     disabled: false,
-    tooltip: "Download PDF report",
+    tooltip: `Download PDF ${reportLabel.toLowerCase()}`,
   };
 }
 
 export function getReportViewUiState({
   user,
   hasReport,
+  reportLabel,
+  assessmentLabel,
 }: {
   user: User | null;
   hasReport: boolean;
+  reportLabel: string;
+  assessmentLabel: string;
 }) {
   const canViewReport = RBAC.canViewReports(user);
 
@@ -84,7 +94,7 @@ export function getReportViewUiState({
       canView: canViewReport,
       showTab: canViewReport,
       state: "empty" as const,
-      message: "No report has been generated for this assessment yet.",
+      message: `No ${reportLabel.toLowerCase()} has been generated for this ${assessmentLabel.toLowerCase()} yet.`,
     };
   }
 
@@ -93,7 +103,7 @@ export function getReportViewUiState({
       canView: false,
       showTab: true,
       state: "denied" as const,
-      message: "You don't have permission to view this report.",
+      message: `You don't have permission to view this ${reportLabel.toLowerCase()}.`,
     };
   }
 
@@ -217,6 +227,11 @@ export default function AssessmentDetailRoute() {
   });
   const [editingFinding, setEditingFinding] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const terminology = terminologyFromUser(data.user);
+  const assessmentLabel = terminology.assessment;
+  const assessmentsLabel = terminology.plural.assessment;
+  const tasksLabel = terminology.plural.task;
+  const reportLabel = terminology.report;
 
   // Handle permission denied error
   if (data.error === "permission_denied" || !data.assessment) {
@@ -225,10 +240,10 @@ export default function AssessmentDetailRoute() {
         <AlertTriangle className="w-12 h-12 mx-auto text-orange-500" />
         <h2 className="text-xl font-medium">Access Denied</h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          You don't have permission to view this assessment. Contact your organization admin if you believe this is an error.
+          {`You don't have permission to view this ${lowerFirst(assessmentLabel)}. Contact your organization admin if you believe this is an error.`}
         </p>
         <Link to="/assessments" className="text-primary hover:underline">
-          ← Back to assessments
+          ← Back to {lowerFirst(assessmentsLabel)}
         </Link>
       </div>
     );
@@ -239,10 +254,14 @@ export default function AssessmentDetailRoute() {
     user: data.user,
     hasReport: Boolean(data.report),
     generatingReport,
+    reportLabel,
+    assessmentLabel,
   });
   const reportViewUiState = getReportViewUiState({
     user: data.user,
     hasReport: Boolean(data.report),
+    reportLabel,
+    assessmentLabel,
   });
 
   const handleSave = () => {
@@ -254,13 +273,13 @@ export default function AssessmentDetailRoute() {
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/assessments">Assessments</BreadcrumbLink>
+            <BreadcrumbLink href="/assessments">{assessmentsLabel}</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <div className="inline-block" title={a.display_name || `Assessment ${a.id.slice(0, 8)}`}>
+            <div className="inline-block" title={a.display_name || `${assessmentLabel} ${a.id.slice(0, 8)}`}>
               <BreadcrumbPage>
-                {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
+                {a.display_name || `${assessmentLabel} ${a.id.slice(0, 8)}`}
               </BreadcrumbPage>
             </div>
           </BreadcrumbItem>
@@ -272,9 +291,9 @@ export default function AssessmentDetailRoute() {
           <ArrowLeft className="w-5 h-5 text-muted-foreground" />
         </Link>
         <div className="flex-1">
-          <div className="inline-block" title={a.display_name || `Assessment ${a.id.slice(0, 8)}`}>
+          <div className="inline-block" title={a.display_name || `${assessmentLabel} ${a.id.slice(0, 8)}`}>
             <h2 className="text-2xl font-semibold tracking-tight">
-              {a.display_name || `Assessment ${a.id.slice(0, 8)}`}
+              {a.display_name || `${assessmentLabel} ${a.id.slice(0, 8)}`}
             </h2>
           </div>
           <p className="text-muted-foreground text-sm mt-0.5">
@@ -312,7 +331,7 @@ export default function AssessmentDetailRoute() {
                 ) : (
                   <>
                     <Download className="w-4 h-4" />
-                    Download Report
+                    Download {reportLabel}
                   </>
                 )}
               </Button>
@@ -411,8 +430,8 @@ export default function AssessmentDetailRoute() {
           { key: "findings", label: "Findings", count: data.findings.length },
           { key: "plan", label: "Plan" },
           { key: "cip", label: "CIP", count: data.cipCycles.length },
-          { key: "tasks", label: "Tasks", count: data.tasks.length },
-          ...(reportViewUiState.showTab ? [{ key: "report", label: "Report" }] : []),
+          { key: "tasks", label: tasksLabel, count: data.tasks.length },
+          ...(reportViewUiState.showTab ? [{ key: "report", label: reportLabel }] : []),
         ]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -426,7 +445,7 @@ export default function AssessmentDetailRoute() {
       </Link>
 
       {activeTab === "overview" && (
-        <SectionCard title="Summary" padding="compact">
+        <SectionCard title={`${assessmentLabel} summary`} padding="compact">
           {a.ai_summary ? (
             <div
               className="prose prose-sm max-w-none text-foreground"
@@ -455,13 +474,13 @@ export default function AssessmentDetailRoute() {
       )}
 
       {activeTab === "plan" && (
-        <SectionCard title="Assessment Plan">
+        <SectionCard title={`${assessmentLabel} Plan`}>
           {data.plan ? (
-            <PlanDetails plan={data.plan} />
+            <PlanDetails plan={data.plan} terminology={terminology} />
           ) : (
             <EmptyState
               icon={FileText}
-              title="No assessment plan yet"
+              title={`No ${lowerFirst(assessmentLabel)} plan yet`}
               description="Create a plan to outline key dates and milestones."
             />
           )}
@@ -510,8 +529,8 @@ export default function AssessmentDetailRoute() {
           {data.tasks.length === 0 ? (
             <EmptyState
               icon={FileText}
-              title="No tasks yet"
-              description="Tasks will appear here when assigned."
+              title={`No ${lowerFirst(tasksLabel)} yet`}
+              description={`${tasksLabel} will appear here when assigned.`}
             />
           ) : (
             data.tasks.map((t: any) => (
@@ -544,7 +563,7 @@ export default function AssessmentDetailRoute() {
       )}
 
       {activeTab === "report" && (
-        <ReportTab report={data.report} viewState={reportViewUiState} />
+        <ReportTab report={data.report} viewState={reportViewUiState} terminology={terminology} />
       )}
     </div>
   );
@@ -562,15 +581,20 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
 function ReportTab({
   report,
   viewState,
+  terminology,
 }: {
   report: AssessmentReport | null;
   viewState: ReturnType<typeof getReportViewUiState>;
+  terminology: TerminologyLabels;
 }) {
+  const reportLabel = terminology.report;
+  const assessmentLabel = terminology.assessment;
+
   if (!report) {
     return (
       <EmptyState
         icon={FileText}
-        title="No report yet"
+        title={`No ${lowerFirst(reportLabel)} yet`}
         description={viewState.message}
       />
     );
@@ -580,7 +604,7 @@ function ReportTab({
     return (
       <EmptyState
         icon={AlertTriangle}
-        title="Report access restricted"
+        title={`${reportLabel} access restricted`}
         description={viewState.message}
       />
     );
@@ -588,12 +612,12 @@ function ReportTab({
 
   return (
     <div className="space-y-4">
-      <SectionCard title="Report overview" description="Read-only assessment report content.">
+      <SectionCard title={`${reportLabel} overview`} description={`Read-only ${lowerFirst(assessmentLabel)} ${lowerFirst(reportLabel)} content.`}>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <ReportMetaItem label="Title" value={report.title || "—"} />
           <ReportMetaItem label="Status" value={formatDisplayLabel(report.status)} />
-          <ReportMetaItem label="Assessment start" value={formatDateValue(report.assessment_start_date)} />
-          <ReportMetaItem label="Assessment end" value={formatDateValue(report.assessment_end_date)} />
+          <ReportMetaItem label={`${assessmentLabel} start`} value={formatDateValue(report.assessment_start_date)} />
+          <ReportMetaItem label={`${assessmentLabel} end`} value={formatDateValue(report.assessment_end_date)} />
           <ReportMetaItem label="Published" value={formatDateValue(report.report_published_date)} />
           <ReportMetaItem label="Created" value={formatDateValue(report.created_at)} />
           <ReportMetaItem label="Last updated" value={formatDateValue(report.updated_at)} />
@@ -642,7 +666,7 @@ function ReportTab({
           <ReportListBlock items={report.limitations} emptyValue="No limitations recorded." />
         </SectionCard>
         <SectionCard title="Disclaimer" padding="compact">
-          <ReportTextBlock value={report.disclaimer} emptyValue="No disclaimer provided." />
+          <ReportTextBlock value={report.disclaimer} emptyValue="No disclaimer provided." renderHtml />
         </SectionCard>
       </div>
     </div>
@@ -660,14 +684,23 @@ function ReportMetaItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ReportTextBlock({ value, emptyValue }: { value?: string | null; emptyValue: string }) {
+function ReportTextBlock({ value, emptyValue, renderHtml = false }: { value?: string | null; emptyValue: string; renderHtml?: boolean }) {
   const content = value?.trim();
 
-  return content ? (
-    <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{content}</p>
-  ) : (
-    <p className="text-sm text-muted-foreground">{emptyValue}</p>
-  );
+  if (!content) {
+    return <p className="text-sm text-muted-foreground">{emptyValue}</p>;
+  }
+
+  if (renderHtml) {
+    return (
+      <div
+        className="text-sm leading-6 text-foreground [&>h1]:text-lg [&>h1]:font-semibold [&>h1]:mt-4 [&>h1]:mb-2 [&>h2]:text-base [&>h2]:font-semibold [&>h2]:mt-3 [&>h2]:mb-1 [&>p]:my-1 [&>ul]:list-disc [&>ul]:ml-4 [&>ol]:list-decimal [&>ol]:ml-4"
+        dangerouslySetInnerHTML={{ __html: content }}
+      />
+    );
+  }
+
+  return <p className="whitespace-pre-wrap text-sm leading-6 text-foreground">{content}</p>;
 }
 
 function ReportListBlock({
@@ -677,7 +710,7 @@ function ReportListBlock({
   items?: unknown[] | null;
   emptyValue: string;
 }) {
-  if (!items || items.length === 0) {
+  if (!items || !Array.isArray(items) || items.length === 0) {
     return <p className="text-sm text-muted-foreground">{emptyValue}</p>;
   }
 
@@ -1011,14 +1044,20 @@ const findingStatusVariant = (s: string) => {
   }
 };
 
-function PlanDetails({ plan }: { plan: any }) {
+function PlanDetails({
+  plan,
+  terminology,
+}: {
+  plan: any;
+  terminology: TerminologyLabels;
+}) {
   return (
     <div className="space-y-4 text-sm">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <DetailItem label="Site Visit Start" value={plan.site_assessment_start} />
-        <DetailItem label="Site Visit End" value={plan.site_assessment_end} />
-        <DetailItem label="Draft Report" value={plan.draft_report_deadline} />
-        <DetailItem label="Final Report" value={plan.final_report_deadline} />
+        <DetailItem label={`${terminology.site} Visit Start`} value={plan.site_assessment_start} />
+        <DetailItem label={`${terminology.site} Visit End`} value={plan.site_assessment_end} />
+        <DetailItem label={`Draft ${terminology.report}`} value={plan.draft_report_deadline} />
+        <DetailItem label={`Final ${terminology.report}`} value={plan.final_report_deadline} />
       </div>
       {plan.notes && (
         <p className="text-sm text-muted-foreground pt-4 border-t">{plan.notes}</p>

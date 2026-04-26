@@ -53,6 +53,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: true,
         generatingReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: false,
@@ -71,6 +73,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: true,
         generatingReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: true,
@@ -89,6 +93,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: false,
         generatingReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: false,
@@ -101,6 +107,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: true,
         generatingReport: true,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: false,
@@ -120,6 +128,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: true,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: true,
@@ -138,6 +148,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: true,
@@ -156,6 +168,8 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: true,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: false,
@@ -174,12 +188,50 @@ describe("assessment detail report view UI state", () => {
       getReportViewUiState({
         user,
         hasReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canView: false,
       showTab: false,
       state: "empty",
       message: "No report has been generated for this assessment yet.",
+    });
+  });
+
+  it("uses organization-specific terminology in messages", () => {
+    const user = makeUser({
+      activePermissions: ["assessment:view", "report:view"],
+    });
+
+    // Demo Energy Corp terminology
+    expect(
+      getReportViewUiState({
+        user,
+        hasReport: false,
+        reportLabel: "Scorecard",
+        assessmentLabel: "Audit",
+      }),
+    ).toEqual({
+      canView: true,
+      showTab: true,
+      state: "empty",
+      message: "No Scorecard has been generated for this Audit yet.",
+    });
+
+    // Demo Automotive Inc terminology
+    expect(
+      getReportViewUiState({
+        user,
+        hasReport: true,
+        reportLabel: "Summary",
+        assessmentLabel: "Review",
+      }),
+    ).toEqual({
+      canView: false,
+      showTab: true,
+      state: "denied",
+      message: "You don't have permission to view this Summary.",
     });
   });
 });

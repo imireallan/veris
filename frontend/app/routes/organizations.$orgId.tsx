@@ -14,6 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "~/components/ui";
+import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
@@ -49,6 +50,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
 export default function OrganizationDetailRoute() {
   const { org, assessments, user } = useLoaderData<typeof loader>();
+  const terminology = terminologyFromUser(user);
 
   if (!user) {
     return <div className="p-8 text-center">Loading user profile...</div>;
@@ -79,9 +81,9 @@ export default function OrganizationDetailRoute() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard
-          title="Assessments"
+          title={terminology.plural.assessment}
           value={assessments.length}
-          subtitle="Total assessments"
+          subtitle={`Total ${lowerFirst(terminology.plural.assessment)}`}
         />
         <StatCard
           title="Focus Areas"
@@ -89,9 +91,9 @@ export default function OrganizationDetailRoute() {
           subtitle="ESG focus areas"
         />
         <StatCard
-          title="Sites"
+          title={terminology.plural.site}
           value={org.site_count ?? "—"}
-          subtitle="Registered sites"
+          subtitle={`Registered ${lowerFirst(terminology.plural.site)}`}
         />
       </div>
 
@@ -101,7 +103,7 @@ export default function OrganizationDetailRoute() {
             to={`/organizations/${org.id}/assessments`}
             className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
           >
-            View Assessments →
+            View {terminology.plural.assessment} →
           </Link>
 
           {RBAC.canManageTemplates(user) && (

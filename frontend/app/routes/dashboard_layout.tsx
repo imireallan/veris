@@ -4,6 +4,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { getUserToken, requireUser } from "~/.server/sessions";
 import { AppLayout } from "~/components/AppLayout";
 import { getAccessibleOrganizations } from "~/.server/organizations";
+import { terminologyFromUser } from "~/lib/terminology";
 import { RBAC } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -13,10 +14,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const organizations = await getAccessibleOrganizations(request, token);
 
+  const terminology = terminologyFromUser(user);
   const navLinks: { to: string; label: string; icon: string }[] = [
     { to: "/app", label: "Dashboard", icon: "LayoutDashboard" },
-    { to: "/assessments", label: "Assessments", icon: "ClipboardCheck" },
-    { to: "/templates", label: "Templates", icon: "FileText" },
+    { to: "/assessments", label: terminology.plural.assessment, icon: "ClipboardCheck" },
+    { to: "/templates", label: `${terminology.assessment} Templates`, icon: "FileText" },
     { to: "/organizations", label: "Organizations", icon: "Building2" },
     { to: "/knowledge", label: "Knowledge", icon: "BookOpen" },
     { to: "/knowledge/chat", label: "AI Chat", icon: "MessageSquare" },

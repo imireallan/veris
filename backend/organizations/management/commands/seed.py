@@ -78,6 +78,13 @@ class Command(BaseCommand):
                     "favicon_url": "",
                     "font_family": "Inter, system-ui, sans-serif",
                 },
+                "terminology": {
+                    "assessment_label": "Audit",
+                    "site_label": "Facility",
+                    "task_label": "Corrective Action",
+                    "evidence_label": "Document",
+                    "report_label": "Scorecard",
+                },
             },
             {
                 "name": "Demo Mining Ltd",
@@ -97,6 +104,13 @@ class Command(BaseCommand):
                     "favicon_url": "",
                     "font_family": "Inter, system-ui, sans-serif",
                 },
+                "terminology": {
+                    "assessment_label": "Assessment",
+                    "site_label": "Mine Site",
+                    "task_label": "Action Item",
+                    "evidence_label": "Evidence",
+                    "report_label": "Report",
+                },
             },
             {
                 "name": "Demo Automotive Inc",
@@ -115,6 +129,13 @@ class Command(BaseCommand):
                     "logo_url": "",
                     "favicon_url": "",
                     "font_family": "Inter, system-ui, sans-serif",
+                },
+                "terminology": {
+                    "assessment_label": "Review",
+                    "site_label": "Plant",
+                    "task_label": "Task",
+                    "evidence_label": "Attachment",
+                    "report_label": "Summary",
                 },
             },
             {

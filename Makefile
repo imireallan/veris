@@ -25,6 +25,32 @@ help: ## Show this help
 		cp .env.example .env; \
 	fi
 
+# Production environment file
+.env.production: .env.production.example
+	@echo "Creating .env.production from .env.production.example..."
+	@if [ -f .env.production ]; then \
+		echo ".env.production already exists. Skipping creation."; \
+	else \
+		cp .env.production.example .env.production; \
+		echo "WARNING: .env.production was created from example. Update with real production values!"; \
+	fi
+
+# Load production env variables into Make environment
+# This allows make targets to use $(POSTGRES_USER), $(POSTGRES_DB), etc.
+ifneq (,$(wildcard .env.production))
+include .env.production
+export
+endif
+
+# Helper to check if .env.production exists
+check-prod-env:
+	@if [ ! -f .env.production ]; then \
+		echo "ERROR: .env.production not found!"; \
+		echo "Create it from .env.production.example and update with real values."; \
+		echo "Or use: cp .env.production.example .env.production"; \
+		exit 1; \
+	fi
+
 # ─────────────────────────────────────────────
 # Core Lifecycle
 # ─────────────────────────────────────────────
@@ -103,6 +129,64 @@ db-up: ## Start database only
 	docker compose up -d db
 
 # ─────────────────────────────────────────────
+# Production (EC2) - uses .env.production
+# ─────────────────────────────────────────────
+prod-wire: check-prod-env ## Full production setup: DB → migrations → seed → framework import
+	@echo "\033[33m>>> Starting production database...\033[0m"
+	docker compose --env-file .env.production -f docker-compose.prod.yml up -d db
+	@echo "Waiting for database (healthcheck)..."
+	@until docker compose --env-file .env.production -f docker-compose.prod.yml exec db pg_isready -U $(POSTGRES_USER) > /dev/null 2>&1; do sleep 1; done
+	@echo "\033[33m>>> Running Django migrations...\033[0m"
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py migrate
+	@echo "\033[33m>>> Seeding data...\033[0m"
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py seed
+	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
+	$(MAKE) prod-import-framework-dump
+	@echo ""
+	@echo "\033[32m========================================\033[0m"
+	@echo "\033[32m  Production wire complete!\033[0m"
+	@echo "\033[32m========================================\033[0m"
+
+prod-up: check-prod-env ## Start all production services
+	docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+
+prod-up-build: check-prod-env ## Start all production services with rebuild
+	docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+
+prod-down: check-prod-env ## Stop all production services
+	docker compose --env-file .env.production -f docker-compose.prod.yml down
+
+prod-down-clean: check-prod-env ## Stop production services + remove volumes
+	docker compose --env-file .env.production -f docker-compose.prod.yml down -v --remove-orphans
+
+prod-logs: check-prod-env ## Tail all production logs
+	docker compose --env-file .env.production -f docker-compose.prod.yml logs -f
+
+prod-logs-backend: check-prod-env ## Tail backend production logs
+	docker compose --env-file .env.production -f docker-compose.prod.yml logs -f backend
+
+prod-logs-frontend: check-prod-env ## Tail frontend production logs
+	docker compose --env-file .env.production -f docker-compose.prod.yml logs -f frontend
+
+prod-shell: check-prod-env ## Django shell in production
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec backend python manage.py shell
+
+prod-bash: check-prod-env ## Bash into backend production container
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec backend bash
+
+prod-migrate: check-prod-env ## Run migrations in production
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py migrate
+
+prod-seed: check-prod-env ## Seed data in production
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py seed
+
+prod-restart: check-prod-env ## Restart all production services
+	docker compose --env-file .env.production -f docker-compose.prod.yml restart
+
+prod-rebuild: check-prod-env ## Rebuild and restart all production services
+	docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --force-recreate
+
+# ─────────────────────────────────────────────
 # Backend (Django)
 # ─────────────────────────────────────────────
 backend-makemigrations: ## Create migrations
@@ -135,6 +219,16 @@ import-framework-dump: ## Import legacy framework data into Veris DB
 	@echo "Temp DB loaded. Running migration..."
 	docker compose run --rm backend python migrate_framework_dump.py
 	@echo "Framework import complete!"
+
+prod-import-framework-dump: check-prod-env ## Import legacy framework data into production DB
+	@echo "Loading framework.sql into production temp database..."
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "DROP DATABASE IF EXISTS framework_import;"
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "CREATE DATABASE framework_import;"
+	docker compose --env-file .env.production -f docker-compose.prod.yml cp backend/framework.sql db:/tmp/framework.sql
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $(POSTGRES_USER) -d framework_import -f /tmp/framework.sql
+	@echo "Temp DB loaded. Running migration..."
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python migrate_framework_dump.py
+	@echo "Production framework import complete!"
 
 # ─────────────────────────────────────────────
 # Frontend (Vite)

@@ -35,10 +35,12 @@ help: ## Show this help
 		echo "WARNING: .env.production was created from example. Update with real production values!"; \
 	fi
 
-# Load production env for make targets
-define load_prod_env
-$(eval export $(shell grep -v '^#' .env.production | xargs))
-endef
+# Load production env variables into Make environment
+# This allows make targets to use $(POSTGRES_USER), $(POSTGRES_DB), etc.
+ifneq (,$(wildcard .env.production))
+include .env.production
+export
+endif
 
 # Helper to check if .env.production exists
 check-prod-env:
@@ -139,7 +141,7 @@ prod-wire: check-prod-env ## Full production setup: DB → migrations → seed �
 	@echo "\033[33m>>> Seeding data...\033[0m"
 	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py seed
 	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
-	$(MAKE) import-framework-dump
+	$(MAKE) prod-import-framework-dump
 	@echo ""
 	@echo "\033[32m========================================\033[0m"
 	@echo "\033[32m  Production wire complete!\033[0m"
@@ -217,6 +219,16 @@ import-framework-dump: ## Import legacy framework data into Veris DB
 	@echo "Temp DB loaded. Running migration..."
 	docker compose run --rm backend python migrate_framework_dump.py
 	@echo "Framework import complete!"
+
+prod-import-framework-dump: check-prod-env ## Import legacy framework data into production DB
+	@echo "Loading framework.sql into production temp database..."
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "DROP DATABASE IF EXISTS framework_import;"
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "CREATE DATABASE framework_import;"
+	docker compose --env-file .env.production -f docker-compose.prod.yml cp backend/framework.sql db:/tmp/framework.sql
+	docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db psql -U $(POSTGRES_USER) -d framework_import -f /tmp/framework.sql
+	@echo "Temp DB loaded. Running migration..."
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python migrate_framework_dump.py
+	@echo "Production framework import complete!"
 
 # ─────────────────────────────────────────────
 # Frontend (Vite)

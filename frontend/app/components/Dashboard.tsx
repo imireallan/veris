@@ -972,32 +972,39 @@ function getQuickLinks(
   mode: DashboardMode,
   user: User,
   activeOrgId?: string | null,
+  terminology?: ReturnType<typeof terminologyFromUser>,
 ) {
+  const assessmentLabel = terminology?.assessment ?? "Assessment";
+  const assessmentsLabel = terminology?.plural.assessment ?? "Assessments";
+  const reportLabel = terminology?.report ?? "Report";
+  const evidenceLabel = terminology?.evidence ?? "Evidence";
+  const lowerAssessments = assessmentsLabel.toLowerCase();
+
   const orgWideLinks = [
-    { label: "View assessments", href: "/assessments" },
-    { label: "Review templates", href: "/templates" },
-    { label: "Open knowledge base", href: "/knowledge" },
-    { label: "Ask AI", href: "/knowledge/chat" },
+    { label: `View ${lowerAssessments}`, href: "/assessments" },
+    { label: `Review templates`, href: "/templates" },
+    { label: `Open knowledge base`, href: "/knowledge" },
+    { label: `Ask AI`, href: "/knowledge/chat" },
   ];
 
   const assignedLinks = [
-    { label: "Open my assessments", href: "/assessments" },
-    { label: "Review evidence", href: "/knowledge" },
-    { label: "Ask AI for context", href: "/knowledge/chat" },
-    { label: "Update my profile", href: "/settings/profile" },
+    { label: `Open my ${lowerAssessments}`, href: "/assessments" },
+    { label: `Review ${evidenceLabel}`, href: "/knowledge" },
+    { label: `Ask AI for context`, href: "/knowledge/chat" },
+    { label: `Update my profile`, href: "/settings/profile" },
   ];
 
   const consultantLinks = [
-    { label: "Cross-client assessments", href: "/assessments" },
-    { label: "Review templates", href: "/templates" },
-    { label: "Open knowledge base", href: "/knowledge" },
-    { label: "Ask AI", href: "/knowledge/chat" },
+    { label: `Cross-client ${lowerAssessments}`, href: "/assessments" },
+    { label: `Review templates`, href: "/templates" },
+    { label: `Open knowledge base`, href: "/knowledge" },
+    { label: `Ask AI`, href: "/knowledge/chat" },
   ];
 
   const executiveLinks = [
-    { label: "View assessments", href: "/assessments" },
-    { label: "Export reports", href: "/reports" },
-    { label: "Open knowledge base", href: "/knowledge" },
+    { label: `View ${lowerAssessments}`, href: "/assessments" },
+    { label: `Export ${reportLabel}s`, href: "/reports" },
+    { label: `Open knowledge base`, href: "/knowledge" },
   ];
 
   if (mode === "assigned-only") return assignedLinks;
@@ -1087,8 +1094,8 @@ export default function Dashboard({
     user.orgName ??
     "your organization";
   const roleLabel = RBAC.getRoleLabel(viewer.role ?? user.role);
-  const quickLinks = getQuickLinks(mode, user, viewer.organization_id);
   const terminology = terminologyFromUser(user);
+  const quickLinks = getQuickLinks(mode, user, viewer.organization_id, terminology);
   const lowerAssessments = terminology.plural.assessment.toLowerCase();
   const lowerEvidence = terminology.evidence.toLowerCase();
   const lowerTasks = terminology.plural.task.toLowerCase();

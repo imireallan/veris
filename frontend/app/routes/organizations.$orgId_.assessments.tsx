@@ -5,6 +5,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { Button, SearchBar, EmptyState, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
+import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 import type { User } from "~/types";
 import { RBAC } from "~/types/rbac";
 
@@ -57,6 +58,9 @@ export default function OrganizationAssessments() {
   const search = searchParams.get("q") || "";
   const currentPage = parseInt(searchParams.get("page") || "1");
   
+  const terminology = terminologyFromUser(user);
+  const assessmentLabel = terminology.assessment;
+  const assessmentsLabel = terminology.plural.assessment;
   const PAGE_SIZE = 5;
   
   const filteredAssessments = assessments.filter((a: any) => 
@@ -79,7 +83,7 @@ export default function OrganizationAssessments() {
     <div className="flex items-center justify-between mt-6">
       <div className="text-sm text-muted-foreground">
         Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, filteredAssessments.length)} to{" "}
-        {Math.min(currentPage * PAGE_SIZE, filteredAssessments.length)} of {filteredAssessments.length} assessments
+        {Math.min(currentPage * PAGE_SIZE, filteredAssessments.length)} of {filteredAssessments.length} {lowerFirst(assessmentsLabel)}
       </div>
       <div className="flex items-center gap-1">
         <Button
@@ -128,7 +132,7 @@ export default function OrganizationAssessments() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Assessments</BreadcrumbPage>
+            <BreadcrumbPage>{assessmentsLabel}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -137,10 +141,10 @@ export default function OrganizationAssessments() {
         <div>
           <h2 className="text-2xl font-semibold text-foreground flex items-center gap-2">
             <FileText className="w-6 h-6" />
-            Organization Assessments
+            Organization {assessmentsLabel}
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
-            Managing assessments for this organization.
+            Managing {lowerFirst(assessmentsLabel)} for this organization.
           </p>
         </div>
         <Button
@@ -155,7 +159,7 @@ export default function OrganizationAssessments() {
       {RBAC.canCreateAssessments(user, orgId!) && (
         <Link to={`/assessments/new?orgId=${orgId}`}>
           <Button size="lg">
-            <Plus className="w-5 h-5" /> New Assessment
+            <Plus className="w-5 h-5" /> New {assessmentLabel}
           </Button>
         </Link>
       )}
@@ -169,20 +173,20 @@ export default function OrganizationAssessments() {
           next.set("page", "1");
           setSearchParams(next);
         }}
-        placeholder="Search assessments..."
+        placeholder={`Search ${lowerFirst(assessmentsLabel)}...`}
       />
 
       {filteredAssessments.length === 0 ? (
         accessDenied ? (
           <EmptyState
             icon={FileText}
-            title="No access to assessments"
-            description="You don't have permission to view assessments in this organization. Contact your admin if you need access."
+            title={`No access to ${lowerFirst(assessmentsLabel)}`}
+            description={`You don't have permission to view ${lowerFirst(assessmentsLabel)} in this organization. Contact your admin if you need access.`}
           />
         ) : (
           <EmptyState
             icon={FileText}
-            title="No assessments found"
+            title={`No ${lowerFirst(assessmentsLabel)} found`}
             description="Try adjusting your search or filter."
           />
         )
@@ -197,7 +201,8 @@ export default function OrganizationAssessments() {
               >
                 <AssessmentCard 
                   assessment={a} 
-                  orgName={undefined} 
+                  orgName={undefined}
+                  user={user} 
                 />
               </Link>
             ))}

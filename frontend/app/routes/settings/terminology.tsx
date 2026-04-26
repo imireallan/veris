@@ -7,16 +7,9 @@ import { Languages, RotateCcw, Save } from "lucide-react";
 import { Alert, AlertDescription, Button, Card, CardContent, CardHeader, CardTitle, Input, Label } from "~/components/ui";
 import { useFetcherToast } from "~/hooks/use-fetcher-toast";
 import { useToast } from "~/hooks/use-toast";
+import { DEFAULT_TERMINOLOGY } from "~/lib/terminology";
 import type { OrganizationTerminology } from "~/types";
 import { RBAC } from "~/types/rbac";
-
-const DEFAULT_TERMINOLOGY: OrganizationTerminology = {
-  assessment_label: "Assessment",
-  site_label: "Site",
-  task_label: "Task",
-  evidence_label: "Evidence",
-  report_label: "Report",
-};
 
 type TerminologyLabelKey =
   | "assessment_label"

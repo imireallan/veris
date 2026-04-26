@@ -10,14 +10,14 @@ import {
     MessageSquare,
     Paintbrush,
     Languages,
-    LogOut,
     Leaf,
     Database,
     Building2,
+    FileText,
 } from "lucide-react";
-import React from "react";
+import type { ComponentType } from "react";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+const iconMap: Record<string, ComponentType<{ className?: string }>> = {
     LayoutDashboard,
     ClipboardCheck,
     BookOpen,
@@ -26,6 +26,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
     Languages,
     Database,
     Building2,
+    FileText,
 };
 
 export default function Sidebar({

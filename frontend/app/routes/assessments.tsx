@@ -6,6 +6,7 @@ import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
+import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 import { RBAC } from "~/types/rbac";
 
 export async function loader({ request }: LoaderFunctionArgs) {
@@ -97,6 +98,9 @@ export default function AssessmentsListRoute() {
     ]),
   );
 
+  const terminology = terminologyFromUser(user);
+  const assessmentLabel = terminology.assessment;
+  const assessmentsLabel = terminology.plural.assessment;
   const currentOrgName = selectedOrg?.name ?? "Current Organization";
   const canCreateInSelectedOrg = RBAC.canCreateAssessments(user);
 
@@ -110,7 +114,7 @@ export default function AssessmentsListRoute() {
     <div className="flex items-center justify-between mt-6">
       <div className="text-sm text-muted-foreground">
         Showing {Math.min((currentPage - 1) * PAGE_SIZE + 1, items.length)} to{" "}
-        {Math.min(currentPage * PAGE_SIZE, items.length)} of {items.length} assessments
+        {Math.min(currentPage * PAGE_SIZE, items.length)} of {items.length} {lowerFirst(assessmentsLabel)}
       </div>
       <div className="flex items-center gap-1">
         <Button
@@ -157,24 +161,24 @@ export default function AssessmentsListRoute() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>Assessments</BreadcrumbPage>
+            <BreadcrumbPage>{assessmentsLabel}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Assessments</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{assessmentsLabel}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             {scope === "all"
-              ? "Viewing assessments across all your organizations."
-              : `Viewing assessments for ${currentOrgName}.`}
+              ? `Viewing ${lowerFirst(assessmentsLabel)} across all your organizations.`
+              : `Viewing ${lowerFirst(assessmentsLabel)} for ${currentOrgName}.`}
           </p>
         </div>
         {scope !== "all" && canCreateInSelectedOrg && (
           <Link to="/assessments/new">
             <Button>
-              <Plus className="w-4 h-4" /> New Assessment
+              <Plus className="w-4 h-4" /> New {assessmentLabel}
             </Button>
           </Link>
         )}
@@ -224,24 +228,24 @@ export default function AssessmentsListRoute() {
           }
           setSearchParams(next);
         }}
-        placeholder="Search assessments..."
+        placeholder={`Search ${lowerFirst(assessmentsLabel)}...`}
       />
 
       {items.length === 0 ? (
         <EmptyState
           icon={FileText}
-          title="No assessments yet"
+          title={`No ${lowerFirst(assessmentsLabel)} yet`}
           description={
             scope === "all"
-              ? "No assessments found across your organizations."
+              ? `No ${lowerFirst(assessmentsLabel)} found across your organizations.`
               : canCreateInSelectedOrg
-                ? `Get started by creating the first assessment for ${currentOrgName}.`
-                : `You can view assessments in ${currentOrgName}, but you do not have permission to create them.`
+                ? `Get started by creating the first ${lowerFirst(assessmentLabel)} for ${currentOrgName}.`
+                : `You can view ${lowerFirst(assessmentsLabel)} in ${currentOrgName}, but you do not have permission to create them.`
           }
           action={
             scope !== "all" && canCreateInSelectedOrg ? (
               <Link to="/assessments/new">
-                <Button className="mt-2">Create Assessment</Button>
+                <Button className="mt-2">Create {assessmentLabel}</Button>
               </Link>
             ) : undefined
           }
@@ -264,6 +268,7 @@ export default function AssessmentsListRoute() {
                   frameworkName={fwMap.get(a.framework)}
                   focusAreaName={faMap.get(a.focus_area)}
                   orgName={orgMap?.get(a.organization)}
+                  user={user}
                 />
               </Link>
             ))}

@@ -34,10 +34,14 @@ export function getReportExportUiState({
   user,
   hasReport,
   generatingReport,
+  reportLabel,
+  assessmentLabel,
 }: {
   user: User | null;
   hasReport: boolean;
   generatingReport: boolean;
+  reportLabel: string;
+  assessmentLabel: string;
 }) {
   const canExportReport = RBAC.canExportReports(user);
 
@@ -45,7 +49,7 @@ export function getReportExportUiState({
     return {
       canClick: false,
       disabled: true,
-      tooltip: "Generating PDF report...",
+      tooltip: `Generating PDF ${reportLabel.toLowerCase()}...`,
     };
   }
 
@@ -53,7 +57,7 @@ export function getReportExportUiState({
     return {
       canClick: false,
       disabled: true,
-      tooltip: "No report generated yet. Complete the assessment and create a report first.",
+      tooltip: `No ${reportLabel.toLowerCase()} generated yet. Complete the ${assessmentLabel.toLowerCase()} and create a ${reportLabel.toLowerCase()} first.`,
     };
   }
 
@@ -61,14 +65,14 @@ export function getReportExportUiState({
     return {
       canClick: false,
       disabled: true,
-      tooltip: "You don't have permission to export reports. Contact your organization admin.",
+      tooltip: `You don't have permission to export ${reportLabel.toLowerCase()}s. Contact your organization admin.`,
     };
   }
 
   return {
     canClick: true,
     disabled: false,
-    tooltip: "Download PDF report",
+    tooltip: `Download PDF ${reportLabel.toLowerCase()}`,
   };
 }
 
@@ -246,6 +250,8 @@ export default function AssessmentDetailRoute() {
     user: data.user,
     hasReport: Boolean(data.report),
     generatingReport,
+    reportLabel,
+    assessmentLabel,
   });
   const reportViewUiState = getReportViewUiState({
     user: data.user,
@@ -433,7 +439,7 @@ export default function AssessmentDetailRoute() {
       </Link>
 
       {activeTab === "overview" && (
-        <SectionCard title="Summary" padding="compact">
+        <SectionCard title={`${assessmentLabel} summary`} padding="compact">
           {a.ai_summary ? (
             <div
               className="prose prose-sm max-w-none text-foreground"

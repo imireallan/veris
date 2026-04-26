@@ -53,6 +53,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: true,
         generatingReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: false,
@@ -71,6 +73,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: true,
         generatingReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: true,
@@ -89,6 +93,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: false,
         generatingReport: false,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: false,
@@ -101,6 +107,8 @@ describe("assessment detail report export UI state", () => {
         user,
         hasReport: true,
         generatingReport: true,
+        reportLabel: "Report",
+        assessmentLabel: "Assessment",
       }),
     ).toEqual({
       canClick: false,

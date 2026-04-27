@@ -13,6 +13,7 @@ from assessments.models import (
     ExternalRating,
     Finding,
     Framework,
+    FrameworkImportJob,
     Site,
     Task,
 )
@@ -24,6 +25,7 @@ class FrameworkSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "slug",
             "version",
             "description",
             "categories",
@@ -453,3 +455,65 @@ class AssessmentPlanSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class FrameworkImportJobSerializer(serializers.ModelSerializer):
+    """Serializer for framework import job status."""
+
+    class Meta:
+        model = FrameworkImportJob
+        fields = [
+            "id",
+            "original_filename",
+            "framework_name",
+            "framework_version",
+            "framework_description",
+            "create_template",
+            "status",
+            "progress_percentage",
+            "current_step",
+            "total_items",
+            "processed_items",
+            "framework_id",
+            "template_id",
+            "questions_created",
+            "error_message",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "status",
+            "progress_percentage",
+            "current_step",
+            "total_items",
+            "processed_items",
+            "framework_id",
+            "template_id",
+            "questions_created",
+            "error_message",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class FrameworkImportPreviewSerializer(serializers.Serializer):
+    """Serializer for framework file preview response."""
+
+    framework_name = serializers.CharField()
+    framework_version = serializers.CharField(required=False, default="1.0.0")
+    framework_description = serializers.CharField(required=False, default="")
+    create_template = serializers.BooleanField(default=True)
+
+    # Preview data
+    detected_structure = serializers.JSONField()
+    total_principles = serializers.IntegerField()
+    total_categories = serializers.IntegerField()
+    total_provisions = serializers.IntegerField()
+
+    # File path for submit step (opaque token, not exposed to users)
+    temp_file_path = serializers.CharField(required=False, default="")
+
+    # Validation
+    is_valid = serializers.BooleanField()
+    validation_errors = serializers.JSONField(default=list)

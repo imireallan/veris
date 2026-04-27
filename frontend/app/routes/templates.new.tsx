@@ -16,17 +16,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
   if (!RBAC.canManageTemplates(user, "")) {
     // Return accessDenied flag instead of throwing 403
     return { 
-      frameworks: [], 
       user, 
       accessDenied: true 
     };
   }
 
-  const token = await getUserToken(request);
-  const frameworks = await api.get<any[]>("/api/frameworks/", token, request);
-
   return {
-    frameworks: Array.isArray(frameworks) ? frameworks : [],
     user,
     accessDenied: false,
   };
@@ -40,7 +35,6 @@ export async function action({ request }: ActionFunctionArgs) {
   if (intent === "create-template") {
     const name = formData.get("name") as string;
     const description = formData.get("description") as string;
-    const framework = formData.get("framework") as string;
     const isPublic = formData.get("is_public") === "on";
     const ownerOrg = formData.get("owner_org") as string;
 
@@ -50,7 +44,6 @@ export async function action({ request }: ActionFunctionArgs) {
         {
           name,
           description,
-          framework: framework || null,
           is_public: isPublic,
           owner_org: ownerOrg || null,
           version: "1.0.0",
@@ -69,7 +62,7 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function NewTemplateRoute() {
-  const { frameworks, user, accessDenied } = useLoaderData<typeof loader>();
+  const { user, accessDenied } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigate = useNavigate();
   const { success: toastSuccess, error: toastError } = useToast();
@@ -164,22 +157,6 @@ export default function NewTemplateRoute() {
                 className="w-full px-3 py-2 border rounded-md text-sm"
                 placeholder="Describe the purpose and scope of this template..."
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="framework">Framework (Optional)</Label>
-              <select
-                id="framework"
-                name="framework"
-                className="w-full px-3 py-2 border rounded-md text-sm"
-              >
-                <option value="">No framework</option>
-                {frameworks.map((fw: any) => (
-                  <option key={fw.id} value={fw.id}>
-                    {fw.name} {fw.version && `(${fw.version})`}
-                  </option>
-                ))}
-              </select>
             </div>
           </CardContent>
         </Card>

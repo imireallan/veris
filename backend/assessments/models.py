@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.utils import timezone
 
 
 class Framework(models.Model):
@@ -8,6 +9,7 @@ class Framework(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True, null=True, blank=True)
     version = models.CharField(max_length=50, default="")
     description = models.TextField(blank=True, default="")
     categories = models.JSONField(default=dict)
@@ -23,6 +25,20 @@ class Framework(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.version})"
+
+    def save(self, *args, **kwargs):
+        """Auto-generate slug from name if not provided."""
+        if not self.slug and self.name:
+            import re
+
+            self.slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
+            # Ensure uniqueness
+            base_slug = self.slug
+            counter = 1
+            while Framework.objects.filter(slug=self.slug).exists():
+                self.slug = f"{base_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
 
 
 class ESGFocusArea(models.Model):
@@ -887,3 +903,124 @@ class UploadedImage(models.Model):
 
     def __str__(self):
         return f"Image {self.id} ({self.file.name})"
+
+
+class FrameworkImportJob(models.Model):
+    """
+    Tracks async framework import jobs.
+    Created when admin uploads Excel/CSV file.
+    Polled by frontend for progress updates.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PROCESSING = "PROCESSING", "Processing"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="framework_import_jobs",
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="framework_import_jobs",
+    )
+
+    # File metadata
+    original_filename = models.CharField(max_length=255)
+    file_path = models.CharField(max_length=500)  # Temporary storage path
+
+    # Framework metadata (from preview step)
+    framework_name = models.CharField(max_length=200)
+    framework_version = models.CharField(max_length=50, default="1.0.0")
+    framework_description = models.TextField(blank=True, default="")
+    create_template = models.BooleanField(default=True)
+
+    # Progress tracking
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    progress_percentage = models.FloatField(default=0.0)
+    current_step = models.CharField(max_length=100, blank=True, default="")
+    total_items = models.IntegerField(default=0)
+    processed_items = models.IntegerField(default=0)
+
+    # Results
+    framework_id = models.UUIDField(null=True, blank=True)
+    template_id = models.UUIDField(null=True, blank=True)
+    questions_created = models.IntegerField(default=0)
+    error_message = models.TextField(blank=True, default="")
+
+    # Timing
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "framework_import_jobs"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Import Job {self.id} - {self.framework_name} ({self.status})"
+
+    def update_progress(
+        self, processed: int, total: int, step: str = "", status: str = None
+    ):
+        """Update job progress - called by async task."""
+        self.processed_items = processed
+        self.total_items = total
+        self.progress_percentage = (processed / total * 100) if total > 0 else 0
+        self.current_step = step
+        if status:
+            self.status = status
+        self.save(
+            update_fields=[
+                "processed_items",
+                "total_items",
+                "progress_percentage",
+                "current_step",
+                "status",
+                "updated_at",
+            ]
+        )
+
+    def mark_completed(self, framework_id, template_id=None, questions_created=0):
+        """Mark job as completed with results."""
+        self.status = self.Status.COMPLETED
+        self.framework_id = framework_id
+        self.template_id = template_id
+        self.questions_created = questions_created
+        self.progress_percentage = 100.0
+        self.completed_at = timezone.now()
+        self.save(
+            update_fields=[
+                "status",
+                "framework_id",
+                "template_id",
+                "questions_created",
+                "progress_percentage",
+                "completed_at",
+                "updated_at",
+            ]
+        )
+
+    def mark_failed(self, error_message: str):
+        """Mark job as failed with error."""
+        self.status = self.Status.FAILED
+        self.error_message = error_message
+        self.completed_at = timezone.now()
+        self.save(
+            update_fields=[
+                "status",
+                "error_message",
+                "completed_at",
+                "updated_at",
+            ]
+        )

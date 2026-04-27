@@ -23,7 +23,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     return { templates: [], orgId, user, accessDenied: true };
   }
 
-  const response = await api.get<any>(`/api/organizations/${orgId}/templates/`, token, request)
+  // Use platform templates endpoint - backend filters by org context
+  const response = await api.get<any>(`/api/templates/`, token, request)
     .catch(() => ({ results: [] }));
   const templates = Array.isArray(response) ? response : (response?.results || []);
 
@@ -41,10 +42,13 @@ export async function action({ request, params }: ActionFunctionArgs) {
     const description = formData.get("description") as string;
 
     try {
-      await api.post(`/api/organizations/${orgId}/templates/`, { 
+      // Create template scoped to this organization
+      await api.post(`/api/templates/`, { 
         name, 
         description,
-        organization: orgId 
+        owner_org: orgId,
+        is_public: false,  // Private to org by default
+        version: "1.0.0",
       }, token, request);
       return redirect(`/organizations/${orgId}/templates`);
     } catch (err: any) {
@@ -56,7 +60,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   if (intent === "delete-template") {
     const templateId = formData.get("template_id") as string;
     try {
-      await api.delete(`/api/organizations/${orgId}/templates/${templateId}/`, token, request);
+      await api.delete(`/api/templates/${templateId}/`, token, request);
       return redirect(`/organizations/${orgId}/templates`);
     } catch (err: any) {
       if (err instanceof Response && err.status === 302) throw err;
@@ -125,12 +129,22 @@ export default function TemplatesRoute() {
                 </div>
                 
                 <div className="flex items-center justify-between pt-4 border-t">
-                  <Link 
-                    to={`/organizations/${orgId}/templates/${template.id}`} 
-                    className="text-sm text-primary font-medium hover:underline"
-                  >
-                    Edit Questions →
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link 
+                      to={`/organizations/${orgId}/templates/${template.id}`} 
+                      className="text-sm text-primary font-medium hover:underline"
+                    >
+                      Edit Questions →
+                    </Link>
+                    {template.status === "PUBLISHED" && (
+                      <Link 
+                        to={`/organizations/${orgId}/templates/${template.id}/instantiate`}
+                        className="text-sm text-green-600 font-medium hover:underline"
+                      >
+                        Instantiate →
+                      </Link>
+                    )}
+                  </div>
                   <Form method="post">
                     <input type="hidden" name="intent" value="delete-template" />
                     <input type="hidden" name="template_id" value={template.id} />

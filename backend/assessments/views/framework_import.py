@@ -111,8 +111,8 @@ class FrameworkImportViewSet(viewsets.ViewSet):
                 for chunk in file.chunks():
                     f.write(chunk)
 
-            # Parse file
-            service = FrameworkImportService(str(temp_path))
+            # Parse file - pass original filename for human-readable framework name
+            service = FrameworkImportService(str(temp_path), original_filename=file.name)
             metadata, provisions = service.parse_file()
 
             # Build preview response — include temp_file_path so the
@@ -272,9 +272,9 @@ class FrameworkImportViewSet(viewsets.ViewSet):
         job.save(update_fields=["status", "started_at"])
 
         try:
-            # Parse file
+            # Parse file - pass original filename for human-readable framework name
             job.update_progress(0, 100, "Parsing file...")
-            service = FrameworkImportService(job.file_path)
+            service = FrameworkImportService(job.file_path, original_filename=job.original_filename)
             metadata, provisions = service.parse_file()
 
             # Create framework + template + questions

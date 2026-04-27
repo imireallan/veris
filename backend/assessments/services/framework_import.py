@@ -20,9 +20,11 @@ class FrameworkImportService:
     Supports Bettercoal format: Principle → Category → Provision
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, original_filename: str = None):
         self.file_path = Path(file_path)
         self.extension = self.file_path.suffix.lower()
+        # Use original filename for deriving framework name, fallback to temp path
+        self.original_filename = original_filename or self.file_path.name
 
     def parse_file(self) -> Tuple[Dict, List[Dict]]:
         """
@@ -104,8 +106,9 @@ class FrameworkImportService:
 
         wb.close()
 
-        # Infer framework name from file or first principle
-        framework_name = self.file_path.stem.replace("_", " ").replace("-", " ").title()
+        # Infer framework name from original filename
+        name_from_file = self.original_filename.rsplit('.', 1)[0]  # Remove extension
+        framework_name = name_from_file.replace("_", " ").replace("-", " ").title()
 
         metadata = {
             "framework_name": framework_name,
@@ -153,10 +156,14 @@ class FrameworkImportService:
                         "rating_choices": [float(x.strip()) for x in rating_choices.split(",") if x.strip()],
                     })
 
+        # Infer framework name from original filename
+        name_from_file = self.original_filename.rsplit('.', 1)[0]  # Remove extension
+        framework_name = name_from_file.replace("_", " ").replace("-", " ").title()
+
         metadata = {
-            "framework_name": self.file_path.stem.replace("_", " ").replace("-", " ").title(),
+            "framework_name": framework_name,
             "framework_version": "1.0.0",
-            "framework_description": f"Imported from {self.file_path.name}",
+            "framework_description": f"Imported from {self.original_filename}",
             "total_principles": len(principles_seen),
             "total_categories": len(categories_seen),
             "total_provisions": len(provisions),

@@ -76,6 +76,7 @@ class FrameworkViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Framework.objects.all()
     serializer_class = FrameworkSerializer
     permission_classes = [IsAuthenticated]
+    lookup_field = "slug"  # Use slug instead of ID in URLs
 
 
 class ESGFocusAreaViewSet(viewsets.ReadOnlyModelViewSet):

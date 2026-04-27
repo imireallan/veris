@@ -25,6 +25,7 @@ class FrameworkSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "name",
+            "slug",
             "version",
             "description",
             "categories",

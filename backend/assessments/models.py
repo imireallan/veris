@@ -9,6 +9,7 @@ class Framework(models.Model):
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True, null=True, blank=True)
     version = models.CharField(max_length=50, default="")
     description = models.TextField(blank=True, default="")
     categories = models.JSONField(default=dict)
@@ -24,6 +25,19 @@ class Framework(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.version})"
+
+    def save(self, *args, **kwargs):
+        """Auto-generate slug from name if not provided."""
+        if not self.slug and self.name:
+            import re
+            self.slug = re.sub(r'[^a-z0-9]+', '-', self.name.lower()).strip('-')
+            # Ensure uniqueness
+            base_slug = self.slug
+            counter = 1
+            while Framework.objects.filter(slug=self.slug).exists():
+                self.slug = f"{base_slug}-{counter}"
+                counter += 1
+        super().save(*args, **kwargs)
 
 
 class ESGFocusArea(models.Model):

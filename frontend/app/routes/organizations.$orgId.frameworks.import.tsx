@@ -1,5 +1,6 @@
 import {
   Form,
+  Link,
   useLoaderData,
   useFetcher,
   useActionData,
@@ -273,12 +274,19 @@ export default function FrameworkImportRoute() {
           </p>
         </div>
 
-        <a
-          href={`/organizations/${orgId}`}
-          className="text-sm text-muted-foreground hover:text-primary"
-        >
-          &larr; Back to organization
-        </a>
+        <div className="flex items-center gap-2">
+          <Link to={`/organizations/${orgId}/frameworks`}>
+            <Button variant="outline" size="sm">
+              View All Frameworks
+            </Button>
+          </Link>
+          <a
+            href={`/organizations/${orgId}`}
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
+            ← Back to organization
+          </a>
+        </div>
       </div>
 
       {/* Progress Steps */}

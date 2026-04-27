@@ -29,9 +29,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     return { template: null, questions: [], orgId, templateId, user, accessDenied: true };
   }
 
-  const template = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/`, token, request)
+  // Use platform templates endpoint (not org-scoped)
+  const template = await api.get<any>(`/api/templates/${templateId}/`, token, request)
     .catch(() => null);
-  const questions = await api.get<any>(`/api/organizations/${orgId}/templates/${templateId}/questions/`, token, request)
+  const questions = await api.get<any>(`/api/templates/${templateId}/questions/`, token, request)
     .then(res => Array.isArray(res) ? res : (res?.results || []))
     .catch(() => []);
 
@@ -43,6 +44,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData();
   const intent = formData.get("intent") as string;
   const { orgId, templateId } = params;
+
+  if (intent === "publish-template") {
+    try {
+      await api.post(`/api/templates/${templateId}/publish/`, {}, token, request);
+      return redirect(`/organizations/${orgId}/templates/${templateId}`);
+    } catch (err: any) {
+      if (err instanceof Response && err.status === 302) throw err;
+      return { error: err.message ?? "Failed to publish template" };
+    }
+  }
 
   if (intent === "add-question") {
     const questionText = formData.get("text") as string;
@@ -92,6 +103,18 @@ export default function TemplateEditor() {
     );
   }
 
+  if (!template) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <h2 className="text-xl font-medium">Template Not Found</h2>
+        <p className="text-muted-foreground">The template you're looking for doesn't exist or couldn't be loaded.</p>
+        <Link to={`/organizations/${orgId}/templates`} className="text-primary hover:underline">
+          ← Back to templates
+        </Link>
+      </div>
+    );
+  }
+
   const [isAdding, setIsAdding] = useState(false);
 
   const groupedQuestions = questions.reduce((acc: Record<string, any[]>, q: any) => {
@@ -113,15 +136,47 @@ export default function TemplateEditor() {
           </Link>
           <div className="h-4 w-[1px] bg-border" />
           <h1 className="text-2xl font-semibold tracking-tight">{template.name}</h1>
+          {template.status === "DRAFT" && (
+            <Badge variant="secondary" className="text-xs">Draft</Badge>
+          )}
         </div>
-        <Button 
-          onClick={() => setIsAdding(true)} 
-          size="sm" 
-          className="gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Add Question
-        </Button>
+        <div className="flex items-center gap-2">
+          {template.status === "DRAFT" && (
+            <Form method="post">
+              <input type="hidden" name="intent" value="publish-template" />
+              <Button 
+                type="submit" 
+                size="sm" 
+                variant="default" 
+                className="gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Publish Template
+              </Button>
+            </Form>
+          )}
+          {template.status === "PUBLISHED" && (
+            <Link to={`/organizations/${orgId}/templates/${templateId}/instantiate`}>
+              <Button 
+                size="sm" 
+                variant="default" 
+                className="gap-2"
+              >
+                <CheckCircle className="w-4 h-4" />
+                Instantiate Assessment
+              </Button>
+            </Link>
+          )}
+          <Button 
+            onClick={() => setIsAdding(true)} 
+            size="sm" 
+            variant="outline"
+            className="gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Question
+          </Button>
+        </div>
       </div>
 
       <Card className="border-none shadow-none bg-transparent">

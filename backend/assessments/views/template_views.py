@@ -45,7 +45,7 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
         """
         Filter templates based on active tenant context.
         - SUPERADMIN: all templates
-        - Org users: public templates + templates owned by request.organization
+        - Org users: public published templates + org-owned templates (any status)
         """
         user = self.request.user
         organization = getattr(self.request, "organization", None)
@@ -61,9 +61,11 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
                 status=AssessmentTemplate.Status.PUBLISHED,
             ).select_related("framework", "owner_org")
 
+        # Org users can see:
+        # 1. Public published templates
+        # 2. Templates owned by their org (any status - including drafts)
         return AssessmentTemplate.objects.filter(
-            Q(is_public=True) | Q(owner_org=organization),
-            status=AssessmentTemplate.Status.PUBLISHED,
+            Q(is_public=True, status=AssessmentTemplate.Status.PUBLISHED) | Q(owner_org=organization),
         ).select_related("framework", "owner_org")
 
     def perform_create(self, serializer):

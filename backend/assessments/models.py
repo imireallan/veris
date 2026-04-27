@@ -1016,11 +1016,178 @@ class FrameworkImportJob(models.Model):
         self.status = self.Status.FAILED
         self.error_message = error_message
         self.completed_at = timezone.now()
-        self.save(
-            update_fields=[
-                "status",
-                "error_message",
-                "completed_at",
-                "updated_at",
-            ]
-        )
+        self.save(update_fields=[
+            "status", "error_message", "completed_at", "updated_at",
+        ])
+
+
+class SAQToken(models.Model):
+    """
+    Token-based access for CGWG SAQ (no-login web form).
+    Tokens expire after 30 days.
+    
+    Replaces cgwg-backend.questionnaires.models.Response
+    """
+    
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        SUBMITTED = "SUBMITTED", "Submitted"
+        EXPIRED = "EXPIRED", "Expired"
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Keep 6-char key for backward compatibility with existing CGWG links
+    key = models.CharField(max_length=10, unique=True, editable=False)
+    
+    # Template association (replaces Questionnaire)
+    template = models.ForeignKey(
+        "assessments.AssessmentTemplate",
+        on_delete=models.CASCADE,
+        related_name="saq_tokens",
+    )
+    
+    # Supplier info (from Response + Answer fields)
+    supplier_name = models.CharField(max_length=200)
+    supplier_email = models.EmailField()
+    site_name = models.CharField(max_length=200, help_text="Mine/site name")
+    company_name = models.CharField(max_length=200, blank=True, default="")
+    contact_person = models.CharField(max_length=200, blank=True, default="")
+    
+    # Lifecycle
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING
+    )
+    expires_at = models.DateTimeField()
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    
+    # Legacy migration support
+    legacy_response_id = models.IntegerField(
+        null=True, blank=True, help_text="Original cgwg-backend Response.id"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = "saq_tokens"
+        ordering = ["-created_at"]
+    
+    def __str__(self):
+        return f"SAQ {self.key} - {self.supplier_name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = self._generate_key()
+        if not self.expires_at:
+            from django.utils import timezone
+            from datetime import timedelta
+            self.expires_at = timezone.now() + timedelta(days=30)
+        super().save(*args, **kwargs)
+    
+    @staticmethod
+    def _generate_key():
+        """Generate 6-char key compatible with CGWG legacy format."""
+        import secrets
+        import string
+        alphabet = string.ascii_lowercase + string.digits
+        return "".join(secrets.choice(alphabet) for _ in range(6))
+    
+    @property
+    def is_expired(self):
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+    
+    @property
+    def access_url(self):
+        """Generate public access URL."""
+        from django.conf import settings
+        base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+        return f"{base_url}/saq/{self.key}"
+    
+    @property
+    def completion_percentage(self):
+        """Calculate completion percentage based on answered questions."""
+        if not self.template_id:
+            return 0
+        total_questions = self.template.assessment_questions.count()
+        if total_questions == 0:
+            return 0
+        answered = self.responses.count()
+        return int((answered / total_questions) * 100)
+
+
+class SAQResponse(models.Model):
+    """
+    Individual response to an SAQ question.
+    Replaces cgwg-backend.questionnaires.models.Answer
+    """
+    
+    class AnswerChoice(models.TextChoices):
+        YES = "YES", "Yes"
+        NO = "NO", "No"
+        NA = "NA", "Not Applicable"
+    
+    # Match CGWG question types
+    class QuestionType(models.TextChoices):
+        SHORT_TEXT = "short_text", "Single Line Text"
+        TEXT = "text", "Block Text"
+        INTEGER = "integer", "Integer"
+        SELECT_ONE = "select_one", "Select One"
+        SELECT_MULTIPLE = "select_multiple", "Select Multiple"
+        DATE = "date", "Date"
+        FILES = "files", "Files"
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    token = models.ForeignKey(
+        "assessments.SAQToken",
+        on_delete=models.CASCADE,
+        related_name="responses",
+    )
+    question = models.ForeignKey(
+        "assessments.AssessmentQuestion",
+        on_delete=models.CASCADE,
+        related_name="saq_responses",
+    )
+    
+    # Answer data (flexible to support multiple question types)
+    answer_choice = models.CharField(
+        max_length=50, blank=True, default="",
+        help_text="For Yes/No/NA or select_one questions"
+    )
+    answer_text = models.TextField(
+        blank=True, default="", help_text="For text/short_text questions"
+    )
+    answer_integer = models.IntegerField(
+        null=True, blank=True, help_text="For integer questions"
+    )
+    answer_date = models.DateField(
+        null=True, blank=True, help_text="For date questions"
+    )
+    answer_multiple = models.JSONField(
+        default=list, help_text="For select_multiple: [choice1, choice2, ...]"
+    )
+    
+    # CGWG-style fields
+    comments = models.TextField(
+        blank=True, default="", help_text="Comment box / explanation"
+    )
+    evidence_files = models.JSONField(
+        default=list, help_text="List of uploaded file keys/URLs"
+    )
+    
+    # Legacy migration support
+    legacy_answer_id = models.IntegerField(
+        null=True, blank=True, help_text="Original cgwg-backend Answer.id"
+    )
+    
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = "saq_responses"
+        unique_together = ["token", "question"]
+        ordering = ["question__order"]
+    
+    def __str__(self):
+        return f"SAQ Response {self.id} - {self.answer_choice or self.answer_text[:20]}"
+>>>>>>> 50ace0c (feat: CGWG SAQ models with legacy migration support)

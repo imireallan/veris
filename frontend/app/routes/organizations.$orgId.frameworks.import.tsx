@@ -25,8 +25,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const orgId = params.orgId;
 
   // Check RBAC - only ADMIN can import frameworks
-  const isAdmin = RBAC.hasRole(user, orgId!, "ADMIN");
-  if (!isAdmin && !user.is_superuser) {
+  const userRole = RBAC.getOrgRole(user, orgId!);
+  const isAdmin = userRole === "ADMIN" || user.isSuperuser;
+  if (!isAdmin) {
     return { 
       user, 
       orgId, 

@@ -15,13 +15,14 @@ class Framework(models.Model):
     categories = models.JSONField(default=dict)
     scoring_methodology = models.JSONField(default=dict)
     reporting_period = models.CharField(max_length=100, blank=True, default="")
-    
+
     # EO100 and other framework-specific metadata
     metadata = models.JSONField(
-        default=dict, blank=True,
-        help_text="Framework-specific metadata (e.g., EO100 supplements, principle count)"
+        default=dict,
+        blank=True,
+        help_text="Framework-specific metadata (e.g., EO100 supplements, principle count)",
     )
-    
+
     last_synced = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -198,20 +199,20 @@ class Assessment(models.Model):
         blank=True,
         related_name="assessments",
     )
-    
+
     # Multi-party review workflow
     review_stage = models.CharField(
         max_length=30,
         choices=ReviewStage.choices,
         default=ReviewStage.OPERATOR,
-        help_text="Current stage in multi-party review workflow"
+        help_text="Current stage in multi-party review workflow",
     )
-    
+
     # Due dates per stage
     operator_due_date = models.DateTimeField(null=True, blank=True)
     platform_due_date = models.DateTimeField(null=True, blank=True)
     assessor_due_date = models.DateTimeField(null=True, blank=True)
-    
+
     # Assignment
     assigned_platform_reviewer = models.ForeignKey(
         "users.User",
@@ -309,14 +310,14 @@ class AssessmentTemplate(models.Model):
         blank=True,
         related_name="templates",
     )
-    
+
     # EO100 supplement type (null for non-EO100 frameworks)
     supplement_type = models.CharField(
         max_length=50,
         choices=SupplementType.choices,
         null=True,
         blank=True,
-        help_text="EO100 supplement type (null for non-EO100 frameworks)"
+        help_text="EO100 supplement type (null for non-EO100 frameworks)",
     )
 
     # Versioning
@@ -430,15 +431,15 @@ class AssessmentQuestion(models.Model):
             (2, "PT2 - Good Practice"),
             (3, "PT3 - Best Practice"),
         ],
-        help_text="EO100 performance target level"
+        help_text="EO100 performance target level",
     )
-    
+
     # External question ID for legacy/migration (e.g., EO100: "100.1.1.1")
     external_question_id = models.CharField(
         max_length=50,
         null=True,
         blank=True,
-        help_text="External format: supplement.principle.objective.PT (e.g., '100.1.1.1')"
+        help_text="External format: supplement.principle.objective.PT (e.g., '100.1.1.1')",
     )
 
     # Cross-framework mapping (P2-1)
@@ -488,13 +489,13 @@ class AssessmentResponse(models.Model):
         blank=True,
         related_name="responses",
     )
-    
+
     # === Operator Fields (Self-Assessment) ===
     operator_answer = models.TextField(blank=True, default="")
     operator_score = models.FloatField(null=True, blank=True)
     operator_submitted = models.BooleanField(default=False)
     operator_submitted_at = models.DateTimeField(null=True, blank=True)
-    
+
     # === Platform Review Fields (EO/Veris/Consultancy) ===
     platform_review_score = models.FloatField(null=True, blank=True)
     platform_review_notes = models.TextField(blank=True, default="")
@@ -507,13 +508,14 @@ class AssessmentResponse(models.Model):
         blank=True,
         related_name="platform_reviews",
     )
-    
+
     # === Assessor Fields (Third-Party Auditor) ===
     assessor_score = models.FloatField(null=True, blank=True)
     assessor_notes = models.TextField(blank=True, default="")
     assessor_private_notes = models.TextField(
-        blank=True, default="",
-        help_text="Private notes - not visible to operator or platform"
+        blank=True,
+        default="",
+        help_text="Private notes - not visible to operator or platform",
     )
     assessor_reviewed = models.BooleanField(default=False)
     assessor_reviewed_at = models.DateTimeField(null=True, blank=True)
@@ -524,10 +526,10 @@ class AssessmentResponse(models.Model):
         blank=True,
         related_name="assessor_reviews",
     )
-    
+
     # === Final Score (Auto-calculated) ===
     final_score = models.FloatField(null=True, blank=True)
-    
+
     # Legacy field (keep for backward compatibility during migration)
     answer_text = models.TextField(blank=True, default="")
     answer_score = models.FloatField(default=0.0)
@@ -1135,94 +1137,104 @@ class FrameworkImportJob(models.Model):
         self.status = self.Status.FAILED
         self.error_message = error_message
         self.completed_at = timezone.now()
-        self.save(update_fields=[
-            "status", "error_message", "completed_at", "updated_at",
-        ])
+        self.save(
+            update_fields=[
+                "status",
+                "error_message",
+                "completed_at",
+                "updated_at",
+            ]
+        )
 
 
 class SAQToken(models.Model):
     """
     Token-based access for CGWG SAQ (no-login web form).
     Tokens expire after 30 days.
-    
+
     Replaces cgwg-backend.questionnaires.models.Response
     """
-    
+
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
         IN_PROGRESS = "IN_PROGRESS", "In Progress"
         SUBMITTED = "SUBMITTED", "Submitted"
         EXPIRED = "EXPIRED", "Expired"
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # Keep 6-char key for backward compatibility with existing CGWG links
     key = models.CharField(max_length=10, unique=True, editable=False)
-    
+
     # Template association (replaces Questionnaire)
     template = models.ForeignKey(
         "assessments.AssessmentTemplate",
         on_delete=models.CASCADE,
         related_name="saq_tokens",
     )
-    
+
     # Supplier info (from Response + Answer fields)
     supplier_name = models.CharField(max_length=200)
     supplier_email = models.EmailField()
     site_name = models.CharField(max_length=200, help_text="Mine/site name")
     company_name = models.CharField(max_length=200, blank=True, default="")
     contact_person = models.CharField(max_length=200, blank=True, default="")
-    
+
     # Lifecycle
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
     )
     expires_at = models.DateTimeField()
     submitted_at = models.DateTimeField(null=True, blank=True)
-    
+
     # Legacy migration support
     legacy_response_id = models.IntegerField(
         null=True, blank=True, help_text="Original cgwg-backend Response.id"
     )
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = "saq_tokens"
         ordering = ["-created_at"]
-    
+
     def __str__(self):
         return f"SAQ {self.key} - {self.supplier_name}"
-    
+
     def save(self, *args, **kwargs):
         if not self.key:
             self.key = self._generate_key()
         if not self.expires_at:
-            from django.utils import timezone
             from datetime import timedelta
+
+            from django.utils import timezone
+
             self.expires_at = timezone.now() + timedelta(days=30)
         super().save(*args, **kwargs)
-    
+
     @staticmethod
     def _generate_key():
         """Generate 6-char key compatible with CGWG legacy format."""
         import secrets
         import string
+
         alphabet = string.ascii_lowercase + string.digits
         return "".join(secrets.choice(alphabet) for _ in range(6))
-    
+
     @property
     def is_expired(self):
         from django.utils import timezone
+
         return timezone.now() > self.expires_at
-    
+
     @property
     def access_url(self):
         """Generate public access URL."""
         from django.conf import settings
+
         base_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
         return f"{base_url}/saq/{self.key}"
-    
+
     @property
     def completion_percentage(self):
         """Calculate completion percentage based on answered questions."""
@@ -1240,12 +1252,12 @@ class SAQResponse(models.Model):
     Individual response to an SAQ question.
     Replaces cgwg-backend.questionnaires.models.Answer
     """
-    
+
     class AnswerChoice(models.TextChoices):
         YES = "YES", "Yes"
         NO = "NO", "No"
         NA = "NA", "Not Applicable"
-    
+
     # Match CGWG question types
     class QuestionType(models.TextChoices):
         SHORT_TEXT = "short_text", "Single Line Text"
@@ -1255,7 +1267,7 @@ class SAQResponse(models.Model):
         SELECT_MULTIPLE = "select_multiple", "Select Multiple"
         DATE = "date", "Date"
         FILES = "files", "Files"
-    
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     token = models.ForeignKey(
         "assessments.SAQToken",
@@ -1267,11 +1279,13 @@ class SAQResponse(models.Model):
         on_delete=models.CASCADE,
         related_name="saq_responses",
     )
-    
+
     # Answer data (flexible to support multiple question types)
     answer_choice = models.CharField(
-        max_length=50, blank=True, default="",
-        help_text="For Yes/No/NA or select_one questions"
+        max_length=50,
+        blank=True,
+        default="",
+        help_text="For Yes/No/NA or select_one questions",
     )
     answer_text = models.TextField(
         blank=True, default="", help_text="For text/short_text questions"
@@ -1285,7 +1299,7 @@ class SAQResponse(models.Model):
     answer_multiple = models.JSONField(
         default=list, help_text="For select_multiple: [choice1, choice2, ...]"
     )
-    
+
     # CGWG-style fields
     comments = models.TextField(
         blank=True, default="", help_text="Comment box / explanation"
@@ -1293,20 +1307,19 @@ class SAQResponse(models.Model):
     evidence_files = models.JSONField(
         default=list, help_text="List of uploaded file keys/URLs"
     )
-    
+
     # Legacy migration support
     legacy_answer_id = models.IntegerField(
         null=True, blank=True, help_text="Original cgwg-backend Answer.id"
     )
-    
+
     submitted_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
         db_table = "saq_responses"
         unique_together = ["token", "question"]
         ordering = ["question__order"]
-    
+
     def __str__(self):
         return f"SAQ Response {self.id} - {self.answer_choice or self.answer_text[:20]}"
->>>>>>> 50ace0c (feat: CGWG SAQ models with legacy migration support)

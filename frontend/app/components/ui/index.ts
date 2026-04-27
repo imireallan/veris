@@ -90,6 +90,7 @@ export { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "./
 /* ─── Feedback ─── */
 export { Alert, AlertTitle, AlertDescription, alertVariants } from "./alert"
 export { Skeleton } from "./skeleton"
+export { Progress } from "./progress"
 export { Toaster } from "./sonner";
 export {
   Breadcrumb,

@@ -501,6 +501,9 @@ class FrameworkImportPreviewSerializer(serializers.Serializer):
     total_categories = serializers.IntegerField()
     total_provisions = serializers.IntegerField()
     
+    # File path for submit step (opaque token, not exposed to users)
+    temp_file_path = serializers.CharField(required=False, default="")
+
     # Validation
     is_valid = serializers.BooleanField()
     validation_errors = serializers.JSONField(default=list)

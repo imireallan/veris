@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
 import { useState } from "react";
-import { Plus, FileText, Trash2 } from "lucide-react";
+import { Plus, FileText, Trash2, Upload } from "lucide-react";
 import { 
   Card, 
   CardContent, 
@@ -90,10 +90,18 @@ export default function TemplatesRoute() {
           <h1 className="text-2xl font-semibold tracking-tight">Assessment Templates</h1>
           <p className="text-sm text-muted-foreground">Define your ESG criteria and question sets.</p>
         </div>
-        <Button size="sm" onClick={() => setIsCreating(true)} className="gap-2">
-          <Plus className="w-4 h-4" />
-          New Template
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link to={`/organizations/${orgId}/frameworks/import`}>
+            <Button size="sm" variant="outline" className="gap-2">
+              <Upload className="w-4 h-4" />
+              Import Framework
+            </Button>
+          </Link>
+          <Button size="sm" onClick={() => setIsCreating(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            New Template
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

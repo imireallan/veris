@@ -28,6 +28,8 @@ export default [
     route("organizations/:orgId/assessments", "routes/organizations.$orgId_.assessments.tsx"),
     route("organizations/:orgId/templates", "routes/organizations.$orgId.templates.tsx"),
     route("organizations/:orgId/templates/:templateId", "routes/organizations.$orgId.templates.$templateId.tsx"),
+    route("organizations/:orgId/frameworks/import", "routes/organizations.$orgId.frameworks.import.tsx"),
+    route("organizations/:orgId/frameworks/import/:jobId", "routes/organizations.$orgId.frameworks.import.$jobId.tsx"),
     route("organizations/:orgId/members", "routes/organizations.$orgId.members.tsx"),
     route("organizations/:orgId/settings", "routes/organizations.$orgId.settings.tsx"),
   ]),

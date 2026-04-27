@@ -154,6 +154,13 @@ class Assessment(models.Model):
         HIGH = "HIGH", "High"
         CRITICAL = "CRITICAL", "Critical"
 
+    # Multi-party review workflow stages
+    class ReviewStage(models.TextChoices):
+        OPERATOR = "OPERATOR", "Operator Self-Assessment"
+        PLATFORM = "PLATFORM", "Platform Review"
+        ASSESSOR = "ASSESSOR", "Assessor Review"
+        COMPLETED = "COMPLETED", "Completed"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
         "organizations.Organization",
@@ -190,6 +197,35 @@ class Assessment(models.Model):
         null=True,
         blank=True,
         related_name="assessments",
+    )
+    
+    # Multi-party review workflow
+    review_stage = models.CharField(
+        max_length=30,
+        choices=ReviewStage.choices,
+        default=ReviewStage.OPERATOR,
+        help_text="Current stage in multi-party review workflow"
+    )
+    
+    # Due dates per stage
+    operator_due_date = models.DateTimeField(null=True, blank=True)
+    platform_due_date = models.DateTimeField(null=True, blank=True)
+    assessor_due_date = models.DateTimeField(null=True, blank=True)
+    
+    # Assignment
+    assigned_platform_reviewer = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_platform_reviews",
+    )
+    assigned_assessor = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_assessments",
     )
 
     # Template association (P0 - Template Management)
@@ -452,6 +488,47 @@ class AssessmentResponse(models.Model):
         blank=True,
         related_name="responses",
     )
+    
+    # === Operator Fields (Self-Assessment) ===
+    operator_answer = models.TextField(blank=True, default="")
+    operator_score = models.FloatField(null=True, blank=True)
+    operator_submitted = models.BooleanField(default=False)
+    operator_submitted_at = models.DateTimeField(null=True, blank=True)
+    
+    # === Platform Review Fields (EO/Veris/Consultancy) ===
+    platform_review_score = models.FloatField(null=True, blank=True)
+    platform_review_notes = models.TextField(blank=True, default="")
+    platform_reviewed = models.BooleanField(default=False)
+    platform_reviewed_at = models.DateTimeField(null=True, blank=True)
+    platform_reviewer = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="platform_reviews",
+    )
+    
+    # === Assessor Fields (Third-Party Auditor) ===
+    assessor_score = models.FloatField(null=True, blank=True)
+    assessor_notes = models.TextField(blank=True, default="")
+    assessor_private_notes = models.TextField(
+        blank=True, default="",
+        help_text="Private notes - not visible to operator or platform"
+    )
+    assessor_reviewed = models.BooleanField(default=False)
+    assessor_reviewed_at = models.DateTimeField(null=True, blank=True)
+    assessor = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assessor_reviews",
+    )
+    
+    # === Final Score (Auto-calculated) ===
+    final_score = models.FloatField(null=True, blank=True)
+    
+    # Legacy field (keep for backward compatibility during migration)
     answer_text = models.TextField(blank=True, default="")
     answer_score = models.FloatField(default=0.0)
     evidence_files = models.JSONField(default=list)

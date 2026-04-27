@@ -34,13 +34,13 @@ from assessments.views.flat_views import (
     FlatSiteViewSet,
     FlatTaskViewSet,
 )
+from assessments.views.framework_import import FrameworkImportViewSet
 from assessments.views.template_views import (
     AssessmentTemplateViewSet,
     TemplateQuestionViewSet,
 )
 from assessments.views.upload_evidence import upload_evidence_document
 from assessments.views.upload_image import upload_image
-from assessments.views.framework_import import FrameworkImportViewSet
 from knowledge.views import KnowledgeDocumentViewSet
 
 # App viewsets
@@ -63,7 +63,9 @@ router.register(r"api/organizations", OrganizationViewSet, basename="organizatio
 router.register(r"api/users", UserViewSet, basename="user")
 router.register(r"api/themes", ThemeViewSet, basename="theme")
 router.register(r"api/frameworks", FrameworkViewSet, basename="framework")
-router.register(r"api/frameworks/import", FrameworkImportViewSet, basename="framework-import")
+router.register(
+    r"api/frameworks/import", FrameworkImportViewSet, basename="framework-import"
+)
 router.register(r"api/templates", AssessmentTemplateViewSet, basename="template")
 router.register(
     r"api/templates/(?P<template_pk>[^/.]+)/questions",

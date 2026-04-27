@@ -65,7 +65,8 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
         # 1. Public published templates
         # 2. Templates owned by their org (any status - including drafts)
         return AssessmentTemplate.objects.filter(
-            Q(is_public=True, status=AssessmentTemplate.Status.PUBLISHED) | Q(owner_org=organization),
+            Q(is_public=True, status=AssessmentTemplate.Status.PUBLISHED)
+            | Q(owner_org=organization),
         ).select_related("framework", "owner_org")
 
     def perform_create(self, serializer):

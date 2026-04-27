@@ -482,9 +482,18 @@ class FrameworkImportJobSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = [
-            "id", "status", "progress_percentage", "current_step",
-            "total_items", "processed_items", "framework_id", "template_id",
-            "questions_created", "error_message", "created_at", "updated_at",
+            "id",
+            "status",
+            "progress_percentage",
+            "current_step",
+            "total_items",
+            "processed_items",
+            "framework_id",
+            "template_id",
+            "questions_created",
+            "error_message",
+            "created_at",
+            "updated_at",
         ]
 
 
@@ -495,13 +504,13 @@ class FrameworkImportPreviewSerializer(serializers.Serializer):
     framework_version = serializers.CharField(required=False, default="1.0.0")
     framework_description = serializers.CharField(required=False, default="")
     create_template = serializers.BooleanField(default=True)
-    
+
     # Preview data
     detected_structure = serializers.JSONField()
     total_principles = serializers.IntegerField()
     total_categories = serializers.IntegerField()
     total_provisions = serializers.IntegerField()
-    
+
     # File path for submit step (opaque token, not exposed to users)
     temp_file_path = serializers.CharField(required=False, default="")
 

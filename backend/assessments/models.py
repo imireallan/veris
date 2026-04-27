@@ -30,7 +30,8 @@ class Framework(models.Model):
         """Auto-generate slug from name if not provided."""
         if not self.slug and self.name:
             import re
-            self.slug = re.sub(r'[^a-z0-9]+', '-', self.name.lower()).strip('-')
+
+            self.slug = re.sub(r"[^a-z0-9]+", "-", self.name.lower()).strip("-")
             # Ensure uniqueness
             base_slug = self.slug
             counter = 1
@@ -969,7 +970,9 @@ class FrameworkImportJob(models.Model):
     def __str__(self):
         return f"Import Job {self.id} - {self.framework_name} ({self.status})"
 
-    def update_progress(self, processed: int, total: int, step: str = "", status: str = None):
+    def update_progress(
+        self, processed: int, total: int, step: str = "", status: str = None
+    ):
         """Update job progress - called by async task."""
         self.processed_items = processed
         self.total_items = total
@@ -977,10 +980,16 @@ class FrameworkImportJob(models.Model):
         self.current_step = step
         if status:
             self.status = status
-        self.save(update_fields=[
-            "processed_items", "total_items", "progress_percentage",
-            "current_step", "status", "updated_at",
-        ])
+        self.save(
+            update_fields=[
+                "processed_items",
+                "total_items",
+                "progress_percentage",
+                "current_step",
+                "status",
+                "updated_at",
+            ]
+        )
 
     def mark_completed(self, framework_id, template_id=None, questions_created=0):
         """Mark job as completed with results."""
@@ -990,16 +999,28 @@ class FrameworkImportJob(models.Model):
         self.questions_created = questions_created
         self.progress_percentage = 100.0
         self.completed_at = timezone.now()
-        self.save(update_fields=[
-            "status", "framework_id", "template_id", "questions_created",
-            "progress_percentage", "completed_at", "updated_at",
-        ])
+        self.save(
+            update_fields=[
+                "status",
+                "framework_id",
+                "template_id",
+                "questions_created",
+                "progress_percentage",
+                "completed_at",
+                "updated_at",
+            ]
+        )
 
     def mark_failed(self, error_message: str):
         """Mark job as failed with error."""
         self.status = self.Status.FAILED
         self.error_message = error_message
         self.completed_at = timezone.now()
-        self.save(update_fields=[
-            "status", "error_message", "completed_at", "updated_at",
-        ])
+        self.save(
+            update_fields=[
+                "status",
+                "error_message",
+                "completed_at",
+                "updated_at",
+            ]
+        )

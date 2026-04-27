@@ -2,6 +2,7 @@
 ViewSet for framework import functionality.
 Handles file upload, preview, and async import job processing.
 """
+
 import uuid
 from pathlib import Path
 
@@ -34,7 +35,12 @@ class FrameworkImportViewSet(viewsets.ViewSet):
 
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
-    @action(detail=False, methods=["post"], url_path="preview", parser_classes=[MultiPartParser])
+    @action(
+        detail=False,
+        methods=["post"],
+        url_path="preview",
+        parser_classes=[MultiPartParser],
+    )
     def preview(self, request):
         """
         Step 1: Upload file and get preview of framework structure.
@@ -60,15 +66,17 @@ class FrameworkImportViewSet(viewsets.ViewSet):
                     "error": "Organization context required",
                     "debug": {
                         "user": str(getattr(request, "user", None)),
-                        "user_is_authenticated": getattr(request.user, "is_authenticated", "N/A"),
+                        "user_is_authenticated": getattr(
+                            request.user, "is_authenticated", "N/A"
+                        ),
                         "meta_org": request.META.get("HTTP_X_ORGANIZATION_ID"),
-                        "request_organization": str(getattr(request, "organization", "NOTSET")),
+                        "request_organization": str(
+                            getattr(request, "organization", "NOTSET")
+                        ),
                     },
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        # request.organization is an Organization instance, extract the UUID
-        org_id = org.id
 
         # Get uploaded file
         file: UploadedFile = request.FILES.get("file")
@@ -104,7 +112,9 @@ class FrameworkImportViewSet(viewsets.ViewSet):
         temp_path = None
         try:
             # Save file temporarily
-            temp_path = settings.MEDIA_ROOT / "framework_imports" / f"{uuid.uuid4()}{ext}"
+            temp_path = (
+                settings.MEDIA_ROOT / "framework_imports" / f"{uuid.uuid4()}{ext}"
+            )
             temp_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(temp_path, "wb+") as f:
@@ -112,7 +122,9 @@ class FrameworkImportViewSet(viewsets.ViewSet):
                     f.write(chunk)
 
             # Parse file - pass original filename for human-readable framework name
-            service = FrameworkImportService(str(temp_path), original_filename=file.name)
+            service = FrameworkImportService(
+                str(temp_path), original_filename=file.name
+            )
             metadata, provisions = service.parse_file()
 
             # Build preview response — include temp_file_path so the
@@ -152,7 +164,9 @@ class FrameworkImportViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-    @action(detail=False, methods=["post"], url_path="create", parser_classes=[JSONParser])
+    @action(
+        detail=False, methods=["post"], url_path="create", parser_classes=[JSONParser]
+    )
     def create_import_job(self, request):
         """
         Step 2: Create import job from a previously-uploaded file.
@@ -175,9 +189,13 @@ class FrameworkImportViewSet(viewsets.ViewSet):
                     "error": "Organization context required",
                     "debug": {
                         "user": str(getattr(request, "user", None)),
-                        "user_is_authenticated": getattr(request.user, "is_authenticated", "N/A"),
+                        "user_is_authenticated": getattr(
+                            request.user, "is_authenticated", "N/A"
+                        ),
                         "meta_org": request.META.get("HTTP_X_ORGANIZATION_ID"),
-                        "request_organization": str(getattr(request, "organization", "NOTSET")),
+                        "request_organization": str(
+                            getattr(request, "organization", "NOTSET")
+                        ),
                     },
                 },
                 status=status.HTTP_400_BAD_REQUEST,
@@ -264,8 +282,9 @@ class FrameworkImportViewSet(viewsets.ViewSet):
         Process the import job synchronously.
         In production, this should be a Celery/Dramatiq task.
         """
-        from assessments.services.framework_import import FrameworkImportService
         from django.utils import timezone
+
+        from assessments.services.framework_import import FrameworkImportService
 
         job.status = FrameworkImportJob.Status.PROCESSING
         job.started_at = timezone.now()
@@ -274,7 +293,9 @@ class FrameworkImportViewSet(viewsets.ViewSet):
         try:
             # Parse file - pass original filename for human-readable framework name
             job.update_progress(0, 100, "Parsing file...")
-            service = FrameworkImportService(job.file_path, original_filename=job.original_filename)
+            service = FrameworkImportService(
+                job.file_path, original_filename=job.original_filename
+            )
             metadata, provisions = service.parse_file()
 
             # Create framework + template + questions

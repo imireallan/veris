@@ -3,7 +3,7 @@ Service for processing framework import files (Excel/CSV).
 Parses hierarchy: Principle → Category → Provision
 Creates Framework + AssessmentTemplate + AssessmentQuestions
 """
-import json
+
 import uuid
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -43,7 +43,9 @@ class FrameworkImportService:
         try:
             import openpyxl
         except ImportError:
-            raise ImportError("openpyxl is required for Excel parsing. Install with: pip install openpyxl")
+            raise ImportError(
+                "openpyxl is required for Excel parsing. Install with: pip install openpyxl"
+            )
 
         wb = openpyxl.load_workbook(self.file_path, read_only=True, data_only=True)
         ws = wb.active
@@ -94,20 +96,26 @@ class FrameworkImportService:
 
             # Add provision
             if provision_code or provision_desc:
-                provisions.append({
-                    "principle_sequence": current_principle or "0",
-                    "principle_name": principle_name or "",
-                    "category_sequence": current_category or "0",
-                    "category_name": category_name or "",
-                    "provision_code": provision_code or "",
-                    "description": provision_desc,
-                    "rating_choices": [float(x.strip()) for x in rating_choices.split(",") if x.strip()],
-                })
+                provisions.append(
+                    {
+                        "principle_sequence": current_principle or "0",
+                        "principle_name": principle_name or "",
+                        "category_sequence": current_category or "0",
+                        "category_name": category_name or "",
+                        "provision_code": provision_code or "",
+                        "description": provision_desc,
+                        "rating_choices": [
+                            float(x.strip())
+                            for x in rating_choices.split(",")
+                            if x.strip()
+                        ],
+                    }
+                )
 
         wb.close()
 
         # Infer framework name from original filename
-        name_from_file = self.original_filename.rsplit('.', 1)[0]  # Remove extension
+        name_from_file = self.original_filename.rsplit(".", 1)[0]  # Remove extension
         framework_name = name_from_file.replace("_", " ").replace("-", " ").title()
 
         metadata = {
@@ -146,18 +154,24 @@ class FrameworkImportService:
                     categories_seen.add(category_seq)
 
                 if provision_code or provision_desc:
-                    provisions.append({
-                        "principle_sequence": principle_seq,
-                        "principle_name": principle_name,
-                        "category_sequence": category_seq,
-                        "category_name": category_name,
-                        "provision_code": provision_code,
-                        "description": provision_desc,
-                        "rating_choices": [float(x.strip()) for x in rating_choices.split(",") if x.strip()],
-                    })
+                    provisions.append(
+                        {
+                            "principle_sequence": principle_seq,
+                            "principle_name": principle_name,
+                            "category_sequence": category_seq,
+                            "category_name": category_name,
+                            "provision_code": provision_code,
+                            "description": provision_desc,
+                            "rating_choices": [
+                                float(x.strip())
+                                for x in rating_choices.split(",")
+                                if x.strip()
+                            ],
+                        }
+                    )
 
         # Infer framework name from original filename
-        name_from_file = self.original_filename.rsplit('.', 1)[0]  # Remove extension
+        name_from_file = self.original_filename.rsplit(".", 1)[0]  # Remove extension
         framework_name = name_from_file.replace("_", " ").replace("-", " ").title()
 
         metadata = {
@@ -186,7 +200,11 @@ class FrameworkImportService:
         Returns: (framework, template, questions_count)
         """
         # Build categories JSON structure
-        categories_tree = {"principles": [], "categories": [], "provisions_count": len(provisions)}
+        categories_tree = {
+            "principles": [],
+            "categories": [],
+            "provisions_count": len(provisions),
+        }
         principles_map = {}
         categories_map = {}
 
@@ -197,11 +215,19 @@ class FrameworkImportService:
             c_name = prov["category_name"]
 
             if p_seq not in principles_map:
-                principles_map[p_seq] = {"sequence": p_seq, "name": p_name, "categories": []}
+                principles_map[p_seq] = {
+                    "sequence": p_seq,
+                    "name": p_name,
+                    "categories": [],
+                }
                 categories_tree["principles"].append(principles_map[p_seq])
 
             if c_seq not in categories_map:
-                categories_map[c_seq] = {"sequence": c_seq, "name": c_name, "principle_sequence": p_seq}
+                categories_map[c_seq] = {
+                    "sequence": c_seq,
+                    "name": c_name,
+                    "principle_sequence": p_seq,
+                }
                 principles_map[p_seq]["categories"].append(categories_map[c_seq])
 
         # Create Framework
@@ -236,7 +262,9 @@ class FrameworkImportService:
             # Create AssessmentQuestions (one per provision)
             questions = []
             for idx, prov in enumerate(provisions, start=1):
-                category_label = f"{prov['principle_name']} – {prov['category_name']}".strip(" –")
+                category_label = (
+                    f"{prov['principle_name']} – {prov['category_name']}".strip(" –")
+                )
                 questions.append(
                     AssessmentQuestion(
                         template=template,

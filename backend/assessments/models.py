@@ -15,6 +15,13 @@ class Framework(models.Model):
     categories = models.JSONField(default=dict)
     scoring_methodology = models.JSONField(default=dict)
     reporting_period = models.CharField(max_length=100, blank=True, default="")
+    
+    # EO100 and other framework-specific metadata
+    metadata = models.JSONField(
+        default=dict, blank=True,
+        help_text="Framework-specific metadata (e.g., EO100 supplements, principle count)"
+    )
+    
     last_synced = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -246,6 +253,13 @@ class AssessmentTemplate(models.Model):
         PUBLISHED = "PUBLISHED", "Published"
         ARCHIVED = "ARCHIVED", "Archived"
 
+    # EO100 supplement types
+    class SupplementType(models.TextChoices):
+        DEFAULT = "DEFAULT", "Default"
+        PROCESSING = "PROCESSING", "Processing"
+        PRODUCTION = "PRODUCTION", "Production"
+        TRANSMISSION_STORAGE = "TRANSMISSION_STORAGE", "Transmission & Storage"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True, null=True, blank=True)
@@ -258,6 +272,15 @@ class AssessmentTemplate(models.Model):
         null=True,
         blank=True,
         related_name="templates",
+    )
+    
+    # EO100 supplement type (null for non-EO100 frameworks)
+    supplement_type = models.CharField(
+        max_length=50,
+        choices=SupplementType.choices,
+        null=True,
+        blank=True,
+        help_text="EO100 supplement type (null for non-EO100 frameworks)"
     )
 
     # Versioning
@@ -362,6 +385,25 @@ class AssessmentQuestion(models.Model):
     category = models.CharField(max_length=200, blank=True, default="")
     scoring_criteria = models.JSONField(default=dict)
     is_required = models.BooleanField(default=True)
+
+    # EO100 performance target level
+    performance_target_level = models.IntegerField(
+        default=1,
+        choices=[
+            (1, "PT1 - Minimum Compliance"),
+            (2, "PT2 - Good Practice"),
+            (3, "PT3 - Best Practice"),
+        ],
+        help_text="EO100 performance target level"
+    )
+    
+    # External question ID for legacy/migration (e.g., EO100: "100.1.1.1")
+    external_question_id = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text="External format: supplement.principle.objective.PT (e.g., '100.1.1.1')"
+    )
 
     # Cross-framework mapping (P2-1)
     # Structure: [{"framework_id": "uuid", "provision_code": "P1.2.3", "provision_name": "..."}, ...]

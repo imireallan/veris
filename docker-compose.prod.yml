@@ -64,13 +64,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    command: "gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     healthcheck:
       test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.settimeout(5); s.connect(('127.0.0.1',8000)); s.close()"]
-      interval: 20s
-      timeout: 10s
+      interval: 60s
+      timeout: 30s
       retries: 3
-      start_period: 40s
+      start_period: 120s
 
   ai_engine:
     build:

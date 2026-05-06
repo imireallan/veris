@@ -7,7 +7,8 @@ Usage:
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from assessments.models import Framework, AssessmentTemplate, AssessmentQuestion
+
+from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
 
 
 class Command(BaseCommand):
@@ -194,5 +195,7 @@ class Command(BaseCommand):
             total_questions += template.assessment_questions.count()
 
         self.stdout.write(
-            self.style.SUCCESS(f"  ✓ EO100: {total_questions} questions across 3 supplements")
+            self.style.SUCCESS(
+                f"  ✓ EO100: {total_questions} questions across 3 supplements"
+            )
         )

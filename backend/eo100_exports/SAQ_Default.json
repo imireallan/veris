@@ -1,0 +1,2045 @@
+{
+    "100": {
+        "1": {
+            "1": {
+                "1": {
+                    "text": "Operator shall establish a mechanism to identify and guarantee compliance with all applicable local and national legal, regulatory and administrative requirements, including regular updates and amendments to these requirements.",
+                    "pt": 1,
+                    "description": "Code of conduct, employee handbook, record of laws, contracts with legal services"
+                },
+                "2": {
+                    "text": "Operator shall make a public and documented commitment to comply with: a) all applicable local and national legal, regulatory and administrative requirements",
+                    "pt": 1,
+                    "description": "Code of conduct, employee handbook, record of laws, contracts with legal services"
+                },
+                "3": {
+                    "text": "Operator shall make a public and documented commitment to comply with: b) the principles of international agreements to which the country of operation is a signatory (whether those agreements have been transposed into national law or not). ",
+                    "pt": 1,
+                    "description": "Code of Conduct, employee handbook, documentation of international agreements"
+                },
+                "4": {
+                    "text": "Operator maintains independently audited or certified financial accounts in accordance with national or international accounting standards (whichever are the more comprehensive and stringent) and these meet the requirements of the relevant government authority.",
+                    "pt": 1,
+                    "description": "Audited financial statements, 10K"
+                },
+                "5": {
+                    "text": "Operator shall pay fees, royalties, taxes and other legally required payments according to the requirements of the host country.",
+                    "pt": 1,
+                    "description": "Tax payment confirmations"
+                },
+                "6": {
+                    "text": "Operator ensures that information on relevant requirements is held and updated in a legal register or equivalent system.",
+                    "pt": 2,
+                    "description": "Code of conduct, employee handbook, record of laws, contracts with legal services"
+                },
+                "7": {
+                    "text": "Operator has attained confirmation from an independent audit that it is in compliance with all applicable local and national legal, regulatory and administrative requirements (including permits and licenses), as well as with the principles of international agreements to which the country of operation is a signatory (whether agreements have been transposed into national law or not).",
+                    "pt": 3,
+                    "description": "Code of conduct, employee handbook, record of laws, contracts with legal services"
+                },
+                "8": {
+                    "text": "Operator has attained confirmation from the relevant government authority (or agent thereof) that all legally required payments have been made.",
+                    "pt": 3,
+                    "description": "Tax payment confirmations"
+                }
+            },
+            "2": {
+                "1": {
+                    "text": "Operator shall publicly disclose what it pays for resource extraction and/or development rights on the project and proof of payment of all  fees, royalties and taxes as well as all other information to be disclosed under the Extractive Industries Transparency Initiative (EITI) whether or not the host country is EITI compliant.",
+                    "pt": 1,
+                    "description": "statement of support, payment figures, ESTMA reports (Canada), 10K (US), Audited financial reports"
+                },
+                "2": {
+                    "text": "Operator shall disclose beneficial ownership of the project.",
+                    "pt": 1,
+                    "description": "Ownership announcements, severance taxes, royalty payments: Who actually owns the company?  Complex ownership structure.  Public companies have to disclose this under EITI"
+                },
+                "3": {
+                    "text": "Operator discloses any clauses of agreements and contracts with the host country that affect the rights of communities.",
+                    "pt": 2,
+                    "description": "statement of support, payment figures, ESTMA reports (Canada), 10K (US), Audited financial reports"
+                },
+                "4": {
+                    "text": "Operator determines beneficial ownership of partner, contractor and supplier companies.",
+                    "pt": 2,
+                    "description": "Ownership announcements, severance taxes, royalty payments: Who actually owns the company?  Complex ownership structure.  Public companies have to disclose this under EITI"
+                },
+                "5": {
+                    "text": "Operator has attained confirmation from the relevant government authority (or agent thereof) that all legally required payments have been made.",
+                    "pt": 3,
+                    "description": "statement of support, payment figures, ESTMA reports (Canada), 10K (US), Audited financial reports"
+                },
+                "6": {
+                    "text": "Operator only works with partner, contractor and supplier companies that disclose their beneficial owners.",
+                    "pt": 3,
+                    "description": "Ownership announcements, severance taxes, royalty payments: Who actually owns the company?  Complex ownership structure.  Public companies have to disclose this under EITI"
+                }
+            },
+            "3": {
+                "1": {
+                    "text": "Operator shall establish a mechanism for employees, service providers, intermediaries, agents, and contractors that prohibits, prevents and combats bribery, corruption, money laundering and financing of terrorism and of other forms of violence.",
+                    "pt": 1,
+                    "description": "Code of conduct, contractor policies and procedures, HR handbook"
+                },
+                "2": {
+                    "text": "Operator shall establish clear rules for interactions with all levels of the host country's government, administration and public agencies, with political parties and other officials",
+                    "pt": 1,
+                    "description": "-Code of conduct - ESTMA reports - government lobby registries"
+                },
+                "3": {
+                    "text": "Operator shall provide for protection of whistleblowers from retaliation.",
+                    "pt": 1,
+                    "description": "HR handbook, whistleblower policy"
+                },
+                "4": {
+                    "text": "Operator has established continuous and proactive monitoring mechanisms to detect, anticipate, and forestall potential cases of bribery and/or corruption, money laundering or financing of terrorism and other forms of violence.",
+                    "pt": 2,
+                    "description": "Code of conduct, contractor policies and procedures, HR handbook"
+                }
+            },
+            "4": {
+                "1": {
+                    "text": "Management System: Operator shall incorporate all the elements (Principles, Objectives, and Performance Targets at least at the level of PT1) specified in the EO100 Standard into its management system.",
+                    "pt": 1,
+                    "description": "This is typically not fully met in the first certification year.  An operator can partially meet this target by declaring commitment to meeting the performance level 1 targets in the EO100 standard.  It is expected that this is included in the future into the corporate management system."
+                    
+                },
+                "2": {
+                    "text": "The scope of the management system shall be defined and documented and shall include all aspects of operating activities related to environment, labor, health, safety, risk management and community affairs.",
+                    "pt": 1
+                },
+                "3": {
+                    "text": "Commitment: Operator shall adopt a directive, memorandum of intent, or similar position statement from top management (i.e., corporate-level or country-level authority) that commits to implementing the EO100™ Standard at each stage of the project life cycle.",
+                    "pt": 1,
+                    "description": ""
+                },
+                "4": {
+                    "text": "Operator shall develop, implement, and maintain procedures to identify, access, and apply all applicable international standards regarding good practice.",
+                    "pt": 1,
+                    "description": "Code of conduct, employee handbook"
+                },
+                "5": {
+                    "text": "Impact Assessments: Operator shall conduct Environmental, Social, Economic, Cultural and Health Impact Assessments for each phase of the project establishing a baseline and using recognized international standards to identify impacts and appropriate mitigation measures at each stage of the project life cycle.",
+                    "pt": 1,
+                    "description": "Any evidence of environmental, social, economic or health impact assessments done. Could include: air quality impact assessments, water quality impact assessments, soil assessments (monitoring, modelling, compare to standards). Impact benefit sharing agreements with local communities. Economic assessments of project impacts - job creation, impacts on local businesses (positive or negative)"
+                },
+                "6": {
+                    "text": "Secondary and Cumulative Impacts: Operator shall conduct indirect, secondary and cumulative impact assessments.",
+                    "pt": 1,
+                    "description": "Impact assessment study procedures, ESIAs including secondary and cumulative impacts"
+                },
+                "7": {
+                    "text": "Monitoring: Operator shall implement a comprehensive monitoring program for social  impacts, including monitoring of human rights, health and engagement of workers, Indigenous Peoples and local communities; and environmental impacts, including monitoring of emissions and discharges to water, air, land and of biodiversity resources.",
+                    "pt": 1,
+                    "description": "Management guidelines around health, safety, environmental guidance, fugitive emissions, etc., Impact benefit agreements. Could be different departments"
+                },
+                "8": {
+                    "text": "Operator shall develop opportunities to involve local communities, where present, in monitoring activities.",
+                    "pt": 1,
+                    "description": "Community engagement records. Monitoring records (environmental, social, economic, health). Training of local employee. Impact benefit sharing agreements"
+                },
+                "9": {
+                    "text": "Operator shall report the results of monitoring activities and shall make such results publicly available in a timely manner (via appropriate disclosure methods for local communities, Indigenous Peoples and other non-technical stakeholders).",
+                    "pt": 1,
+                    "description": "Monitoring and reporting to regulatory/government bodies (ex: British Columbia Oil and Gas Commission)"
+                },
+                "10": {
+                    "text": "Risk Mitigation and Management: Operator shall manage and/or minimize, restore, and/or compensate for direct and indirect adverse health, economic, social, human rights and environmental  impacts proportional to the nature and scale of such impacts and the vulnerability of affected communities.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, land owner information"
+                },
+                "11": {
+                    "text": "Remedies shall be culturally appropriate and consistent with community expectations, host country domestic law, and international standards.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, land owner information"
+                },    
+                "12": {
+                    "text": "Operator conducts internal audits of the effectiveness of its policies and implementation on a regular basis. If audits identify ineffective policies or implementation, Operator takes action to improve accordingly.",
+                    "pt": 2,
+                    "description": "This is typically not fully met in the first certification year.  An operator can partially meet this target by declaring commitment to meeting the performance level 1 targets in the EO100 standard.  It is expected that this is included in the future into the corporate management system."
+                },    
+                "13": {
+                    "text": "International Industry Standards: Operator shall use international industry standards of practice and care for each stage of the project life cycle.",
+                    "pt": 2
+                },    
+                "14": {
+                    "text": "Operator, to encourage and achieve continual improvement through the application of best practices, regularly sends its relevant technical personnel to pertinent training, conferences, forums and/or meetings that are widely recognized by the industry, governments and/or stakeholders.",
+                    "pt": 2,
+                    "description": "Code of conduct, employee handbook"
+                },    
+                "15": {
+                    "text": "Operator’s development plans, as well as the environmental and social impact assessments, shall include the participatory identification and assessment of traditional use of natural resources and priority ecosystem services by local communities (land, water, landscape, flora and fauna) during all project phases.",
+                    "pt": 2,
+                    "description": "Any evidence of environmental, social, economic or health impact assessments done. Could include: air quality impact assessments, water quality impact assessments, soil assessments (monitoring, modelling, compare to standards). Impact benefit sharing agreements with local communities. Economic assessments of project impacts - job creation, impacts on local businesses (positive or negative)"
+                },
+                "16": {
+                    "text": "Operator engages other operators in the project area to participate in the indirect and cumulative impact assessment and the corresponding plan.",
+                    "pt": 2,
+                    "description": "Impact assessment study procedures, ESIAs including secondary and cumulative impacts"
+                },
+                "17": {
+                    "text": "Monitoring and sample collection by Operator is supplemented by joint monitoring and sampling with key stakeholders.",
+                    "pt": 2,
+                    "description": "Management guidelines around health, safety, environmental guidance, fugitive emissions, etc., Impact benefit agreements. Could be different departments"
+                },
+                "18": {
+                    "text": "Operator provides opportunities for stakeholders to participate meaningfully in the indirect and cumulative impact assessment and the corresponding plan.",
+                    "pt": 2,
+                    "description": "Community engagement records. Monitoring records (environmental, social, economic, health). Training of local employee. Impact benefit sharing agreements"
+                },
+                "19": {
+                    "text": "Operator undergoes external audits of the effectiveness of its policies and implementation on a regular basis. If audits identify ineffective policies or implementation, Operator takes action to improve accordingly.",
+                    "pt": 3,
+                    "description": "This is typically not fully met in the first certification year.  An operator can partially meet this target by declaring commitment to meeting the performance level 1 targets in the EO100 standard.  It is expected that this is included in the future into the corporate management system."
+                },
+                "20": {
+                    "text": "Operator investigates, analyzes or supports studies on how to improve their social and environmental practices.",
+                    "pt": 3
+                },
+                "21": {
+                    "text": "Operator provides resources to its technical personnel so that they may document their findings, experiences and best practices; publish articles in specialized journals; and present at international conferences.",
+                    "pt": 3,
+                    "description": "Code of conduct, employee handbook"
+                },
+                "22": {
+                    "text": "Operator has evaluated the impact of its local purchases on the price of local goods and equipment, and implements a purchasing policy intended to mitigate negative impacts to the local economy.",
+                    "pt": 3,
+                    "description": "Any evidence of environmental, social, economic or health impact assessments done. Could include: air quality impact assessments, water quality impact assessments, soil assessments (monitoring, modelling, compare to standards). Impact benefit sharing agreements with local communities. Economic assessments of project impacts - job creation, impacts on local businesses (positive or negative)"
+                },
+                "23": {
+                    "text": "Monitoring and sample collection by Operator is supplemented by independent monitoring and sampling by qualified third parties.",
+                    "pt": 3,
+                    "description": "Management guidelines around health, safety, environmental guidance, fugitive emissions, etc., Impact benefit agreements. Could be different departments"
+                },
+                "24": {
+                    "text": "Where local capacity is lacking, Operator establishes capacity-building and training programs to enable key stakeholders to acquire the technical skills necessary to independently undertake monitoring and sampling.",
+                    "pt": 3,
+                    "description": "Community engagement records. Monitoring records (environmental, social, economic, health). Training of local employee. Impact benefit sharing agreements"
+                },
+                "25": {
+                    "text": "Risk assessments and evaluations are reviewed by a professional, independent third party selected by the affected community.",
+                    "pt": 3,
+                    "description": "Impact Benefit Agreements, land owner information"
+                  }
+            },    
+            "5": {
+                "1": {
+                    "text": "Operator shall have a mechanism for ensuring contractors comply with local laws and adhere to the social, ethical, labor, human rights and environmental standards contained in the EO100™ Standard.",
+                    "pt": 1,
+                    "description": "Contractor policies. Will be verified on site by assessors"
+                },
+                "2": {
+                    "text": "Operator includes a provision in service contracts that requires conformity with the social, ethical, labor, human rights and environmental standards contained in the EO100™  Standard.",
+                    "pt": 2,
+                    "description": "Contractor policies. Will be verified on site by assessors"
+                },
+                "3": {
+                    "text": "Operator builds the capacity of contractors to meet the social, ethical, labor, human rights and environmental standards contained in the EO100™  Standard.",
+                    "pt": 3,
+                    "description": "Contractor policies. Will be verified on site by assessors"
+                }
+            },              
+            "6": {
+                "1": {
+                    "text": "Operator shall fully, accurately and freely disclose to public and employees all its social and environmental policies, activities and performance metrics, including quantitative metrics where feasible. Operator shall report in accordance with recognized sustainability reporting best practices, such as the Global Reporting Initiative, the Carbon Disclosure Project, and the United Nations Guiding Principles on Business and Human Rights.",
+                    "pt": 1,
+                    "description": "Sustainability reports"
+                }, 
+                "2": {
+                    "text": "Public disclosure of social, environmental, human rights and cultural risks and impacts to affected communities shall be in their local language(s) and in a reasonably accessible format throughout the life of the project.",
+                    "pt": 1
+                },      
+                "3": {
+                    "text": "Operator engages specifically with stakeholders to determine and prioritize what information to disclose and how to provide this information and details of their performance.",
+                    "pt": 2,
+                    "description": "Sustainability reports"  
+                },
+                "4": {
+                    "text": "Operator publicly reports data related to mitigation activities to a degree mutually agreed upon with affected stakeholders.",
+                    "pt": 2   
+                },
+                "5": {
+                    "text": "Operator ensures the quality and completeness of information disclosed through verification by: a) Independent third-party evaluation.",
+                    "pt": 3,
+                    "description": "Sustainability reports"  
+                },
+                "6": {
+                    "text": "Operator ensures the quality and completeness of information disclosed through verification by: b) Obtaining stakeholder feedback. Operator demonstrates steps taken for continual improvement of information quality and disclosure practices.",
+                    "pt": 3  
+                },
+                "7": {
+                    "text": "Operator reports annually via a GRI sustainability report on its human rights performance.",
+                    "pt": 3 
+                } 
+            }
+        },
+        "2": {
+            "1": {
+                "1": {
+                    "text": "Operator shall establish a mechanism to respect human rights in line with the UN Guiding Principles on Business and Human Rights, including a policy commitment to respect human rights; a due-diligence process to identify, prevent and mitigate adverse human rights impacts that the Operator causes or contributes to, or that the Operator is directly linked to; and a process to enable the remediation of any adverse human rights impacts.",
+                    "pt": 1,
+                    "description": "Code of conduct, ethics policies, handbooks."
+                },
+                "2": {
+                    "text": "Operator shall not have been found responsible, complicit or liable in any case that involves human rights impacts in a final and affirmative legal finding after exhausting all appeals made by a properly constituted legal body operating under recognized standards of the rule of law, in any of its operations within the previous five years.",
+                    "pt": 1,
+                    "description": "Absence of human Rights violations is confirmed by assessors.  No specific documentation required."
+                },
+                "3": {
+                    "text": "If there are public human rights infringement claims within the last five years, the Operator has investigated those claims promptly, thoroughly and in good faith and has provided a fair remedy where it has been responsible for or complicit in human rights infringements.",
+                    "pt": 1,
+                    "description": "Absence of human Rights violations is confirmed by assessors.  No specific documentation required."
+                },
+                "4": {
+                    "text": "In determining the appropriate form of monetary or non-monetary reparations, the Operator shall ensure that the affected stakeholder(s) are adequately informed, that the process is transparent and follows clear and consistent procedures, and that the results are predictable and fair.",
+                    "pt": 1,
+                    "description": "N/A if no human rights violations"
+                },
+                "5": {
+                    "text": "Operator educates employees, contractors, and stakeholders on their human rights both as related to the project and in general.",
+                    "pt": 2,
+                    "description": "Code of conduct, ethics policies, handbooks."
+                },
+                "6": {
+                    "text": "Neither Operator, nor its contractors, subcontractors, or subsidiaries or business units engaged in substantially similar lines of business, have been found guilty of a violation of human rights on any project within the previous three years.",
+                    "pt": 2,
+                    "description": "Absence of human Rights violations is confirmed by assessors.  No specific documentation required."
+                },
+                "7": {
+                    "text": "Operator has identified and taken measures to mitigate risks to human rights—demonstrating performance improvement over time.",
+                    "pt": 3,
+                    "description": "Code of conduct, ethics policies, handbooks."
+                },
+                "8": {
+                    "text": "Operator identifies risks to and takes steps to protect human rights defenders and environmental advocates.",
+                    "pt": 3,
+                    "description": "Absence of human Rights violations is confirmed by assessors.  No specific documentation required."
+                },
+                "9": {
+                    "text": "Human rights performance has been verified by an independent third party.",
+                    "pt": 3,
+                    "description": "Absence of human Rights violations is confirmed by assessors.  No specific documentation required."
+                }
+            },
+            "2": {
+                "1": {
+                    "text": "Operator shall establish an inclusive and accessible mechanism that directs its approach to identifying stakeholder needs and to managing stakeholder engagement activities developed in accordance with the AA1000 AccountAbility Stakeholder Engagement Standard or similar principles.",
+                    "pt": 1,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, stakeholder needs assessment. General approach to identifying landowners and affected stakeholders.  Stakeholder mapping.  Salesforce database might contain, permitting requirements drilling permits."
+                }, 
+                "2": {
+                    "text": "Operator’s mechanism shall include public and participatory processes to identify and involve legitimate and representative stakeholders in the planning and implementation of the socio-environmental components of the project, including how the Operator identifies legitimate community representatives and how it provides for the participation of minorities and vulnerable groups.",
+                    "pt": 1,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, stakeholder needs assessment."
+                }, 
+                "3": {
+                    "text": "Operator shall take steps to ensure that engagement activities do not exclude participation based on gender, social status, religious affiliation or spiritual practice, language, literacy, formal education, age or other considerations.",
+                    "pt": 1,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples communications with stakeholders."
+                }, 
+                "4": {
+                    "text": "Operator shall not conduct engagement activities in a way that creates an economic barrier to the participation of affected communities.",
+                    "pt": 1,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, example communications with stakeholders."
+                }, 
+                "5": {
+                    "text": "Where stakeholder engagement is the responsibility of the host government, the Operator shall collaborate with the responsible government agency, to the extent permitted by the agency, to achieve outcomes that are consistent with the provisions of this Objective.",
+                    "pt": 1
+                }, 
+                "6": {
+                    "text": "If the process conducted by the government does not meet the relevant requirements of these provisions, the Operator shall conduct a complementary process and, where appropriate, identify and implement supplemental actions.",
+                    "pt": 1
+                }, 
+                "7": {
+                    "text": "Operator has implemented mechanisms to guarantee stakeholder involvement in the planning and implementation of the socioenvironmental component of the project.",
+                    "pt": 2,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, stakeholder needs assessment. General approach to identifying landowners and affected stakeholders.  Stakeholder mapping.  Salesforce database might contain, permitting requirements drilling permits."
+                },
+                "8": {
+                    "text": "Operator demonstrates use of a two-way process that a) Begins early and continues through project life as necessary;",
+                    "pt": 2,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, stakeholder needs assessment."
+                }, 
+                "9": {
+                    "text": "Operator demonstrates use of a two-way process that b) Is based on relevant, transparent, objective, meaningful and easily accessible information in a culturally appropriate local language(s)and formats understandable to stakeholders;",
+                    "pt": 2,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples communications with stakeholders."
+                },
+                "10": {
+                    "text": "Operator demonstrates use of a two-way process that c) Engaged those stakeholders directly affected;",
+                    "pt": 2,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, example communications with stakeholders."
+                },
+                "11": {
+                    "text": "Operator demonstrates use of a two-way process that d) Is free of external manipulation, interference, coercion, or intimidation;",
+                    "pt": 2
+                },
+                "12": {
+                    "text": "Operator demonstrates use of a two-way process that e) Is documented.",
+                    "pt": 2
+                },
+                "13": {
+                    "text": "Operator supports the development of community capacity to engage in consultation and negotiation processes.",
+                    "pt": 2
+                },
+                "14": {
+                    "text": "Operator supports the right to Free, Prior and Informed Consent (FPIC) for all communities.",
+                    "pt": 2
+                },
+                "15": {
+                    "text": "Operator measures and publicly reports on site-level performance around management of security and human rights issues.",
+                    "pt": 2
+                },
+                "16": {
+                    "text": "Operator provides education and training for all Operations staff and contractors who engage with stakeholders and/or make decisions affecting stakeholder engagement activities on policy, strategy and implications.",
+                    "pt": 3,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, stakeholder needs assessment. General approach to identifying landowners and affected stakeholders.  Stakeholder mapping.  Salesforce database might contain, permitting requirements drilling permits."
+                },
+                "17": {
+                    "text": "Operator’s consultation activities result in: a) Improved stakeholder understanding and awareness of project impacts",
+                    "pt": 3,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, stakeholder needs assessment."
+                },
+                "18": {
+                    "text": "Operator’s consultation activities result in: b) Full and inclusive participation of key stakeholders",
+                    "pt": 3,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples communications with stakeholders."
+                },
+                "19": {
+                    "text": "Operator’s consultation activities result in: c) Clear understanding by Operator of stakeholder preferences",
+                    "pt": 3,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, example communications with stakeholders."
+                },
+                "20": {
+                    "text": "Operator’s consultation activities result in: d) Mutually-agreed upon actions pertaining to mitigation and management of adverse project impacts and opportunities/benefits recorded in a CDA and/or BCP.",
+                    "pt": 3
+                }
+            },
+            "3": {
+                "1": {
+                    "text": "Risk Assessment: Operator shall perform a thorough and timely risk assessment in consultation with communities to assess human rights-related security risks in accordance with the Voluntary Principles on Security and Human Rights. Assessments shall be carried out before operations begin and shall be updated regularly as needed.",
+                    "pt": 1,
+                    "description": "Many North American companies do not use their own security forces so many of these targets are not applicable under this objective. Confirmation that you have no armed security guards would be sufficient. Exception might be with having a policy or plan if there is a protest at one of your facilities, do you have a policy or procedure documented on how you respond to this and how you ensure that the protests remain peaceful."
+                },
+                "2": {
+                    "text": "Where public security forces are used, the Operator shall establish an agreement with the government with regards to the need, strength, and type of security to be provided.",
+                    "pt": 1
+                },
+                "3": {
+                    "text": "In particular, the Operator shall require that use of force is permitted only in direct proportion to the nature and extent of the threat under the UN Code of Conduct for Law Enforcement Officials and the UN Basic Principles on the Use of Force and Firearms by Law Enforcement Officials for preventive and defensive purposes.",
+                    "pt": 1,
+                    "description": "Security policies and procedures, security training."
+                },
+                "4": {
+                    "text": "Operator shall engage affected communities at all stages of risk assessment, security planning, and deployment of security forces.",
+                    "pt": 1,
+                    "description": "Security Risk Assessment and Procedure"
+                },
+                "5": {
+                    "text": "Operator, and its contractors, shall prohibit the deployment of their privately contracted security forces and shall discourage the government from deploying armed security forces to respond with force to civil demonstrations and protests affecting the Operator’s facilities or activities. In situations where the health and safety of project personnel is in jeopardy, only the minimum force needed will be applied if persuasion or other techniques fail to defuse the situation.",
+                    "pt": 1
+                },
+                "6": {
+                    "text": "Due Diligence: Operator, or its contractors, shall conduct a review of the human rights records of individuals, firms, and government forces involved in its security arrangements. Where that review identifies that an individual, firm, or public agency has been involved in human rights abuses, the Operator shall raise the matter with the security provider or with appropriate public authorities and shall require that the concerned individuals, firms, or agencies are replaced, or properly trained before they are deployed and closely monitored.",
+                    "pt": 1
+                },
+                "7": {
+                    "text": "Operator’s contractual relationships with security providers shall ensure that the security personnel will adhere to international norms and standards for law enforcement with regard to human rights and shall include the right to terminate any contractual relationships for non-compliance.",
+                    "pt": 1
+                },
+                "8":{                    
+                    "text": "If the Operator is required to use public security forces, the Operator shall take all reasonable steps to remove individuals from units known for human rights abuses and shall monitor the performance of the public security forces protecting it on an ongoing basis.",
+                    "pt": 1
+                },
+                "9": {
+                    "text": "Training: Operator shall ensure that private security personnel at both the management and the field levels receive training on security and human rights. Operator shall make every reasonable effort to ensure that public security personnel receive training on security and human rights by communicating expectations around appropriate conduct of security personnel and supporting the availability of training resources for public security forces.",
+                    "pt": 1
+                },
+                "10": {
+                    "text": "Training is conducted in accordance with the Voluntary Principles on Security and Human Rights, the International Code of Conduct for Private Security Providers and the ANSI/ASIS PSC.1-2012 Management System for Quality of Private Security Operations.",
+                    "pt": 1
+                },
+                "11": {
+                    "text": "Investigation and Remediation: Operator shall have procedures in place for investigating, documenting and remediating alleged abuses by security personnel or, where appropriate, for referring the matter to the relevant authorities.",
+                    "pt": 1
+                },
+                "12": {
+                    "text": "Operator shall not tolerate offenses by security forces that result in human rights violations and shall take immediate and appropriate action to terminate relationships with culpable security providers and notify relevant authorities. Where concerns relate to public security forces, the Operator shall undertake to bring the concerns to the attention of the highest levels of government.",
+                    "pt": 1
+                },
+                "13": {
+                    "text": "Transparency: Operator shall disclose or encourage the relevant public authorities to disclose to the public the security arrangements for the site, including any equipment transfers and financial support, where feasible and taking into account associated security concerns.",
+                    "pt": 1
+                },
+                "14": {
+                    "text": "Operator requires security providers to document and report all incidents of use of force.",
+                    "pt": 2,
+                    "description": "Many North American companies do not use their own security forces so many of these targets are not applicable under this objective. Confirmation that you have no armed security guards would be sufficient. Exception might be with having a policy or plan if there is a protest at one of your facilities, do you have a policy or procedure documented on how you respond to this and how you ensure that the protests remain peaceful."
+                },
+                "15": {
+                    "text": "Operator develops project-specific use of force provisions.",
+                    "pt": 2
+                },
+                "16": {
+                    "text": "Operator has been accepted as a Corporate Participant in the Voluntary Principles on Security and Human Rights, is actively seeking membership, or can demonstrate credible implementation.",
+                    "pt": 2,
+                    "description": "Security policies and procedures, security training."
+                },
+                "17": {
+                    "text": "Operator gathers project-level data on security incidents and performance of security personnel.",
+                    "pt": 2
+                },
+                "18": {
+                    "text": "Operator makes public comprehensive information to ensure that all relevant stakeholders are engaged and informed in land negotiations, market transactions and market values.",
+                    "pt": 2,
+                    "description": "Many North American companies do not use their own security forces so many of these targets are not applicable under this objective. Confirmation that you have no armed security guards would be sufficient. Exception might be with having a policy or plan if there is a protest at one of your facilities, do you have a policy or procedure documented on how you respond to this and how you ensure that the protests remain peaceful."
+                },
+                "19": {
+                    "text": "Operator's risk assessment protocols and mitigation measures consider and address the root causes of conflict.",
+                    "pt": 3
+                },
+                "20": {
+                    "text": "Operator will require that if and when private security forces are used, the company providing the security services is a signatory of the International Code of Conduct for Private Security Providers (ICoC) or is verified by a third party as having met an equivalent standard, such as the ANSI/ASIS PSC.1-2012 Management System for Quality of Private Security Operations.",
+                    "pt": 3,
+                    "description": "Security policies and procedures, security training."
+                },
+                "21": {
+                    "text": "Operator actively contributes to the promotion of the Voluntary Principles on Security and Human Rights and participates in national-level activities related to the Voluntary Principles where they exist.",
+                    "pt": 3,
+                    "description": "Security Risk Assessment and Procedure"
+                },
+                "22": {
+                    "text": "Operator invites third parties to periodically assess its site-level performance around management of security and human rights (either as an independent exercise or as part of a periodic Human Rights Impacts Assessment) and ensures community participation in this assessment.",
+                    "pt": 3
+                }
+            },
+            "4": {
+                "1": {
+                    "text": "Before purchasing or leasing land, Operator shall consult with all affected communities, including vulnerable persons or groups such as women, the landless, and the rural poor. Where affected communities include Indigenous Peoples, the Operator shall apply the Objectives of EO100 Principle 3: Indigenous Peoples’ Rights.",
+                    "pt": 1,
+                    "description": "Consultation policies, community engagement activities. Crown land leasing procedures, consultation with local landowners, surface use agreements."  
+                },
+                "2": {
+                    "text": "Operator shall not engage in, facilitate or support forced evictions and shall strive to ensure that no coercive measures are taken to affect land use or occupancy by local people in order to obtain transfer of their property interests.",
+                    "pt": 1,
+                    "description": "Land acquisition policies, Ethics policy/Statement of principles."  
+                },
+                "3": {
+                    "text": "Operator shall compensate for land use and acquisition or leasing in a timely manner and in accordance with fair market values and equitable restitution that result in the same or better livelihood levels, in the short and long term.",
+                    "pt": 1,
+                    "description": "Land owner contracts/agreements, Surface Use Agreements."  
+                },
+                "4": {
+                    "text": "Operator’s activities shall not prevent access to arable land, water sources and/or other natural resources essential for the wellbeing of the community.",
+                    "pt": 1,
+                    "description": "Land owner contracts/agreements, Surface Use Agreements."  
+                },
+                "5": {
+                    "text": "Operator cedes the land titles back to the community following the closure of the project.",
+                    "pt": 2,
+                    "description": "Land owner contracts/agreements, Surface Use Agreements."  
+                },
+                "6": {
+                    "text": "Operator works with representative institutions and public officials of affected communities and in cooperation with affected communities to develop projects and initiatives that strengthen tenure security through improved documentation and mapping of land ownership and use rights in and of the community.",
+                    "pt": 3,
+                    "description": "Land acquisition policies, Ethics policy/Statement of principles." 
+                },
+                "7": {
+                    "text": "Operator engages in multi-year restoration activities in collaboration with communities after the productive life of the project.",
+                    "pt": 3,
+                    "description": "Land owner contracts/agreements, Surface Use Agreements."  
+                },
+                "8": {
+                    "text": "Operator recognizes that local people are the owners or stewards of the resources on their land according to their traditional use, occupation and/or ownership and provides opportunities for benefit-sharing from natural resource extraction.",
+                    "pt": 3,
+                    "description": "Land owner contracts/agreements, Surface Use Agreements." 
+                }
+            },
+            "5": {
+                "1": {
+                    "text": "Operator shall assess potential for resettlement and if necessary shall develop and implement a Resettlement Action Plan in consultation with affected communities and in accordance with international standards. In the case of projects involving economic displacement only, the Operator shall develop a Livelihood Restoration Plan to compensate affected persons and/or communities in accordance with IFC Performance Standard 5.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."  
+                },
+                "2": {
+                    "text": "The Plans shall be made public and be made available in a format and language accessible to affected communities.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."  
+                },
+                "3": {
+                    "text": "Operator shall consider feasible alternative project designs to avoid the resettlement (especially involuntary resettlement) of people from areas affected by the project, including those from communally held lands and natural resources subject to traditional ownership or under customary use.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "4": {
+                    "text": "When displacement cannot be avoided, the Operator shall obtain the FPIC of local communities and shall provide adequate compensation to help improve or restore standards of living or livelihoods of affected communities in accordance with IFC Performance Standard 5.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "5": {
+                    "text": "Compensation standards shall be transparent and applied consistently to all communities and persons affected by the displacement.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."  
+                },
+                "6": {
+                    "text": "Operator shall ensure that costs for any agreed resettlements are not borne by the communities being resettled.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "7": {
+                    "text": "Resettlements will whenever possible keep communities together and include provisions to maintain the livelihoods of those people and families being resettled.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "8": {
+                    "text": "In cases of involuntary resettlement, Operator shall adhere to IFC Performance Standard 5",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "9": {
+                    "text": "Operator shall record, respond to and manage community requests for resettlement due to human health, environmental or economic impacts of the operations.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "10": {
+                    "text": "Where resettlement is the responsibility of the host government, Operator shall collaborate with the responsible government agency, to the extent permitted by the agency, to achieve outcomes that are consistent with the objectives of the provisions of this Objective.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "11": {
+                    "text": "If the process conducted by the government does not meet the relevant requirements of these provisions, the Operator shall conduct a complementary process and, where appropriate, identify  and implement supplemental actions.",
+                    "pt": 1,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."   
+                },
+                "12": {
+                    "text": "Operator makes efforts to allow resettled people to return to their lands if the cause of resettlement ceases to exist, and if feasible.",
+                    "pt": 2,
+                    "description": "Resettlement plans, feasibility studies, records of consultation and FPIC."  
+                }
+            },
+            "6":{
+                "1":{
+                    "text": "Operator shall avoid activities that promote uncontrolled settlements in areas under its responsibility.",
+                    "pt":1
+                },
+                "2": {
+                    "text": "Operator shall effectively implement design and management strategies to control settlements, and shall minimize the construction and/or opening of new access routes that facilitate settlement.",
+                    "pt": 1,
+                    "description": "Uncontrolled Settlements Strategy and Procedure."
+                },
+                "3": {
+                    "text": "Operator develops an influx management plan in coordination with  relevant local government agencies.",
+                    "pt": 2
+                },
+                "4": {
+                    "text": "Operator coordinates design and management strategies with other Operators and stakeholders to control and avoid settlement.",
+                    "pt": 3
+                }
+            },
+            "7":{
+                "1":{
+                    "text": "Operator shall establish measures for community protection and supplemental nutrition, including provisions of fresh water, when spills or other incidents related to the project compromise a community’s ability to access food or water.",
+                    "pt":1,
+                    "description": "Site safety plan, emergency policies, evidence of past aid provided to local communities when water supply has been compromised. Could also provide evidence of philanthropic activities such as providing food and water to local communities in natural disasters such as fires or floods."
+                },
+                "2": {
+                    "text": "Operator shall establish a mechanism to identify and control risks to the health of the local community, with stakeholder involvement.",
+                    "pt": 1,
+                    "description": "Site safety plan, emergency policies, health impact assessments, community health procedures."
+                },
+                "3": {
+                    "text": "Operator shall monitor the health of the local community and shall identify key health indicators, including early indicators of potentially negative impacts, in participation with stakeholders, and shall measure baseline data against those indicators.",
+                    "pt": 1,
+                    "description": "Health monitoring reports. Water and air quality monitoring could be a surrogate for determining potential health impacts on local communities.  Belonging to air monitoring networks and checking on reports of local exceedances of ambient air quality guidelines or standards.  Gathering local health information for potential exposures to air toxins, increased incidences of asthma.  Monitoring of water for evidence of contamination."
+                },
+                "4": {
+                    "text": "Operator shall contribute to the provision of medical services to the local community, coordinating with stakeholders as necessary.",
+                    "pt": 1,
+                    "description": "Site safety plan, emergency policies, health impact assessments, community health procedures."
+                },
+                "5": {
+                    "text": "Operator shall avoid or minimize the potential for community exposure to risks associated with operational accidents, construction hazards, environmental health impacts, hazardous materials and substances, and diseases that could result from project activities and project-related transportation.",
+                    "pt": 1,
+                    "description": "Site safety plan, emergency policies, health impact assessments, community health procedures, HSE policies."
+                },
+                "6": {
+                    "text": "Operator shall engage with affected communities, local government agencies, and other relevant parties, in the design of an emergency response plan that controls hazards quickly and efficiently.",
+                    "pt": 1,
+                    "description": "Engagement or reporting to local governments or regulatory bodies."
+                },
+                "7": {
+                    "text": "Operator has incorporated recognized industry best practices and IFC Health Impact Assessment (HIA) Guidelines during all project phases.",
+                    "pt": 1,
+                    "description": "Site safety plan, emergency policies, health impact assessments, community health procedures."
+                },
+                "8": {
+                    "text": "Operator provides equipment and training that allows communities to conduct data collection and monitoring on health and safety impacts.",
+                    "pt": 1,
+                    "description": "Health monitoring reports. Water and air quality monitoring could be a surrogate for determining potential health impacts on local communities.  Belonging to air monitoring networks and checking on reports of local exceedances of ambient air quality guidelines or standards.  Gathering local health information for potential exposures to air toxins, increased incidences of asthma.  Monitoring of water for evidence of contamination."
+                }
+            },
+            "8":{
+                "1":{
+                    "text": "Operator shall identify and prioritize social, economic or environmental community investment programs and shall develop and implement a plan to address these opportunities over the duration of the project. The programs shall be developed with the participation of local communities through inclusive and widespread consultation and shall be in line with culturally appropriate models of sustainable development.",
+                    "pt":1,
+                    "description": "Philanthropic initiatives, community engagement, community development plans and funds."
+                },
+                "2":{
+                    "text": "Local Content: Operator shall engage with local communities to identify and provide appropriate opportunities for employment, training and other services to communities within or adjacent to the project area.",
+                    "pt":1,
+                    "description": "Training, local recruitment activities, local content plan."
+                },
+                "3":{
+                    "text": "Operator shall establish a mechanism to determine the proportion of employment opportunities available to community members, with both the Operator and its contractors. This mechanism includes an identification of the Operator’s demand for labor, goods and services and the community’s real and potential capacity to meet that demand.",
+                    "pt":1,
+                    "description": "Philanthropy initiatives, community engagement, community development plans and funds."
+                },
+                "4":{
+                    "text": "Community Development Agreements (CDAs): Operator shall identify opportunities and create mechanisms to collaboratively develop Community Development Agreements (CDAs) and shall engage with community stakeholders to establish such agreements.",
+                    "pt":1,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds."
+                },
+                "5":{
+                    "text": "Where such agreements are in place, the Operator shall carry out the terms of the agreement in a timely, equitable and culturally appropriate manner as agreed to with affected communities.",
+                    "pt":1,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds, benefit sharing agreements."
+                },
+                "6":{
+                    "text": "CDAs shall complement and align with local government community development plans, where they exist.",
+                    "pt":1,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds, benefit sharing agreements."
+                },
+                "7":{
+                    "text": "Operator aligns community investment programs with UN Sustainable Development Goals.",
+                    "pt":2,
+                    "description": "Philanthropic initiatives, community engagement, community development plans and funds."
+                },
+                "8":{
+                    "text": "Operator: a) Ensures transparency in the tendering process to include opportunities for the community;",
+                    "pt":2,
+                    "description": "Training, local recruitment activities, local content plan."
+                },
+                "9":{
+                    "text": "Operator: b) Actively fosters the development of community subject matter experts (SMEs).",
+                    "pt":2,
+                    "description": "Philanthropy initiatives, community engagement, community development plans and funds."
+                },
+                "10":{
+                    "text": "Operator demonstrates collaborative implementation of CDA. Opportunities for improvement have been established through joint monitoring of programs and recommendations by both community and Operator representatives. Operator supports the creation of a neutral agency for the apportioning and outlay of revenue.",
+                    "pt":2,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds."
+                },
+                "11":{
+                    "text": "Operator provides support to build capacity for local administration of financial resources in order to facilitate appropriate allocations in ways that minimize potential for creating conflict.",
+                    "pt":2,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds, benefit sharing agreements."
+                },
+                "12":{
+                    "text": "Operator fairly determines the amount of community investment in consultation with local communities and taking into consideration the cumulative impacts over the life of the project.",
+                    "pt":2,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds, benefit sharing agreements."
+                },
+                "13":{
+                    "text": "Operator can demonstrate consistent, beneficial impacts over time that contribute to the UN Sustainable Development Goals.",
+                    "pt":3,
+                    "description": "Philanthropic initiatives, community engagement, community development plans and funds."
+                },
+                "14":{
+                    "text": "Operator works with the community to identify where infrastructure constraints limit the ability of local contractors to provide needed services, and invests in infrastructure accordingly.",
+                    "pt":3,
+                    "description": "Training, local recruitment activities, local content plan."
+                },
+                "15":{
+                    "text": "Operator demonstrates that: a) CDA activities result in quantifiable improvements to (or factors leading to) improved quality of life for community members.",
+                    "pt":3,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds."
+                },
+                "16":{
+                    "text": "Operator demonstrates that: b) It has made long-term and sustainable program contributions.",
+                    "pt":3,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds, benefit sharing agreements."
+                },
+                "17":{
+                    "text": "Operator demonstrates that: c) It is contributing to development of best practice guidelines on CDAs that can be adopted into legislation or used as a voluntary best practice standard within industry.",
+                    "pt":3,
+                    "description": "CDAs, Philanthropic initiatives, community engagement, community development plans and funds, benefit sharing agreements."
+                },
+                "18":{
+                    "text": "Operator supports the development of Bio-cultural Community Protocols (BCPs) to enable communities to affirm their role as the drivers of conservation and sustainable use of biodiversity in ways that support their livelihoods and traditional ways of life.",
+                    "pt":3
+                },
+                "19":{
+                    "text": "Operator measures social outcomes and impacts of community investment programs and communicates results to relevant stakeholders.",
+                    "pt":3
+                }
+            },
+            "9":{
+                "1":{
+                    "text": "Operator shall identify cultural heritage in its development plans and environmental and social impact assessments and protect it from the adverse impacts of project activities and support preservation measures.",
+                    "pt":1,
+                    "description": "Stakeholder engagement, cultural heritage policy, engagement with relevant agencies (ex: Historic Preservation Office), chance find procedure. Policy stating process to follow if cultural artifacts are found when drilling or clearing land that includes notifying appropriate communities and respecting cultural heritage."
+                },
+                "2":{
+                    "text": "Operator shall not remove, significantly alter, or damage critical cultural heritage.",
+                    "pt":1,
+                    "description": "Stakeholder engagement, cultural heritage policy, engagement with relevant agencies (ex: Historic Preservation Office)."
+                },
+                "3":{
+                    "text": "Where a project proposes to use the cultural heritage, including knowledge, innovations, or practices of local communities for commercial purposes, the Operator shall use a good faith negotiation process that results in a documented outcome and provides for fair and equitable sharing of benefits from commercialization of such knowledge, innovation, or practice, consistent with the local community’s customs and traditions.",
+                    "pt":1,
+                    "description": "Stakeholder engagement, cultural heritage policy, engagement with relevant agencies (ex: Historic Preservation Office), chance find procedure."
+                }
+            },
+            "10":{
+                "1":{
+                    "text": "Operator shall develop, implement, communicate and maintain a grievance mechanism to accommodate, understand, document, respond to and address complaints, comments, and expectations of stakeholders.",
+                    "pt":1,
+                    "description": "Records of community complaints and methods to address them, grievance policies and procedures. Where can grievances be brought forth?  Website, hotlines? Documented mechanism and tracking of grievances and methods used to respond to local concerns."
+                },
+                "2":{
+                    "text": "Operator shall record, prioritize, verify and remediate grievances in a timely manner.",
+                    "pt":1
+                },
+                "3":{
+                    "text": "The Operator shall establish and exercise the grievance mechanism with a view to good faith resolution of disputes through a fair and transparent process.",
+                    "pt":1
+                },
+                "4":{
+                    "text": "The grievance mechanism shall not restrict communities´ access to judicial remedies, and any and all statutes of limitations for possible claims against the Operator shall be suspended during the grievance mechanism process.",
+                    "pt":1
+                },
+                "5":{
+                    "text": "The grievance mechanism shall meet the effectiveness criteria for non-judicial grievance mechanisms established by the UN Guiding Principles on Business and Human Rights, shall provide for an independent arbiter with human rights expertise and shall ensure the informed participation of affected stakeholders.",
+                    "pt":1,
+                    "description": "Records of community complaints and methods to address them, grievance policies and procedures."
+                },
+                "6":{
+                    "text": "Affected communities bringing grievances shall be entitled to choose their own advocate (lawyer or advisor) to accompany and/or represent them.",
+                    "pt":1
+                },
+                "7":{
+                    "text": "Proceedings of grievances shall be made available in a format and language accessible to the party or parties involved.",
+                    "pt":1
+                },
+                "8":{
+                    "text": "The grievance mechanism shall be freely available and affordable to access for all interested parties.",
+                    "pt":1
+                },
+                "9":{
+                    "text": "Operator publishes summaries of grievances, their status and ultimate resolutions.",
+                    "pt":2
+                }
+            }
+        },
+        "3":{
+            "1":{
+                "1":{
+                    "text": "Operator shall apply FPIC in the following situations and any others where it is required by local laws: • When a project impacts Indigenous Peoples´ lands and natural resources subject to traditional ownership or under customary use; • When the Operator proposes to store or dispose of hazardous materials on Indigenous Peoples´ land or territories; • When a project occasions the relocation of Indigenous Peoples from lands and natural resources subject to traditional ownership or under customary use; • When a project may significantly impact priority ecosystems that Indigenous Peoples may rely on for cultural, spiritual, or livelihood purposes;• When a project may significantly impact critical cultural heritage that is essential to the identity and or cultural, ceremonial or spiritual aspects of Indigenous Peoples’ lives; or • When the Operator proposes to use the cultural heritage including traditional knowledge, innovations and or practices of Indigenous Peoples for commercial purposes.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Indigenous Consultation Strategy. Non-objection letters from Indigenous Communities. Government consultation requirements."
+                },
+                "2":{
+                    "text": "Where FPIC was not obtained by the host government, prior concession holder, or by the Operator, Operator shall conduct an FPIC process before it starts project activities.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements."
+                },
+                "3":{
+                    "text": "Operator shall publicly disclose how it determines FPIC and how it has ensured that those participating in FPIC consultations are the relevant stakeholders with the authority to represent their community's interests.",
+                    "pt": 2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Indigenous Consultation Strategy. Non-objection letters from Indigenous Communities. Government consultation requirements."
+                },
+                "4":{
+                    "text": "Consultation activities are performed well in advance of ground disturbance activities to all communities to understand potential impacts and make informed decisions.",
+                    "pt": 2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements."
+                },
+                "5":{
+                    "text": "Operator shall record consultation and engagement activities, monitor mitigation implementation and commitment management.",
+                    "pt": 3,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Indigenous Consultation Strategy. Non-objection letters from Indigenous Communities. Government consultation requirements."
+                },
+                "6":{
+                    "text": "Operator demonstrates that legitimate and/or legal representatives of affected communities of Indigenous Peoples are satisfied with the results of these procedures.",
+                    "pt": 3
+                }
+            },
+            "2":{
+                "1":{
+                    "text": "Operator shall conduct thorough stakeholder mapping or another exercise that identifies the full range of decision makers and opinion influencers in order to identify legitimate, traditional, and legal representatives.",
+                    "pt": 1, 
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Stakeholder engagement policies/guides, Indigenous people policies."
+                },
+                "2":{
+                    "text": "In all cases where stakeholder consultation takes place, the Operator shall demonstrate the participation of the legitimate, traditional and/or legal representatives of the organizational structures of directly,  indirectly and potentially affected Indigenous Peoples in all project phases.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Stakeholder engagement policies/guides, Indigenous people policies."
+                }, 
+                "3":{
+                    "text": "Operator shall also demonstrate participation from diverse members of the community (including women and discriminated groups).",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Stakeholder engagement policies/guides, Indigenous people policies."
+                }, 
+                "4":{
+                    "text": "Operator shall demonstrate that a clear majority of traditional and/or legal representatives of affected Indigenous Peoples' communities are satisfied with the results of engagement activities.",
+                    "pt": 1,
+                    "description": "Documentation of any voting processes and townhalls with indigenous communities."
+                }, 
+                "5":{
+                    "text": "In the event of divisiveness within communities, the Operator and contractors shall make concerted efforts to include all parties, including those who may oppose their interests.",
+                    "pt": 1
+                }, 
+                "6":{
+                    "text": "Operator shall hold consultations and other meetings in areas that are geographically accessible to the majority of community members. When this is not possible, the Operator shall compensate participants for time and travel.",
+                    "pt": 1
+                }, 
+                "7":{
+                    "text": "Operator shall provide information about the project in languages that are understood by the majority of community members, and in formats that are compatible with technology available to the majority of community members.",
+                    "pt": 1,
+                    "description": "Presentations or documentation of communications sent to the community."
+                }, 
+                "8":{
+                    "text": "Government Agents: Where a government agency has oversight for managing Indigenous Peoples’ issues, the Operator shall collaborate with the agency  to the extent feasible and permitted by it, and with the communities, to achieve outcomes that are consistent with the objectives of this Principle and are compliant with government requirements.",
+                    "pt": 1
+                }, 
+                "9":{
+                    "text": "Operator’s policy for engagement with Indigenous Peoples has been agreed upon by relevant stakeholders in the affected community.",
+                    "pt": 2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Stakeholder engagement policies/guides, Indigenous people policies."
+                }, 
+                "10":{
+                    "text": "Where practicable, Operator establishes the process and outcomes of engagement with Indigenous Peoples in the form of an equitable agreement, the terms of which are clear and understood by the community and its legitimate representatives.",
+                    "pt": 2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, Stakeholder engagement policies/guides, Indigenous people policies."
+                }, 
+                "11":{
+                    "text": "Operator demonstrates the participation of the legitimate and/or legal representatives of potentially affected communities of Indigenous Peoples in all project phases.",
+                    "pt": 2,
+                    "description": "Documentation of any voting processes and townhalls with indigenous communities."
+                }, 
+                "12":{
+                    "text": "Operator has developed and implemented a plan detailing the requirements and accountabilities of the government agency and Operator regarding the Provisions of Principle 3 of the EO100™ Standard.",
+                    "pt": 2
+                }, 
+                "13":{
+                    "text": "Operator demonstrates that legitimate and/or legal representatives of affected communities of Indigenous Peoples are satisfied with the results of these procedures.",
+                    "pt": 3,
+                    "description": "Documentation of any voting processes and townhalls with indigenous communities."
+                }
+            },
+            "3":{
+                "1":{
+                    "text": "Where a project directly or indirectly impacts cultural heritage. Operator obtains the FPIC of the affected Indigenous Peoples in accordance with best practices in established and emerging standards and norms (both international and local).",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements."
+                },
+                "2":{
+                    "text": "If a project may significantly impact cultural heritage that is essential to the identity and/or cultural, ceremonial, or spiritual aspects of Indigenous Peoples’ lives, Operator shall take steps to avoid or minimize such direct or indirect impacts.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "3":{
+                    "text": "If construction or operations at the project site prevent access to previously accessible cultural heritage sites that are currently being used by, or that have been used by, affected communities within living memory for long-standing cultural purposes, the Operator shall allow continued access to the cultural site or provide an alternative access route, subject to health, safety, and security considerations.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "4":{
+                    "text": "Operator shall protect and preserve tangible and intangible cultural heritage that is part of the community's tradition.",
+                    "pt": 2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                }
+            },
+            "4":{
+                "1":{
+                    "text": "Operator’s development plans, as well as the environmental and social impact assessments, shall include the participatory identification and assessment of traditional use of natural resources and priority ecosystem services by Indigenous Peoples (land, water, landscape, flora and fauna) during all project phases.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "2":{
+                    "text": "Operator shall protect and preserve traditional natural resources and avoid adverse impacts on those resources.",
+                    "pt": 1, 
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "3":{
+                    "text": "Operator, jointly with Indigenous Peoples, has implemented programs for the protection – and optimization, when necessary – of traditional resource use.",
+                    "pt": 2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                }
+            },
+            "5":{
+                "1":{
+                    "text": "Where a project proposes to use the cultural heritage, including traditional, intellectual and spiritual knowledge, innovations; or practices of indigenous communities for commercial purposes, the Operator shall use a good faith negotiation process that results in a documented outcome and provides for fair and equitable sharing of benefits from commercialization of such knowledge, innovation, or practice, consistent with their customs and traditions.",
+                    "pt": 1,
+                    "description": "Compliance with UNDRIP Article 11, traditional land use studies."
+                },
+                "2":{
+                    "text": "Where a project proposes to use the cultural heritage including knowledge, innovations, or practices of Indigenous Peoples for commercial purposes (including project-related activities), the Operator shall inform the affected communities of: a) Their rights under national and international law;",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "3":{
+                    "text": "Where a project proposes to use the cultural heritage including knowledge, innovations, or practices of Indigenous Peoples for commercial purposes (including project-related activities), the Operator shall inform the affected communities of: b) The scope and nature of the proposed commercial development and use;",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "4":{
+                    "text": "Where a project proposes to use the cultural heritage including knowledge, innovations, or practices of Indigenous Peoples for commercial purposes (including project-related activities), the Operator shall inform the affected communities of: c) Potential consequences of such development and use.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "5":{
+                    "text": "And The Operator shall also: d) Obtain FPIC from the affected communities of Indigenous Peoples in accordance with best practices in emerging standards and norms;",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "6":{
+                    "text": "Where a project proposes to use the cultural heritage including knowledge, innovations, or practices of Indigenous Peoples for commercial purposes (including project-related activities), the Operator shall inform the affected communities of: e) Ensure fair and equitable benefits and compensation from operationally applied knowledge, innovation, or practice;",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                },
+                "7":{
+                    "text": "Where a project proposes to use the cultural heritage including knowledge, innovations, or practices of Indigenous Peoples for commercial purposes (including project-related activities), the Operator shall inform the affected communities of: f) Recognize the right to intellectual property of Indigenous Peoples.",
+                    "pt": 1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements, documented consultations."
+                }
+            },
+            "6":{
+                "1":{
+                    "text": "Operator shall establish a mechanism to respect the rights of Indigenous Peoples in isolation and initial contact, in accordance with the principles of respect for their rights to: self-determination; to their lands territories and resources; health; participation, consultation and Free, Prior and Informed Consent (FPIC); and remaining in isolation.",
+                    "pt": 1,
+                    "description": "Objective 3.6 is not applicable in North America."
+                },
+                "2":{
+                    "text": "The mechanism shall include an environmental, health and social risk analysis and response mechanisms in case of incidental contact.",
+                    "pt": 1,
+                    "description": "Objective 3.6 is not applicable in North America."
+                },
+                "3":{
+                    "text": "Operator shall not conduct activities in locations where there is evidence of Indigenous Peoples in isolation. The precautionary principle is applied: If there is evidence of Indigenous Peoples in isolation, Operator immediately informs the relevant government authorities and self-imposes strict measures to respect their rights.",
+                    "pt": 1,
+                    "description": "Objective 3.6 is not applicable in North America."
+                },
+                "4":{
+                    "text": "Operator facilitates the creation of a consultation committee comprised of organizations with a legitimate interest in or knowledge of the Indigenous Peoples in isolation.",
+                    "pt": 2,
+                    "description": "Objective 3.6 is not applicable in North America."
+                }
+            }
+        },     
+        "4":{
+            "1":{
+                "1":{
+                    "text": "Operator shall define and make publicly available in relevant local languages its employment policy. The Employment Policy addresses all issues raised in Principle 4 of the EO100™ Standard.",
+                    "pt": 1,
+                    "description": "Employment policy, HR Handbook."
+                },
+                "2":{
+                    "text": "Operator shall provide workers with documented information that is clear and understandable, regarding their rights under national labor and employment law.",
+                    "pt": 1,
+                    "description": "Employment policy, HR Handbook."
+                }, 
+                "3":{
+                    "text": "Operator shall have a mechanism for ensuring that contractors respect workers' rights and meet performance requirements equivalent to or compatible with Principle 4 of the EO100™ Standard.",
+                    "pt": 1,
+                    "description": "Contractor agreements, documented contractor selection process."
+                }, 
+                "4":{
+                    "text": "Worker policy awareness includes employee annual sign off.",
+                    "pt": 2,
+                    "description": "Employment policy, HR Handbook."
+                },
+                "5":{
+                    "text": "Workers are trained and engaged to understand labour related policies.",
+                    "pt": 3,
+                    "description": "Employment policy, HR Handbook."
+                }
+            },      
+            "2":{
+                "1":{
+                    "text": "Operator's employment policy shall include a clause prohibiting child labor.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct, statement of principles. Note that although child labor is illegal in north America, this target can be satisfied with a written commitment of the organization that prohibits child labor. In the absence of a policy commitment, the assessors can check employment records to ensure this is met." 
+                },  
+                "2":{
+                    "text": "The policy shall include protections for young workers, where young workers are or may be engaged in employment. The policy addresses age requirements for hazardous work.",
+                    "pt": 1 
+                }, 
+                "3":{
+                    "text": "Operator demonstrates that it does not employ under-age individuals.",
+                    "pt": 1
+                },  
+                "4":{
+                    "text": "Operator  shall apply the policy to its suppliers.",
+                    "pt": 1,
+                    "description": "Some suppliers are oversees and in disadvantaged countries.  A best practice would be to ensure the company is not indirectly supporting child labor through it's supply chain." 
+                }, 
+                "5":{
+                    "text": "Operator has established a system to monitor labor throughout its supply chain to ensure no child labor is engaged, including terminating contracts with providers that employ or are at risk or employing child labor.",
+                    "pt": 3,
+                    "description": "Employment policy, HR handbook, Code of Conduct, statement of principles. Note that although child labor is illegal in north America, this target can be satisfied with a written commitment of the organization that prohibits child labor. In the absence of a policy commitment, the assessors can check employment records to ensure this is met." 
+                },   
+                "6":{
+                    "text": "Operator and its contractors monitor compliance with the policy. Operator demonstrates that its contractors do not employ under-age individuals.",
+                    "pt": 3
+                }
+            }, 
+            "3":{
+                "1":{
+                    "text": "Operator's employment policy includes a clause prohibiting forced labor in any form.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct, statement of principles." 
+                }, 
+                "2":{
+                    "text": "Operator applies the policy to its contractors and suppliers.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct." 
+                },
+                "3":{
+                    "text": "Operator shall not retain original copies of employees’ personal documentation, nor require any form of deposit, fee, or equipment advance from employees either directly or through recruitment agencies.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct."  
+                }, 
+                "4":{
+                    "text": " Operator has established a system to monitor its supply chain to ensure no forced labor is engaged, including terminating contracts with providers that employ or are at risk or employing forced labor.",
+                    "pt": 3,
+                    "description": "Employment policy, HR handbook, Code of Conduct, statement of principles."  
+                }
+            },
+            "4":{
+                "1":{
+                    "text": "Operator respects the rights of workers to freedom of association and collective bargaining and shall not interfere in workers' organizations. Operator’s employment policy shall explicitly state it respects workers' rights to freedom of association and collective bargaining.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct, statement of principles, collective bargaining agreements." 
+                },
+                "2":{
+                    "text": "Operator shall negotiate in good faith and adhere to collective bargaining agreements where they exist.",
+                    "pt": 1 
+                },  
+                "3":{
+                    "text": "Operator shall remain neutral in any legitimate unionizing or worker-organization effort; shall not undermine legitimate trade unions; shall not discriminate or retaliate against trade union or other workers’ representatives; and shall not impose sanctions on workers organizing or participating in a legal strike.",
+                    "pt": 1 
+                }, 
+                "4":{
+                    "text": "Operator shall inform workers upon employment of any existing collective bargaining agreement and their rights. Operator shall ensure that workers’ representatives have access to facilities for the purposes of communicating with employees.",
+                    "pt": 1 
+                }
+            },  
+            "5":{
+                "1":{
+                    "text": "Operator’s employment policy shall state it does not practice or condone any form of discrimination in the workplace in terms of hiring, remuneration, overtime, access to training, promotion, termination or retirement based on race, ethnicity, caste, national or social origin, religion, disability, gender, sexual orientation, union membership, political affiliation, marital status, pregnancy status, physical appearance, HIV status, age, or any other applicable prohibited basis.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct, EEO employer policy." 
+                },  
+                "2":{
+                    "text": "Operator shall provide equal opportunities to all individuals who are “Fit for Work” and shall not discriminate on the basis of factors unrelated to their ability to perform their job.",
+                    "pt": 1,
+                    "description": "Employment policy, HR handbook, Code of Conduct, EEO employer policy."  
+                },     
+                "3":{
+                    "text": "Worker committees shall have adequate gender representation.",
+                    "pt": 1,
+                    "description": "Worker committee policies, worker committee participation records." 
+                },
+                "4":{
+                    "text": "Operator shall provide guest or migrant workers with the same benefits and protections as nationals or non-migrants.",
+                    "pt": 1,
+                    "description": "Documentation of benefits, Employment policy, HR handbook, Code of Conduct, EEO employer policy." 
+                },
+                "5":{
+                    "text": "Operator shall prohibit sexual harassment and other forms of mentally or physically abusive behavior in the workplace and in employer-provided accommodations.",
+                    "pt": 1,
+                    "description": "Code of conduct, HR handbook, HR policies, Harassment policies." 
+                },
+                "6":{
+                    "text": "Operator shall establish fair disciplinary practices and communicate its disciplinary process to all workers.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies." 
+                },
+                "7":{
+                    "text": "Operator shall not make deductions for disciplinary purposes except where permitted by national law and permitted by a freely negotiated collective bargaining agreement.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                },
+                "8":{
+                    "text": "Operator’s employment policy explicitly prohibits corporal punishment under any circumstances, as well as harsh or degrading treatment, coercion or intimidation in any circumstances.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                }
+            },
+            "6":{
+                "1":{
+                    "text": "Working Hours: Operator shall apply normal working hours that comply with applicable law. Working hours do not exceed, on a regular basis, a maximum of 48 hours per working week. If overtime is required for business needs, Operator shall pay overtime to its workers according to applicable law. Overtime is voluntary and except in special circumstances (for example on fly-in, fly-out sites) is limited to a maximum of 12 hours in a week.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                },  
+                "2":{
+                    "text": "Leave: Operator shall provide workers with all legally mandated leave, including maternity and paternity, compassionate and paid annual leave. Operator shall provide all employees with at least one rest day in seven consecutive working days.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                },  
+                "3":{
+                    "text": "Employee leave benefits exceed provincial regulations and include remote work from home options.",
+                    "pt": 2,
+                    "description": "HR policy, Employment policies." 
+                }, 
+                "4":{
+                    "text": "Employee leave benefits are industry leading and exceed local best practices",
+                    "pt": 3,
+                    "description": "HR policy, Employment policies." 
+                }
+            }, 
+            "7":{
+                "1":{
+                    "text": "Wages: Operator shall pay workers a wage based on the higher of either the applicable legal minimum wage or the prevailing industry standards, plus associated statutory benefits.",
+                    "pt": 1 
+                }, 
+                "2":{
+                    "text": "Operator shall take steps to ensure: a) Wages are sufficient to meet the basic needs of workers and provide some discretionary income;",
+                    "pt": 1 
+                },  
+                "3":{
+                    "text": "Operator shall take steps to ensure: b) It makes payment to its workers on a regular and pre-determined basis;",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                },
+                "4":{
+                    "text": "Operator shall take steps to ensure: c) Payment is made by bank transfer or in cash or check form, in a manner and location convenient to the workers;",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                }, 
+                "5":{
+                    "text": "Operator shall take steps to ensure: d) All payments include a wage slip which clearly details wage rates, benefits and deductions where applicable;",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                }, 
+                "6":{
+                    "text": "Operator shall take steps to ensure: e) No deductions from wages are made without following due process;",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies."  
+                },
+                "7":{
+                    "text": "Operator shall take steps to ensure: f) Workers are not forced to buy provisions from Operator-owned businesses or facilities;",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Code of Conduct, Statement of principles." 
+                }, 
+                "8":{
+                    "text": "Operator shall take steps to ensure: g) Labor-only contracting arrangements or consecutive short term contracts are not used to avoid obligations under applicable law relating to labor or social security.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Code of Conduct, Statement of principles."  
+                },
+                "9":{
+                    "text": "Operator shall retain appropriate worker documentation, including records of wage payments as well as working hours, for all workers employed, whether on a full time, part time or temporary basis.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Code of Conduct, Statement of principles."  
+                },
+                "10":{
+                    "text": "Operator-provided housing shall be affordable or provided free of charge.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Code of Conduct, Statement of principles, Contractor agreements." 
+                },
+                "11":{
+                    "text": "Operator consults with worker representatives to establish a basic needs wage and provides a living wage to all employees.",
+                    "pt": 2 
+                }
+            },
+            "8":{
+                "1":{
+                    "text": "Operator shall develop and implement an effective and transparent grievance mechanism and investigation process and shall clearly explain these to all workers.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Complaint procedures." 
+                }, 
+                "2":{
+                    "text": "Records of workplace grievances raised shall be treated confidentially. Operator shall formally document and investigate workplace grievances as well as Operator's response and any outcome. Investigations shall be completed in a timely fashion.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Complaint procedures."  
+                }, 
+                "3":{
+                    "text": "Results of grievances  shall be included in Operator’s management reviews and improvement plans.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Complaint procedures."  
+                }, 
+                "4":{
+                    "text": "Operator shall ensure contractors have access to workplace grievance mechanisms or shall require contractors to provide functionally equivalent grievance mechanisms for workers.",
+                    "pt": 1,
+                    "description": "HR policy, Employment policies, Complaint procedures."  
+                }, 
+                "5":{
+                    "text": "Operator’s grievance mechanism and investigation process is monitored by an external and independent third party.",
+                    "pt": 2,
+                    "description": "HR policy, Employment policies, Complaint procedures."  
+                }
+            },    
+            "9":{
+                "1":{
+                    "text": "Management System: Operator shall develop and implement an occupational health, safety, and environmental management system.",
+                    "pt": 1,
+                    "description": "HSE policies, site safety plans." 
+                },
+                "2":{
+                    "text": "The system shall be regularly audited internally and by external accredited auditors.",
+                    "pt": 1,
+                    "description": "HSE policies, site safety plans."  
+                },
+                "3":{
+                    "text": "Risk Assessments: Operator shall conduct risk analysis, identification, documentation and shall communicate all identified hazards and risks to workers.Operator shall develop and implement measures to eliminate or reduce identified hazards and risks.Operator shall take immediate actions to protect the safety of workers where conditions are immediately dangerous to life or health. Operator shall provide workers with opportunities to participate actively in all of these phases.",
+                    "pt": 1,
+                    "description": "Risk management program, HSE manual." 
+                },
+                "4":{
+                    "text": "Procedures: Operator shall implement appropriate procedures to prevent accidents and injury to health arising from, or linked to, the course of work-related activities and operations at a facility.",
+                    "pt": 1,
+                    "description": "Risk management program, HSE manual."  
+                },
+                "5":{
+                    "text": "Worker Safety Equipment: Operator shall provide employees and contractors with all necessary protective equipment and clothing free of charge. Operator and its contractors have implemented a program for the administration of Personal Protective Equipment (PPE), which includes criteria for its selection and acquisition, and training in its use, maintenance, storage and support for PPE procurement as needed. The PPE program complies with applicable norms including OSHA, ANSI, NIOSH, UL and/or the corresponding EU directives.",
+                    "pt": 1,
+                    "description": "Risk management program, HSE manual."  
+                },
+                "6":{
+                    "text": "Training: Operator shall provide regular professional and technical training to workers on the occupational health, and safety management system. Training shall include basic hazard awareness, site-specific hazards, potential risks to health, safe work practices, hygiene requirements, protective equipment and clothing, emergency procedures for fire, evacuation, and natural disaster, as appropriate, and incident reporting.",
+                    "pt": 1,
+                    "description": "Safety training programs and procedures, HSE manual." 
+                },
+                "7":{
+                    "text": "Health & Safety Information: Operator shall make information about health and safety available to workers in an understandable form and in appropriate languages. Material Safety Data Sheets (or equivalent necessary information) are accessible where any hazardous substances are in use, and the risks associated with use of hazardous substances are clearly communicated to all workers who use or work near them.",
+                    "pt": 1,
+                    "description": "Safety training programs and procedures, HSE manual."  
+                },
+                "8":{
+                    "text": "Health & Safety Committee or Equivalent: Operator shall provide workers with a mechanism, such as a joint health and safety committee, by which they can raise and discuss health and safety issues with management and company health staff.",
+                    "pt": 1,
+                    "description": "HSE policies." 
+                },
+                "9":{
+                    "text": "Refusal to Work in Conditions Immediately Dangerous to Life or Health: Operator’s health & safety policy and training shall include workers´ right to refuse to work in conditions that are unsafe, hazardous or life threatening or go against Operator’s health & safety policies or code of conduct.",
+                    "pt": 1,
+                    "description": "HSE policies."  
+                },
+                "10":{
+                    "text": "Incident Reporting: Operator shall maintain documentation of all health and safety incidents. Occupational accident and illness/disease recording and notification practices comply with the ILO Code for Recording and Notification of Occupational Accidents and Diseases.",
+                    "pt": 1,
+                    "description": "HSE policies, reporting procedures, employee safety training." 
+                },
+                "11":{
+                    "text": "Worker & Family Wellness: Operator shall provide a safe and healthy workplace environment and ensure conditions of workplace facilities are adequate, including access to water and food safety and hygiene where food is provided.",
+                    "pt": 1,
+                    "description": "HSE policies."   
+                },
+                "12":{
+                    "text": "If risks to mental health and wellbeing are identified through the health risk assessments or health monitoring, Operator shall consult with workers, and develop policies and programs to prevent or mitigate the identified risks. Operator shall eliminate exposures to risks that might affect reproductive health.",
+                    "pt": 1,
+                    "description": "HSE policies, health assessment policies." 
+                },
+                "13":{
+                    "text": "Facilities: Operator shall provide access to adequate on-site health and medical facilities, including clearly marked first aid provisions, and develops procedures for transportation of workers with more serious health concerns to adequate local hospitals or medical facilities.",
+                    "pt": 1,
+                    "description": "HSE policies."  
+                },
+                "14":{
+                    "text": "Worker Accommodation: Where accommodation is provided by the Operator or its contractors, Operator shall ensure safe, sanitary and healthy living conditions for workers, including access to clean water and waste disposal facilities.",
+                    "pt": 1,
+                    "description": "HSE policies."  
+                },
+                "15":{
+                    "text": "Operator provides workers with access to maternal, child health, reproductive and family planning services.",
+                    "pt": 2,
+                    "description": "HSE policies, site safety plans."  
+                },
+                "16":{
+                    "text": "There are no recordable work-related injuries within the 12 months preceding the audit.",
+                    "pt": 2,
+                    "description": "HSE policies, site safety plans."  
+                },
+                "17":{
+                    "text": "Operator has established a formal internal system to solicit, monitor and follow up on employees’ requests for additional training or professional development.",
+                    "pt": 2,
+                    "description": "Risk management program, HSE manual."  
+                },
+                "18":{
+                    "text": "Operator facilitates access to appropriate physical, mental and social well-being for employees’ families.",
+                    "pt": 2 
+                },
+                "19":{
+                    "text": "On-site health providers are qualified to provide a range of primary care services.",
+                    "pt": 2,
+                    "description": "HSE policies."  
+                },
+                "20":{
+                    "text": "Operator provides workers' families with access to health services.",
+                    "pt": 3,
+                    "description": "HSE policies, site safety plans."  
+                },
+                "21":{
+                    "text": "There are no recordable work-related injuries within the 24 months preceding the audit.",
+                    "pt": 3,
+                    "description": "HSE policies, site safety plans."  
+                },
+                "22":{
+                    "text": "Workers' right to access on- and off-site services and to receive confidential services is stated clearly in workplace polices and posted publicly.",
+                    "pt": 3,
+                    "description": "Risk management program, HSE manual."  
+                }
+            },
+            "10":{
+                "1":{
+                    "text": "Planning & Response Training: Operator shall implement a plan, has appropriate equipment, and permanent control points to respond to emergencies in compliance with national laws and international standards.",
+                    "pt": 1,
+                    "description": "Emergency preparedness policies, emergency management plans, HSE manual." 
+                },  
+                "2":{
+                    "text": "Operator shall hold training and drills regularly. Operator ensures workers are not put at risk by being involved in response activities.",
+                    "pt": 1,
+                    "description": "Emergency preparedness policies, emergency management plans, HSE manual."  
+                }, 
+                "3":{
+                    "text": "Operator shall document the training, drills and performance after emergency events. Continual improvements are sought, based on disclosure to and feedback from stakeholders and responsible government agencies.",
+                    "pt": 1,
+                    "description": "Emergency preparedness policies, emergency management plans, HSE manual."  
+                }, 
+                "4":{
+                    "text": "Equipment: Operator shall install appropriate alarms, warning devices and fire safety mechanisms. This includes firefighting equipment; clearly marked, unlocked and unblocked emergency exits and escape routes; and emergency lighting in all facilities.",
+                    "pt": 1,
+                    "description": "Emergency preparedness policies, emergency management plans, HSE manual."  
+                }, 
+                "5":{
+                    "text": "If security concerns are present at the project site, then Operator shall have appropriate equipment to identify and respond to security related threats.",
+                    "pt": 1,
+                    "description": "Emergency preparedness policies, emergency management plans, HSE manual."  
+                }, 
+                "6":{
+                    "text": "Evacuation Plans & Procedures: Operator shall develop and implement procedures and evacuation plans for all reasonably foreseeable emergencies.",
+                    "pt": 1,
+                    "description": "Evacuation plans, training programs, records of exercises and drills." 
+                }, 
+                "7":{
+                    "text": "Operator shall ensure procedures and plans are accessible and clearly displayed throughout their facilities; ensure these are maintained; regularly test these procedures (including the conduct of evacuation drills), and update them periodically.",
+                    "pt": 1,
+                    "description": "Evacuation plans, training programs, records of exercises and drills."  
+                }, 
+                "8":{
+                    "text": "Operator´s emergency response plans shall be developed and maintained in collaboration with potentially affected communities, workers and their representatives, and relevant agencies.",
+                    "pt": 1,
+                    "description": "Evacuation plans, training programs, records of exercises and drills."  
+                }, 
+                "9":{
+                    "text": "Documentation & Investigation: Operator shall formally document and investigate Health and Safety incidents, as well as Operator´s response and any outcome from such incidents. Investigations shall include a root cause analysis and identification of corrective and preventive measures. Results of the investigation shall be included in Operator’s Health and Safety reviews and process improvement plans.",
+                    "pt": 1,
+                    "description": "Evacuation plans, training programs, records of exercises and drills."  
+                }
+            }
+        },                         
+        "5":{
+            "1":{
+                "1":{
+                    "text": "Operator shall define and communicate to stakeholders in relevant local languages its Environmental Policy, which has equal importance to Operator´s other Business Policies. Environmental Policy shall address all issues raised in Principle 5 of the EO100™ Standard including, in particular, commitment to meet or exceed all relevant environmental legislation; the application of the mitigation hierarchy; the protection of air, water, land, ecosystems and ecosystems services; use of technologies and practices to minimize emissions, energy and water use, surface disturbance, and the generation of wastes; and meaningful engagement with stakeholders on potential environmental issues and impacts.",
+                    "pt": 1,
+                    "description": "Information provided to landowners, Reporting to regulatory bodies (ex: West Virgina DEP), Environmental policies, Code of conduct, company handbook."
+                },
+                "2":{
+                    "text": "Operator shall implement an Environmental Management System that complies with, is based on, or is functionally equivalent to ISO14001.",
+                    "pt": 1,
+                    "description": "General environmental policy, policies on specific environmental aspects (ex: water sustainability policies), compliance with local regulations in line with ISO14001."
+                },
+                "3":{
+                    "text": "Operator shall demonstrate that it has prioritized avoidance and prevention of impacts over minimization and reduction; offsetting is considered only when other approaches have been demonstrated as technically or financially unfeasible. Where avoidance is not possible, Operator shall consider options to minimize, rehabilitate and restore areas affected by environmental impacts of the project. Offsetting is considered only when not precluded and as a last resort when other approaches have been demonstrated as technically or financially unfeasible.",
+                    "pt": 1,
+                    "description": "Environmental impact assessments, creating environmental features (ex: bat boxes), environmental policies that prohibit operating in sensitive habitats."
+                },
+                "4":{
+                    "text": "Operator encourages its suppliers and contractors to meet or exceed the environmental standards noted in its Environmental Policy.",
+                    "pt": 2,
+                    "description": "Information provided to landowners, Reporting to regulatory bodies (ex: West Virgina DEP), Environmental policies, Code of conduct, company handbook."
+                },
+                "5":{
+                    "text": "Where avoidance is not possible, Operator minimizes, rehabilitates and restores areas affected by environmental impacts of the project.",
+                    "pt": 2,
+                    "description": "Environmental impact assessments, creating environmental features (ex: bat boxes), environmental policies that prohibit operating in sensitive habitats."
+                },
+                "6":{
+                    "text": "Operator makes compliance with the environmental standards noted in its Environmental Policy a mandatory requirement for its suppliers and contractors.",
+                    "pt": 3,
+                    "description": "Information provided to landowners, Reporting to regulatory bodies (ex: West Virgina DEP), Environmental policies, Code of conduct, company handbook."
+                },
+                "7":{
+                    "text": "Operator details factors that prevented avoidance of selected areas and resulting mitigation plans in a written report that is made publicly available.",
+                    "pt": 3,
+                    "description": "Environmental impact assessments, creating environmental features (ex: bat boxes), environmental policies that prohibit operating in sensitive habitats."
+                }
+            },
+            "2":{
+                "1":{
+                    "text": "Operator shall implement plans, appropriate equipment, and permanent control points to respond to releases, incidents and emergencies. Plans comply with World Bank Group Environmental, Health, and Safety Guidelines or applicable national government requirements, whichever is stricter.",
+                    "pt": 1,
+                    "description": "Site safety plans, emergency preparedness and response policies."
+                },
+                "2":{
+                    "text": "Plans are aligned with community and worker health and safety, and address potential risks, including access to food and/or water, for nearby communities.",
+                    "pt": 1,
+                    "description": "Site safety plans, emergency preparedness and response policies."
+                },
+                "3":{
+                    "text": "Plans include mechanisms for rapid, immediate response; and a chain of command alert system.",
+                    "pt": 1,
+                    "description": "Site safety plans, emergency preparedness and response policies."
+                },
+                "4":{
+                    "text": "Training and drills are held regularly, including with local communities, where relevant.",
+                    "pt": 1,
+                    "description": "Site safety plans, emergency preparedness and response policies, records of training."
+                },
+                "5":{
+                    "text": "Operator demonstrates best practices, coordinates response plans with government entities and has a joint contingency and emergency response plan with other Operators in the area.",
+                    "pt": 2,
+                    "description": "Site safety plans, emergency preparedness and response policies."
+                },
+                "6":{
+                    "text": "Training and drills are held regularly with stakeholder participation.",
+                    "pt": 2,
+                    "description": "Site safety plans, emergency preparedness and response policies, records of training."
+                },
+                "7":{
+                    "text": "Continual improvements to the emergency preparedness plan are made based on disclosure to and feedback from stakeholders.",
+                    "pt": 3,
+                    "description": "Site safety plans, emergency preparedness and response policies, records of training."
+                }
+            },
+            "3":{
+                "1":{
+                    "text": "Operator shall quantify energy use and set targets for improving energy efficiency and reducing energy consumption.",
+                    "pt": 1,
+                    "description": "ESG reporting, emissions targets, membership in industry environmental orgs with energy efficiency guidelines, thresholds for energy efficiency.  GHG intensity reduction targets can be a surrogate providing scope 1 and 2 emissions are included."
+                },
+                "2":{
+                    "text": "Operator takes steps to reduce energy consumption at all stages of the project life cycle where relevant and feasible.",
+                    "pt": 2,
+                    "description": "ESG reporting, emissions targets, membership in industry environmental orgs with energy efficiency guidelines, thresholds for energy efficiency.  GHG intensity reduction targets can be a surrogate providing scope 1 and 2 emissions are included."
+                },
+                "3":{
+                    "text": "Operator maximizes the use of renewable energy as a proportion of total energy consumption.",
+                    "pt": 3,
+                    "description": "ESG reporting, emissions targets, membership in industry environmental orgs with energy efficiency guidelines, thresholds for energy efficiency.  GHG intensity reduction targets can be a surrogate providing scope 1 and 2 emissions are included."
+                }
+            },
+            "4":{
+                "1":{
+                    "text": "Operator shall demonstrate that a comprehensive waste management plan in line with World Bank Group Environmental, Health, and Safety Guidelines or applicable national government requirements, whichever is more strict, for the handling, storage, transportation, treatment, disposal and monitoring of both hazardous and non-hazardous wastes has been developed and implemented.",
+                    "pt": 1,
+                    "description": "Waste management policies, waste monitoring, technologies used to reduce waste or reuse products."
+                },
+                "2":{
+                    "text": "Operator shall obtain Free, Prior and Informed Consent from Indigenous Peoples for disposal of hazardous waste in their territories.",
+                    "pt": 1,
+                    "description": "Consultation agreements with indigenous groups."
+                },
+                "3":{
+                    "text": "The waste management plan shall include targets and/or programs in place to reduce wastes over time by using alternative consumables, techniques or waste management technologies.",
+                    "pt": 1,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), compliance with government climate change regulations, climate change strategy/climate adaptation policy. TCFD reporting.  Accounting for impacts due to climate change such as increased wildfires/floods."
+                },
+                "4":{
+                    "text": "Operator shall demonstrate regular reductions in the generation of hazardous and nonhazardous wastes (measured on a per-unit of energy basis).",
+                    "pt": 1
+                },
+                "5":{
+                    "text": "Operator identifies and implements opportunities for reducing waste through beneficial reuse or recycling, input substitution or process modification.",
+                    "pt": 2,
+                    "description": "Waste management policies, waste monitoring, technologies used to reduce waste or reuse products."
+                },
+                "6":{
+                    "text": "Operator establishes a goal of zero waste.",
+                    "pt": 2,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), compliance with government climate change regulations, climate change strategy/climate adaptation policy. TCFD reporting.  Accounting for impacts due to climate change such as increased wildfires/floods."
+                },
+                "7":{
+                    "text": "Operator designs and implements the waste management plan with the participation of local communities.",
+                    "pt": 2
+                },
+                "8":{
+                    "text": "Operator demonstrates achievement of zero waste.",
+                    "pt": 3,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), compliance with government climate change regulations, climate change strategy/climate adaptation policy. TCFD reporting.  Accounting for impacts due to climate change such as increased wildfires/floods."
+                }
+            },
+            "5":{
+                "1":{
+                    "text": "Operator shall assess and inventory of pre-existing environmental liabilities.",
+                    "pt": 1,
+                    "description": "Regular environmental assessment of assets, remediation and reclamation policies or guidelines, records of pre-existing liabilities."
+                },
+                "2":{
+                    "text": "Operator shall develop and implement a plan to remediate pre-existing environmental liabilities within the project area.",
+                    "pt": 1,
+                    "description": "Remediation and reclamation policies or guidelines, records of pre-existing liabilities, plug and abandonment procedures."
+                },
+                "3":{
+                    "text": "Where remediation is the legal obligation of another entity, Operator shall encourage remediation and report to the appropriate authorities where those obligations are not fulfilled.",
+                    "pt": 1
+                },
+                "4":{
+                    "text": "Operator executes and manages the implementation of a plan to remediate pre-existing environmental liabilities within the project area.",
+                    "pt": 2,
+                    "description": "Regular environmental assessment of assets, remediation and reclamation policies or guidelines, records of pre-existing liabilities."
+                },
+                "5":{
+                    "text": "In consultation with affected people, Operator actively restores ‘orphan’ environmental liabilities outside its project area that would otherwise remain untreated. The minimum area restored exceeds 100 hectares.",
+                    "pt": 3,
+                    "description": "Regular environmental assessment of assets, remediation and reclamation policies or guidelines, records of pre-existing liabilities."
+                }
+            },
+            "6":{
+                "1":{
+                    "text": "Closure Plan: Operator shall develop a closure plan as early as possible in the lifecycle of the project in collaboration with stakeholders and independent experts and updates it regularly as conditions change.",
+                    "pt": 1,
+                    "description": "Remediation plan submitted with permit application, policies around remediation and reclamation, plug and abandonment procedures."
+                },
+                "2":{
+                    "text": "Operator shall implement actions associated with the closure plan at appropriate times, and shall allocate the necessary funds for full implementation of decommissioning and restoration activities.",
+                    "pt": 1,
+                    "description": "Remediation plan submitted with permit application, policies around remediation and reclamation, plug and abandonment procedures."
+                },
+                "3":{
+                    "text": "Financial Mechanisms for Closure and Restoration: Operator, with stakeholder involvement, shall estimate the financial costs of the project’s closure and restoration phase and refines estimates at least every two years; estimates are subject to independent review and verification.",
+                    "pt": 1,
+                    "description": "Remediation plan submitted with permit application, policies around remediation and reclamation, plug and abandonment procedures."
+                },
+                "4":{
+                    "text": "Operator shall establish trust funds or fully-funded bonds for closure, restoration and indemnity, based on current estimates.",
+                    "pt": 1
+                },
+                "5":{
+                    "text": "Operator has established trust funds or collateral bonds for closure, restoration and indemnity, based on current independently verified estimates.",
+                    "pt": 2,
+                    "description": "Remediation plan submitted with permit application, policies around remediation and reclamation, plug and abandonment procedures."
+                }
+            },
+            "7":{
+                "1":{
+                    "text": "Inventory of GHG Emissions: Operator shall maintain an inventory of GHG emissions, which is updated annually or following material changes to equipment or processes (whichever is more frequent).",
+                    "pt": 1,
+                    "description": " Annual GHG reports, tracking documents."
+                },
+                "2":{
+                    "text": "The methodology to measure and calculate GHG emissions shall be disclosed to stakeholders.",
+                    "pt": 1,
+                    "description": "ESG reports, compliance with a GHG reporting framework (ex: GHG Protocol)."
+                },
+                "3":{
+                    "text": "Operator shall quantify and disclose CO2 and CO2 equivalent Scope 1 GHG emissions using established international reporting protocols such as the IPCC and CDP.",
+                    "pt": 1,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), government GHG reporting regulations.  WCI quantification methodology is acceptable."
+                },
+                "4":{
+                    "text": "Operator shall set targets for reductions in GHGs in line with industry best practice.",
+                    "pt": 1,
+                    "description": "ESG report, documentation of targets from an environmental/ESG committee within the company, regular review of annual emissions."
+                },
+                "5":{
+                    "text": "GHG reduction plans shall include plans for climate change adaptation.",
+                    "pt": 1,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), compliance with government climate change regulations, climate change strategy/climate adaptation policy. TCFD reporting.  Accounting for impacts due to climate change such as increased wildfires/floods."
+                },
+                "6":{
+                    "text": "Operator accounts for, measures and reports on scope 2 GHG emissions.",
+                    "pt": 2,
+                    "description": " Annual GHG reports, tracking documents."
+                },
+                "7":{
+                    "text": "The methodology to measure and calculate GHG emissions is disclosed to other stakeholders in tandem with appropriate training to facilitate stakeholder understanding and engagement.",
+                    "pt": 2,
+                    "description": "ESG reports, compliance with a GHG reporting framework (ex: GHG Protocol)."
+                },
+                "8":{
+                    "text": "Operator conducts resilience planning and identifies potential short-term and long-term climate and environmental risks and hazards, and incorporates adaptation measures accordingly.",
+                    "pt": 2,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), compliance with government climate change regulations, climate change strategy/climate adaptation policy. TCFD reporting.  Accounting for impacts due to climate change such as increased wildfires/floods."
+                },
+                "9":{
+                    "text": "Operator accounts for, measures and reports on scope 3 and life cycle GHG emissions.",
+                    "pt": 3,
+                    "description": " Annual GHG reports, tracking documents."
+                },
+                "10":{
+                    "text": "Operator achieves carbon neutrality through GHG reduction and compensation of any CO2 released.",
+                    "pt": 3,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), government GHG reporting regulations.  WCI quantification methodology is acceptable."
+                },
+                "11":{
+                    "text": "Where the project is expected to be or already is at risk due to climate change impacts, the Operator demonstrate the project's ability to withstand, within reason, identified climate change risks and hazards in different scenarios.",
+                    "pt": 3,
+                    "description": "ESG report, membership in environmental orgs (ex: OneFuture, the Environmental Partnership), compliance with government climate change regulations, climate change strategy/climate adaptation policy. TCFD reporting.  Accounting for impacts due to climate change such as increased wildfires/floods."
+                }
+            },
+            "8":{
+                "1":{
+                    "text": "Operator shall maintain an inventory of ODS used, which is updated annually or following material changes to equipment or processes (whichever is the more frequent). The methodology to measure and quantities of ODS used is disclosed to regulators.",
+                    "pt": 1,
+                    "description": "Reporting to regulatory bodies (ex: NPRI in Canada, Safety Data Sheets for chemicals."
+                },
+                "2":{
+                    "text": "Operator shall demonstrate regular reductions in the use of ODS (adjusted for quantity of production) and eliminate ODS in line with the Phase-out Management Plan noted in the Montreal Protocol on Substances that Deplete the Ozone Layer.",
+                    "pt": 1,
+                    "description": "Reporting to regulatory bodies (ex: NPRI in Canada, Safety Data Sheets for chemicals."
+                },
+                "3":{
+                    "text": "The methodology to measure ODS is disclosed to other stakeholders in tandem with appropriate training to facilitate stakeholder understanding and engagement.",
+                    "pt": 2,
+                    "description": "Reporting to regulatory bodies (ex: NPRI in Canada, Safety Data Sheets for chemicals."
+                },
+                "4":{
+                    "text": "Operator has eliminated the use of ODS (with the exception of “essential uses”, where no acceptable substitutes have been found).",
+                    "pt": 3,
+                    "description": "Reporting to regulatory bodies (ex: NPRI in Canada, Safety Data Sheets for chemicals."
+                }
+            },
+            "9":{
+                "1":{
+                    "text": "Operator shall assess the significance of project-related impacts on biodiversity and ecosystem functioning, including the identification of High Conservation Value Areas (HCVAs), Critical Habitat, and priority ecosystem services potentially affected by project activities in line with IFC Performance Standard 6 Biodiversity Conservation and Sustainable Management of Living Natural Resources.",
+                    "pt": 1,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "2":{
+                    "text": "Operator shall minimize habitat fragmentation and degradation caused by development activities.",
+                    "pt": 1,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "3":{
+                    "text": "Operator shall consider impacts on rare, threatened or endangered species, including aquatic species and shall not introduce invasive species (aquatic and/or terrestrial).",
+                    "pt": 1,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "4":{
+                    "text": "Operator shall not implement project activities in Critical Habitat, unless it can be clearly shown that there are no short or long term negative impacts on biodiversity values for which the Critical Habitat was designated (species and their established populations).",
+                    "pt": 1,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "5":{
+                    "text": "Operator implements an Ecosystem and Biodiversity Action Plan (EBAP), either separate from or integrated with a more comprehensive Environmental Management Plan (EMP) that includes clear and specific provisions to follow the mitigation hierarchy when addressing potential adverse impacts to biodiversity at all levels and ecosystem functioning. The EBAP has a clear procedure for community / stakeholder-based (participatory) monitoring to verify its effectiveness.",
+                    "pt": 2,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "6":{
+                    "text": "Operator's biodiversity and ecosystem impact assessment is independently verified by external experts.",
+                    "pt": 2,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "7":{
+                    "text": "Operator removes existing invasive species (aquatic and/or terrestrial).",
+                    "pt": 2,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "8":{
+                    "text": "When activities fall within the boundaries of HCVAs and/or Critical Habitat, Operator, with the participation of  external specialists and experts with local and traditional knowledge, completes an assessment to ascertain whether to establish and define ‘project-exclusion’ zones by virtue of their conservation, cultural or use value, or their environmental vulnerability. For operations where activities adversely affect zones identified post facto as ‘exclusion zones’, Operator fully mitigates, restores or compensates for those impacts.",
+                    "pt": 2,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "9":{
+                    "text": "Operator contributes to the long-term conservation of species and the integrity of biotic communities, ecosystem processes and services through adopting a goal of ‘no net loss’ and (as appropriate) aspiring to a ‘net gain’ of biodiversity, working toward: a) Full reclamation (rehabilitation) of biodiversity addressing all impacts caused by its activities, and/or;",
+                    "pt": 3,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "10":{
+                    "text": "Operator contributes to the long-term conservation of species and the integrity of biotic communities, ecosystem processes and services through adopting a goal of ‘no net loss’ and (as appropriate) aspiring to a ‘net gain’ of biodiversity, working toward: b) Compensation in a landscape context for any significant unavoidable residual adverse impacts on biodiversity, and the direct users of biodiversity. In addition, Operator incorporates specific biodiversity conservation projects in its social, community or environmental investment programs.",
+                    "pt": 3,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "11":{
+                    "text": "Operator makes all internal and external assessments of ecosystem functioning and biodiversity accessible to the public.",
+                    "pt": 3,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "12":{
+                    "text": "Operator contributes to the promotion, public awareness of, expansion, and long-term protection of HCVAs and Critical Habitat through: a) specific biodiversity conservation projects in its social, community or environmental investment program that establish, promote and/or contribute to the management of HCVAs and/or Critical Habitat.",
+                    "pt": 3,
+                    "description": "Environmental impact assessments, endangered species and wildlife surveys, use of environmental consultants, biodiversity action plan, wildlife action plan, vegetation action plan."
+                },
+                "13":{
+                    "text": "Operator contributes to the promotion, public awareness of, expansion, and long-term protection of HCVAs and Critical Habitat through: b) studies, programs and/or support educational and research institutions that generate, disseminate and advocate for the protection of HCVAs and Critical Habitat.",
+                    "pt": 3
+                }
+            },
+            "10":{
+                "1":{
+                    "text": "Operator shall gather baseline and ongoing data on air quality including volatile organic compound (VOC), methane and nitrogen oxides (NOx) from operations.",
+                    "pt": 1,
+                    "description": "Ambient air quality monitoring programs - continuous, passive or random sampling. Participation in local airshed monitoring networks. Disclosure of NOx and Voc emissions from operations."
+                },
+                "2":{
+                    "text": "Operator shall ensure that the quality of air in operations' airsheds does not materially negatively affect human or ecological health and all emissions are compliant with World Bank Group Environmental, Health, and Safety Guidelines or applicable national government requirements, whichever are stricter.",
+                    "pt": 1,
+                    "description": "Study ambient air quality monitoring data at the local level to ascertain any potential health impacts due to higher than recommended ambient air pollutant levels. Example: local monitoring station indicates frequent NO2 exceedances of local ambient air quality objectives or standards.  Operator collects this data, analyzes potential contribution from their operations."
+                },
+                "3":{
+                    "text": "Operator works with local communities to identify and implement methods for improving local air quality and reducing non-industrial sources of air pollution.",
+                    "pt": 2,
+                    "description": "Ambient air quality monitoring programs - continuous, passive or random sampling. Participation in local airshed monitoring networks. Disclosure of NOx and Voc emissions from operations."
+                }
+            },
+            "11":{
+                "1":{
+                    "text": "Operator shall minimize its use of water. Operator shall document and quantify water consumption and withdrawal over time, accounting for seasonal variability, and shall develop a water and wastewater management plan.",
+                    "pt": 1,
+                    "description": "Water management plan (submitted with well permit and/or general water policy), compliance with regulations on water management, water data in ESG report."
+                },
+                "2":{
+                    "text": "Operator shall assess, document, procure, where necessary, and respect water rights and water use rights, of local and indigenous communities, both formal and informal, that are affected by the site’s water use. Water use shall be sustainable relative to community use and renewable supplies.",
+                    "pt": 1,
+                    "description": "Compliance with regulations around water rights and water use."
+                },
+                "3":{
+                    "text": "Operator shall not use surface water unless approved by the relevant government permitting authority.",
+                    "pt": 1,
+                    "description": "Documentation of regulatory approval."
+                },
+                "4":{
+                    "text": "Operator shall reuse and recycle water to the extent possible.",
+                    "pt": 1,
+                    "description": "Water management plan, reuse and recycle programs, water policies, agreements to provide and use water from other operators."
+                },
+                "5":{
+                    "text": "Operator shall evaluate the need for a full-scale Environmental Flow Assessment (EFA) to define environmental flow requirements using an appropriate methodology that involves input from local stakeholders with scientific and/or traditional knowledge on desired ecological outcomes. Operator shall consistently meet environmental flow requirements and desired ecological outcomes.",
+                    "pt": 1,
+                    "description": "Water management plans, gauging and monitoring water withdrawal sources."
+                },
+                "6":{
+                    "text": "Water and Wastewater Quality: Operator shall gather baseline data on water and wastewater quality. The treatment of effluents and the implementation of other environmental management procedures ensure that the quality of surface water and groundwater in affected catchments and aquifers is materially unchanged by project activities and all discharged effluents are compliant with World Bank Group Environmental, Health, and Safety Guidelines or applicable national government requirements, whichever is stricter.",
+                    "pt": 1,
+                    "description": "Regular water testing and monitoring."
+                },
+                "7":{
+                    "text": "Sedimentation: Operator shall develop and implement technical specifications and guidelines for design, engineering and construction to avoid and limit the movement of sediments into surface waters within or outside the project boundary.",
+                    "pt": 1,
+                    "description": "Project permitting and civil design review, ESG report,  sedimentation and erosion control plans."
+                },
+                "8":{
+                    "text": "Operator implements water management plan, either separate from or integrated with a more comprehensive Environmental Management Plan (EMP) that includes clear and specific provisions to follow the mitigation hierarchy when addressing potential adverse impacts to water at all levels and ecosystem functioning. The Plan has a clear procedure for community / stakeholder-based (participatory) monitoring to verify its effectiveness.",
+                    "pt": 2,
+                    "description": "Water management plan (submitted with well permit and/or general water policy), compliance with regulations on water management, water data in ESG report."
+                },
+                "9":{
+                    "text": "Operator involves stakeholders in the development of water and wastewater management plans.",
+                    "pt": 2,
+                    "description": "Compliance with regulations around water rights and water use."
+                },
+                "10":{
+                    "text": "Operator identifies and collaborates with other water users in the catchment area and engages catchment-level governance mechanisms on its water management plan.",
+                    "pt": 2,
+                    "description": "Documentation of regulatory approval."
+                },
+                "11":{
+                    "text": "Operator identifies and implements opportunities for reducing wastewater through beneficial reuse or recycling, input substitution or process modification.",
+                    "pt": 2,
+                    "description": "Water management plan, reuse and recycle programs, water policies, agreements to provide and use water from other operators."
+                },
+                "12":{
+                    "text": "Environmental flow requirements and desired ecological outcomes are reported publicly; stakeholders have the opportunity to be trained and contribute to monitoring and verifying Operator’s compliance and performance.",
+                    "pt": 2,
+                    "description": "Water management plans, gauging and monitoring water withdrawal sources."
+                },
+                "13":{
+                    "text": "Operator measures water quality at the point of use and at the point that water leaves the project area.",
+                    "pt": 2,
+                    "description": "Regular water testing and monitoring."
+                },
+                "14":{
+                    "text": "Operator identifies and collaborates with other water users in the catchment area and engages catchment-level governance mechanisms on its water management plan.",
+                    "pt": 2,
+                    "description": "Project permitting and civil design review, ESG report,  sedimentation and erosion control plans."
+                },
+                "15":{
+                    "text": "Operator identifies projections for water use in its catchment in the long term, including reasonably foreseeable climate change impacts, and considers the implications for the sustainability of its own water needs.",
+                    "pt": 3,
+                    "description": "Water management plan (submitted with well permit and/or general water policy), compliance with regulations on water management, water data in ESG report."
+                },
+                "16":{
+                    "text": "Operator incorporates a commitment to the right to water in its human rights policy and endorses the UN CEO Water Mandate or equivalent.",
+                    "pt": 3,
+                    "description": "Compliance with regulations around water rights and water use."
+                },
+                "17":{
+                    "text": "Operator measures indirect water use and, if this is significant, to implement actions to reduce the impact of such indirect use, most notably in the supply chain.",
+                    "pt": 3,
+                    "description": "Water management plan, reuse and recycle programs, water policies, agreements to provide and use water from other operators."
+                },
+                "18":{
+                    "text": "The quality of surface water and groundwater in affected catchments and aquifers is improved by project activities. (This requirement applies only to sites where natural or anthropogenic contamination of surface and/or groundwater exists.)",
+                    "pt": 3,
+                    "description": "Regular water testing and monitoring."
+                }
+            },
+            "12":{
+                "1":{
+                    "text": "Operator shall conduct pre-feasibility and Feasibility Studies as well as Environmental and Social Impact Assessments (ESIA). ESIAs Include consideration of alternatives that minimize the clearance of land and quantify the amount of soil to be disturbed. Operator shall carry out a systematic approach for site selection, in consultation with affected people, with consideration of the Project Footprint.",
+                    "pt": 1,
+                    "description": "Remediation and reclamation policy/guide."
+                },
+                "2":{
+                    "text": "Operator shall ensure project infrastructure and activities do not enter into any UNESCO World Heritage Site or adjacent buffer zones.",
+                    "pt": 1,
+                    "description": "Applicable studies and assessments, collaboration and reporting to regulatory bodies (ex: US Fish and Wildlife Service)."
+                },
+                "3":{
+                    "text": "Operator selects a project configuration that minimizes the clearance of land, habitat degradation and fragmentation, and/or prioritizes the use of land previously used. Mitigation measures have been put in place to further minimize the extant cleared area including a rolling program of restoration using native species.",
+                    "pt": 2,
+                    "description": "Remediation and reclamation policy/guide."
+                },
+                "4":{
+                    "text": "Operator sets goal of zero net deforestation.",
+                    "pt": 2,
+                    "description": "Applicable studies and assessments, collaboration and reporting to regulatory bodies (ex: US Fish and Wildlife Service)."
+                },
+                "5":{
+                    "text": "In consultation with affected people, Operator actively restores ‘orphan’ degraded or cleared land in the project area that would otherwise remain unrestored.",
+                    "pt": 3,
+                    "description": "Remediation and reclamation policy/guide."
+                },
+                "6":{
+                    "text": "Operator achieves zero net deforestation.",
+                    "pt": 3,
+                    "description": "Applicable studies and assessments, collaboration and reporting to regulatory bodies (ex: US Fish and Wildlife Service)."
+                }
+            },
+            "13":{
+                "1":{
+                    "text": "Operator shall implement appropriate measures to prevent erosion of soil and non-soil materials (such as cement and other construction materials) as part of the project design and operation.",
+                    "pt": 1,
+                    "description": "Environmental impact assessments, biodiversity policy, reporting to regulatory bodies (ex: US Fish and Wildlife permit and application)."
+                },
+                "2":{
+                    "text": "Operator shall implement appropriate measures to avoid and limit the movement of sediments onto land within the boundary of the project as part of the project design, engineering and construction.",
+                    "pt": 1,
+                    "description": "Project permitting in line with erosion and sedimentation controls."
+                },
+                "3":{
+                    "text": "Operator shall use native species to minimize the area of unrestored land.",
+                    "pt": 1,
+                    "description": "Project permitting in line with erosion and sedimentation controls."
+                },
+                "4":{
+                    "text": "Operator shall initiate restoration activities concurrently with development activities throughout the life of the project, where appropriate, in consultation with stakeholders (including local communities and Indigenous Peoples).",
+                    "pt": 1,
+                    "description": "Permitting and reclamation plan."
+                },
+                "5":{
+                    "text": "Operator regularly monitors the quality of stored soil and soil used in restoration. Monitoring data confirm that stored and reused soils retain the necessary physical, biotic and chemical characteristics to maintain or enhance land capability.",
+                    "pt": 2,
+                    "description": "Environmental impact assessments, biodiversity policy, reporting to regulatory bodies (ex: US Fish and Wildlife permit and application)."
+                },
+                "6":{
+                    "text": "None of the project land area for which certification is sought is affected by sedimentation from activities associated with the project.",
+                    "pt": 2,
+                    "description": "Project permitting in line with erosion and sedimentation controls."
+                },
+                "7":{
+                    "text": "Restoration activities for any unrestored land are developed in consultation with stakeholders (including local communities and Indigenous Peoples) and completed within 6 months of the termination of operation/production or within 2 months of the cessation of exploration activities or, in the case of seasonal constraints, at the earliest possible opportunity.",
+                    "pt": 2,
+                    "description": "Permitting and reclamation plan."
+                },
+                "8":{
+                    "text": "Operator supports local development initiatives related to soil management and protection or enhancement of land capability and soil quality. Such work is defined jointly with stakeholders and implemented beyond the boundaries of the operation.",
+                    "pt": 3,
+                    "description": "Environmental impact assessments, biodiversity policy, reporting to regulatory bodies (ex: US Fish and Wildlife permit and application)."
+                },
+                "9":{
+                    "text": "None of the Infrastructure Footprint exhibits signs of erosion from any activity associated with the project.",
+                    "pt": 3,
+                    "description": "Project permitting in line with erosion and sedimentation controls."
+                },
+                "10":{
+                    "text": "Operator helps stakeholders in the project’s direct and indirect area of influence develop sedimentation prevention and management measures to address natural and anthropogenic causes of sedimentation unrelated to project activities.",
+                    "pt": 3,
+                    "description": "Project permitting in line with erosion and sedimentation controls."
+                },
+                "11":{
+                    "text": "Restoration activities for any unrestored land are developed in consultation with stakeholders (including local communities and Indigenous Peoples) and completed within 3 months of the termination of operation/production or within 1 month of the cessation of exploration activities or, in the case of seasonal constraints, at the earliest possible opportunity.",
+                    "pt": 3,
+                    "description": "Permitting and reclamation plan."
+                },
+                "12":{
+                    "text": "Operator identifies areas where no restoration is possible and avoids operating in areas that cannot be restored to their original state.",
+                    "pt": 3
+                }
+            },
+            "14":{
+                "1":{
+                    "text": "Noise: Operator shall integrate noise prevention and mitigation with project design and operational activities. Exposure levels at noise-sensitive receptors comply with national or international standards, such as the World Bank Group Environmental, Health, and Safety Guidelines (whichever is more stringent). In exceptional circumstances, and in coordination with appropriate regulatory bodies, higher exposure levels may be acceptable provided the exposure is non-continuous and temporary in nature.",
+                    "pt": 1
+                },
+                "2":{
+                    "text": "Light: Operator shall integrate light pollution prevention and mitigation methods with project design and operational activities and follow generally accepted international best practice (taking into consideration occupational health and safety and security requirements for appropriate lighting).",
+                    "pt": 1
+                },
+                "3":{
+                    "text": "Heat: Operator shall identify and characterize sources of excessive heat associated with the project and with which people or wildlife could come into contact.",
+                    "pt": 1,
+                    "description": "Light pollution studies, compliance with regulatory requirements on light, light impact studies."
+                },
+                "4":{
+                    "text": "All heat sources are fenced or otherwise protected and are labeled with visible precautionary signs in local languages.",
+                    "pt": 1,
+                    "description": "Isolation of heat sources, waste heat recovery."
+                },
+                "5":{
+                    "text": "Vibration: Operator shall evaluate and mitigate negative impacts of vibration caused by project activities.",
+                    "pt": 1
+                },
+                "6":{
+                    "text": "Odors: Operator shall identify sources of odor pollution associated with the project and with which be detected by people or wildlife. Operator shall eliminate or substantially mitigate odor emissions associated with the project that may affect or disturb people or wildlife.",
+                    "pt": 1,
+                    "description": "Seismic study, ground motion monitoring. "
+                },
+                "7":{
+                    "text": "Landscape and Visual Impacts: Operator has identified the landscape resource (landscape features, character and aesthetics) and visual receivers likely to be affected by the project and their sensitivity to potential project impacts.",
+                    "pt": 1
+                },
+                "8":{
+                    "text": "Operator shall minimize the impact on the landscape resource of project infrastructure, transport-related infrastructure, lighting, emissions and other project-related developments.",
+                    "pt": 1
+                },
+                "9":{
+                    "text": "Operator shall take particular care to avoid impacts in landscapes that have special economic, cultural, or spiritual value for local communities or Indigenous Peoples.",
+                    "pt": 1
+                },
+                "10":{
+                    "text": "Noise levels from the project are acceptable to local communities and other affected stakeholders.",
+                    "pt": 2
+                },
+                "11":{
+                    "text": "Operator engages with stakeholders, including local communities, to explore innovative approaches to further reduce noise pollution.",
+                    "pt": 2,
+                    "description": "Regulatory noise requirements (ex: BRITISH COLUMBIA NOISE CONTROL BEST PRACTICES GUIDELINE), use noise-reducing technology (ex: sound suppression devices), noise impact studies."
+                },
+                "12":{
+                    "text": "Operator engages with stakeholders, including local communities, to explore innovative approaches to further reduce light pollution.",
+                    "pt": 2
+                },
+                "13":{
+                    "text": "Operator has implemented measures to isolate all heat sources and minimize associated risks to the community, domestic animals and wildlife.",
+                    "pt": 2,
+                    "description": "Light pollution studies, compliance with regulatory requirements on light, light impact studies."
+                    
+                },
+                "14":{
+                    "text": "Operator involves stakeholders, including local communities, in landscape and aesthetic impact mitigation activities during the design phase and subsequent stages of the project.",
+                    "pt": 2
+                },
+                "15":{
+                    "text": "Operator provides quantifiable evidence that it has successfully implemented innovative approaches to reducing noise pollution.",
+                    "pt": 3,
+                    "description": "Regulatory noise requirements (ex: BRITISH COLUMBIA NOISE CONTROL BEST PRACTICES GUIDELINE), use noise-reducing technology (ex: sound suppression devices), noise impact studies."
+                },
+                "16":{
+                    "text": "Operator provides quantifiable evidence that it has successfully implemented innovative approaches to reducing light pollution.",
+                    "pt": 3
+                },
+                "17":{
+                    "text": "Operator conducts a periodic assessment of wildlife and vegetation mortality due to excessive heat sources. If there is evidence of mortality, Operator implements mitigation measures to eliminate the risk entirely, and follow-up assessments demonstrate the elimination of mortality.",
+                    "pt": 3,
+                    "description": "Light pollution studies, compliance with regulatory requirements on light, light impact studies."
+                },
+                "18":{
+                    "text": "Operator undertakes capacity building with potentially affected parties to enable them to understand and engage effectively with respect to cumulative visual impacts and related mitigation measures.",
+                    "pt": 3
+                }
+            }
+        }
+    }
+}

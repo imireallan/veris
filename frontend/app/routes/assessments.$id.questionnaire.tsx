@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLoaderData, Link, Form, redirect, useNavigation } from "react-router";
+import { useLoaderData, Link, Form, redirect, useNavigation, useFetcher } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
@@ -11,13 +11,21 @@ import {
   Save,
   ShieldCheck,
   Loader2,
+  ClipboardCheck,
+  Layers,
+  ListChecks,
   Plus
 } from "lucide-react";
 import { 
   Card, 
+  CardDescription,
+  CardHeader,
+  CardTitle,
   CardContent, 
   Badge, 
   Button,
+  Progress,
+  Separator,
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
@@ -25,8 +33,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "~/components/ui";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+} from "~/components/ui/pagination";
 import { FrameworkMappingBadge, type FrameworkMapping } from "~/components/FrameworkMappingBadge";
 import { FrameworkMappingModal } from "~/components/FrameworkMappingModal";
+import { useToast } from "~/hooks/use-toast";
 import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 import type { User } from "~/types";
 
@@ -37,6 +51,8 @@ interface QuestionnaireQuestion {
   category?: string | null;
   scoring_criteria?: Record<string, unknown> | null;
   framework_mappings?: FrameworkMapping[];
+  external_question_id?: string | null;
+  performance_target_level?: number | null;
 }
 
 interface QuestionnaireResponse {
@@ -50,29 +66,104 @@ interface QuestionnaireResponse {
   evidence_files?: Array<unknown>;
 }
 
+interface QuestionnaireAssessment {
+  id: string;
+  display_name?: string;
+  framework_name?: string | null;
+  template_version?: string | null;
+  status?: string;
+}
+
+const QUESTIONS_PER_PAGE = 6;
+
+function getQuestionCode(question: QuestionnaireQuestion, index: number) {
+  return question.external_question_id || `Q${index + 1}`;
+}
+
+function getScoringType(question: QuestionnaireQuestion) {
+  const criteria = question.scoring_criteria || {};
+  const type = criteria.type || criteria.input_type || criteria.response_type;
+  if (typeof type === "string") return type.replace(/_/g, " ");
+  if (Array.isArray(criteria.choices) || Array.isArray(criteria.options)) return "choice";
+  if (criteria.min != null || criteria.max != null) return "score";
+  return "narrative";
+}
+
+function getFrameworkTone(frameworkName?: string | null) {
+  const normalized = (frameworkName || "").toLowerCase();
+  if (normalized.includes("bettercoal")) return "Bettercoal-style principle review";
+  if (normalized.includes("eo100") || normalized.includes("eo 100")) return "EO100 performance target review";
+  if (normalized.includes("cgwg")) return "CGWG supplier questionnaire";
+  return "Framework questionnaire";
+}
+
 function UploadEvidenceButton({
   responseId,
+  questionId,
+  assessmentId,
+  orgId,
 }: {
   responseId?: string;
+  questionId: string;
+  assessmentId: string;
+  orgId: string;
 }) {
+  const fetcher = useFetcher();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const navigation = useNavigation();
-  const isUploading = navigation.state === "submitting";
+  const isUploading = fetcher.state === "submitting";
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [lastUploadedFileName, setLastUploadedFileName] = useState<string | null>(null);
+
+  // Watch for upload completion
+  useEffect(() => {
+    if (fetcher.state === "idle" && fetcher.data) {
+      if ("success" in fetcher.data && fetcher.data.success) {
+        setLastUploadedFileName(selectedFile?.name ?? null);
+      }
+
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }, [fetcher.state, fetcher.data, selectedFile]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+
+    const formData = new FormData();
+    formData.append("intent", "upload-evidence");
+    formData.append("response_id", responseId || "");
+    formData.append("question_id", questionId);
+    formData.append("file", file, file.name);
+    formData.append("assessment_id", assessmentId);
+    formData.append("org_id", orgId);
+
+    fetcher.submit(formData, {
+      method: "post",
+      encType: "multipart/form-data",
+    });
+  };
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       <input
         ref={fileInputRef}
         type="file"
         className="hidden"
         accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.csv"
+        onChange={handleFileSelect}
+        disabled={isUploading}
       />
       <Button
         variant="outline"
         size="sm"
         className="h-7 px-2 text-xs"
         onClick={() => fileInputRef.current?.click()}
-        disabled={isUploading || !responseId}
+        disabled={isUploading}
       >
         {isUploading ? (
           <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Uploading...</>
@@ -80,7 +171,19 @@ function UploadEvidenceButton({
           "Upload"
         )}
       </Button>
-    </>
+      {fetcher.data && "error" in fetcher.data && fetcher.data.error && (
+        <span className="text-xs text-red-600 flex items-center gap-1">
+          <AlertCircle className="w-3 h-3" />
+          {fetcher.data.error}
+        </span>
+      )}
+      {fetcher.data && "success" in fetcher.data && fetcher.data.success && lastUploadedFileName && (
+        <span className="text-xs text-green-600 flex items-center gap-1">
+          <CheckCircle className="w-3 h-3" />
+          Uploaded: {lastUploadedFileName}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -111,6 +214,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   
   return {
     assessmentId,
+    assessment,
     orgId,
     questions: Array.isArray(questions) ? questions : (questions as any)?.results ?? [],
     responses: Array.isArray(responses) ? responses : (responses as any)?.results ?? [],
@@ -124,42 +228,109 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const intent = formData.get("intent") as string;
   const assessmentId = params.id!;
 
+  // Get orgId for the assessment (needed for upload-evidence)
+  let orgId: string | null = null;
+  if (intent === "upload-evidence") {
+    orgId = formData.get("org_id") as string;
+    if (!orgId) {
+      try {
+        const assessment = await api.get<any>(`/api/assessments/${assessmentId}/`, token, request);
+        orgId = assessment.organization || assessment.organization_id;
+      } catch (err) {
+        return { error: "Could not determine organization for this assessment" };
+      }
+    }
+  }
+
   if (intent === "save-response") {
     const responseId = formData.get("response_id") as string;
     const questionId = formData.get("question_id") as string;
     const answer = formData.get("answer") as string;
     const orgId = formData.get("org_id") as string;
 
+    if (!orgId) {
+      return { error: "Organization ID is required to save this response" };
+    }
+
     try {
-      if (responseId) {
-        await api.patch(`/api/responses/${responseId}/`, { answer }, token, request);
-      } else {
-        await api.post("/api/responses/", {
-          assessment: assessmentId,
-          question: questionId,
-          answer: answer,
-        }, token, request);
+      let targetResponseId = responseId;
+
+      // Keep save idempotent. If the page was stale or the user double-submitted
+      // before loader data refreshed, update the existing assessment/question response
+      // instead of creating duplicate answers for one question.
+      if (!targetResponseId) {
+        const existingResponses = await api.withOrganization.get<any[]>(
+          `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
+          orgId,
+          token,
+          request,
+        );
+        const responsesList = Array.isArray(existingResponses)
+          ? existingResponses
+          : (existingResponses as any)?.results ?? [];
+        const existingResponse = responsesList.find(
+          (response: any) => String(response.question) === String(questionId),
+        );
+        targetResponseId = existingResponse?.id ?? "";
       }
-      return redirect(`/assessments/${assessmentId}/questionnaire`);
+
+      let savedResponse: any;
+      if (targetResponseId) {
+        savedResponse = await api.withOrganization.patch(
+          `/api/responses/${targetResponseId}/`,
+          { answer_text: answer },
+          orgId,
+          token,
+          request,
+        );
+      } else {
+        savedResponse = await api.withOrganization.post(
+          `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
+          {
+            question: questionId,
+            answer_text: answer,
+          },
+          orgId,
+          token,
+          request,
+        );
+      }
+      return {
+        success: true,
+        intent: "save-response",
+        message: "Response saved",
+        response: savedResponse,
+      };
     } catch (err: any) {
       if (err instanceof Response && err.status === 302) throw err;
-      return { error: err.message ?? "Failed to save response" };
+      return { error: err?.body?.detail ?? err.message ?? "Failed to save response" };
     }
   }
 
   if (intent === "upload-evidence") {
     const responseId = formData.get("response_id") as string;
+    const questionId = formData.get("question_id") as string;
     const file = formData.get("file") as File;
 
     try {
-      // Upload file
+      // First upload the file
       const uploadFormData = new FormData();
       uploadFormData.append("file", file);
-      const uploadResponse = await fetch("/api/upload-evidence/", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: uploadFormData,
-      });
+      uploadFormData.append("organization_id", orgId ?? "");
+      uploadFormData.append("assessment_id", assessmentId);
+      uploadFormData.append("question_id", questionId);
+      uploadFormData.append("response_id", responseId || "new");
+      const uploadResponse = await api.raw(
+        "/api/upload-evidence/",
+        {
+          method: "POST",
+          token,
+          organizationId: orgId,
+          body: uploadFormData,
+        },
+        undefined,
+        request,
+      );
 
       if (!uploadResponse.ok) {
         const error = await uploadResponse.json();
@@ -170,14 +341,47 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
       // Attach to response (update evidence_files array)
       if (responseId) {
-        const response = await api.get<any>(`/api/responses/${responseId}/`, token, request);
+        // Update existing response
+        const response = await api.withOrganization.get<any>(
+          `/api/responses/${responseId}/`,
+          orgId,
+          token,
+          request,
+        );
         const evidenceFiles = response.evidence_files || [];
         evidenceFiles.push({
           url: uploadData.url,
           file_name: uploadData.file_name,
           file_size: uploadData.file_size,
         });
-        await api.patch(`/api/responses/${responseId}/`, { evidence_files: evidenceFiles }, token, request);
+        await api.withOrganization.patch(
+          `/api/responses/${responseId}/`,
+          { evidence_files: evidenceFiles },
+          orgId,
+          token,
+          request,
+        );
+      } else {
+        // Create a new response with the evidence file
+        if (!orgId) {
+          return { error: "Organization ID is required" };
+        }
+        await api.withOrganization.post(
+          `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
+          {
+            assessment: assessmentId,
+            question: questionId,
+            answer_text: "",
+            evidence_files: [{
+              url: uploadData.url,
+              file_name: uploadData.file_name,
+              file_size: uploadData.file_size,
+            }],
+          },
+          orgId,
+          token,
+          request,
+        );
       }
 
       return redirect(`/assessments/${assessmentId}/questionnaire`);
@@ -210,6 +414,9 @@ function QuestionCard({
   existingResponse,
   isEditing,
   onEdit,
+  onSaved,
+  onSaveFailed,
+  onOptimisticSave,
   assessmentId,
   orgId,
   onAddMapping,
@@ -219,14 +426,22 @@ function QuestionCard({
   existingResponse?: QuestionnaireResponse;
   isEditing: boolean;
   onEdit: () => void;
+  onSaved: (response: QuestionnaireResponse) => void;
+  onSaveFailed: (questionId: string, previousResponse?: QuestionnaireResponse) => void;
+  onOptimisticSave: (questionId: string, answer: string, responseId?: string) => void;
   assessmentId: string;
   orgId: string;
   onAddMapping: (questionId: string) => void;
 }) {
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
   const [localAnswer, setLocalAnswer] = useState(existingResponse?.answer_text || "");
+  const saveFetcher = useFetcher<typeof action>();
   const navigation = useNavigation();
-  const isUploading = navigation.state === "submitting" && navigation.formData?.get("intent") === "upload-evidence";
+  const { success: toastSuccess, error: toastError, loading: toastLoading, dismiss: dismissToast } = useToast();
+  const saveToastIdRef = useRef<string | number | null>(null);
+  const handledSaveResultRef = useRef(false);
+  const previousResponseRef = useRef<QuestionnaireResponse | undefined>(undefined);
+  const isSaving = saveFetcher.state === "submitting";
   const isValidating = navigation.state === "submitting" && navigation.formData?.get("intent") === "validate-response";
 
   useEffect(() => {
@@ -234,6 +449,38 @@ function QuestionCard({
       setLocalAnswer(existingResponse.answer_text);
     }
   }, [isEditing, existingResponse]);
+
+  useEffect(() => {
+    if (saveFetcher.state === "submitting") {
+      handledSaveResultRef.current = false;
+      if (!saveToastIdRef.current) {
+        saveToastIdRef.current = toastLoading("Saving response...", "Your answer is being saved.");
+      }
+    }
+
+    if (saveFetcher.state === "idle" && saveFetcher.data && !handledSaveResultRef.current) {
+      handledSaveResultRef.current = true;
+
+      if (saveToastIdRef.current) {
+        dismissToast(saveToastIdRef.current);
+        saveToastIdRef.current = null;
+      }
+
+      if ("success" in saveFetcher.data && saveFetcher.data.success) {
+        const savedResponse = (saveFetcher.data as any).response as QuestionnaireResponse | undefined;
+        if (savedResponse) {
+          onSaved(savedResponse);
+        }
+        toastSuccess("Response saved", "Your answer has been saved.");
+        if (isEditing) {
+          onEdit();
+        }
+      } else if ("error" in saveFetcher.data && saveFetcher.data.error) {
+        onSaveFailed(question.id, previousResponseRef.current);
+        toastError("Save failed", saveFetcher.data.error as string);
+      }
+    }
+  }, [saveFetcher.state, saveFetcher.data, toastLoading, dismissToast, toastSuccess, toastError, onSaved, onSaveFailed, onEdit, isEditing, question.id]);
 
   const acceptAISuggestion = () => {
     if (existingResponse?.ai_feedback) {
@@ -261,7 +508,15 @@ function QuestionCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="text-xs text-muted-foreground font-mono">Q{index}</span>
+              <span className="text-xs text-muted-foreground font-mono">{getQuestionCode(question, index - 1)}</span>
+              <Badge variant="outline" className="text-[10px] capitalize">
+                {getScoringType(question)}
+              </Badge>
+              {question.performance_target_level ? (
+                <Badge variant="outline" className="text-[10px]">
+                  PT{question.performance_target_level}
+                </Badge>
+              ) : null}
               {question.category && (
                 <Badge variant="secondary" className="text-[10px]">
                   {question.category}
@@ -325,13 +580,13 @@ function QuestionCard({
                 </Button>
               </Form>
             )}
-            {existingResponse && !isEditing && (
+            {!isEditing && (
               <button
                 type="button"
                 onClick={onEdit}
                 className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-md"
               >
-                Edit
+                {existingResponse ? "Edit" : "Answer"}
               </button>
             )}
           </div>
@@ -381,8 +636,39 @@ function QuestionCard({
           </div>
         )}
 
+        {/* Read-only view of saved response */}
+        {existingResponse?.answer_text && !isEditing && (
+          <div className="p-4 bg-muted/30 rounded-lg text-sm space-y-2 border border-muted">
+            <div className="flex items-center gap-2 mb-2">
+              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground">Answer</span>
+            </div>
+            <p className="text-sm text-foreground whitespace-pre-wrap">{existingResponse.answer_text}</p>
+            {existingResponse.evidence_files && existingResponse.evidence_files.length > 0 && (
+              <div className="pt-2 border-t border-muted/50">
+                <span className="text-xs font-medium text-muted-foreground">Evidence ({existingResponse.evidence_files.length} file{existingResponse.evidence_files.length === 1 ? "" : "s"}):</span>
+                <ul className="text-xs text-muted-foreground mt-1">
+                  {existingResponse.evidence_files.map((file: any, i: number) => (
+                    <li key={i} className="flex items-center gap-2">
+                      <Paperclip className="w-3 h-3" />
+                      <span className="truncate max-w-[200px]">{file.file_name || file.url}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
         {isEditing && (
-          <Form method="post" className="space-y-3">
+          <saveFetcher.Form
+            method="post"
+            className="space-y-3"
+            onSubmit={() => {
+              previousResponseRef.current = existingResponse;
+              onOptimisticSave(question.id, localAnswer, existingResponse?.id);
+            }}
+          >
             <input type="hidden" name="intent" value="save-response" />
             <input type="hidden" name="response_id" value={existingResponse?.id || ""} />
             <input type="hidden" name="question_id" value={question.id} />
@@ -407,7 +693,12 @@ function QuestionCard({
                   <Paperclip className="w-4 h-4" />
                   <span className="text-xs">Evidence attached: {existingResponse?.evidence_files?.length || 0}</span>
                 </div>
-                <UploadEvidenceButton responseId={existingResponse?.id} />
+                <UploadEvidenceButton
+                  responseId={existingResponse?.id}
+                  questionId={question.id}
+                  assessmentId={assessmentId}
+                  orgId={orgId}
+                />
               </div>
             </div>
 
@@ -416,15 +707,20 @@ function QuestionCard({
                 type="button"
                 onClick={onEdit}
                 className="px-3 py-1.5 text-sm bg-muted hover:bg-muted/80 rounded-md"
+                disabled={isSaving}
               >
                 Cancel
               </button>
-              <Button type="submit" size="sm">
-                <Save className="w-3.5 h-3.5 mr-1" />
-                Save Response
+              <Button type="submit" size="sm" disabled={isSaving}>
+                {isSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                )}
+                {isSaving ? "Saving..." : "Save Response"}
               </Button>
             </div>
-          </Form>
+          </saveFetcher.Form>
         )}
       </CardContent>
     </Card>
@@ -432,14 +728,34 @@ function QuestionCard({
 }
 
 export default function QuestionnaireRoute() {
-  const { assessmentId, orgId, questions, responses, user } = useLoaderData<typeof loader>();
+  const { assessmentId, assessment, orgId, questions, responses, user } = useLoaderData<typeof loader>();
+  const assessmentData = assessment as QuestionnaireAssessment;
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null);
   const [localQuestions, setLocalQuestions] = useState<QuestionnaireQuestion[]>(questions);
+  const [localResponses, setLocalResponses] = useState<QuestionnaireResponse[]>(responses);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const terminology = terminologyFromUser(user);
   const assessmentLabel = terminology.assessment;
+  const answeredCount = localQuestions.filter((question) =>
+    localResponses.some((response) => String(response.question) === String(question.id) && Boolean(response.answer_text))
+  ).length;
+  const completionPercent = localQuestions.length ? Math.round((answeredCount / localQuestions.length) * 100) : 0;
+  const totalPages = Math.max(1, Math.ceil(localQuestions.length / QUESTIONS_PER_PAGE));
+  const pageStart = (currentPage - 1) * QUESTIONS_PER_PAGE;
+  const paginatedQuestions = localQuestions.slice(pageStart, pageStart + QUESTIONS_PER_PAGE);
+  const questionsByCategory = paginatedQuestions.reduce<Record<string, QuestionnaireQuestion[]>>((acc, question) => {
+    const category = question.category || "General";
+    acc[category] = acc[category] || [];
+    acc[category].push(question);
+    return acc;
+  }, {});
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
 
   const handleAddMapping = (questionId: string) => {
     setSelectedQuestionId(questionId);
@@ -462,8 +778,45 @@ export default function QuestionnaireRoute() {
     }
   };
 
+  const upsertLocalResponse = (nextResponse: QuestionnaireResponse) => {
+    setLocalResponses((current) => {
+      const existingIndex = current.findIndex((response) =>
+        (nextResponse.id && response.id === nextResponse.id) ||
+        String(response.question) === String(nextResponse.question)
+      );
+
+      if (existingIndex === -1) {
+        return [...current, nextResponse];
+      }
+
+      const updated = [...current];
+      updated[existingIndex] = { ...updated[existingIndex], ...nextResponse };
+      return updated;
+    });
+  };
+
+  const handleOptimisticSave = (questionId: string, answer: string, responseId?: string) => {
+    upsertLocalResponse({
+      id: responseId,
+      question: questionId,
+      answer_text: answer,
+    });
+  };
+
+  const handleSaveFailed = (questionId: string, previousResponse?: QuestionnaireResponse) => {
+    setLocalResponses((current) => {
+      if (previousResponse) {
+        return current.map((response) =>
+          String(response.question) === String(questionId) ? previousResponse : response
+        );
+      }
+
+      return current.filter((response) => String(response.question) !== String(questionId));
+    });
+  };
+
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-6">
+    <div className="max-w-6xl mx-auto py-8 space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -476,40 +829,147 @@ export default function QuestionnaireRoute() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Questionnaire</h2>
-        <Link 
-          to={`/assessments/${assessmentId}`} 
-          className="text-sm text-primary hover:underline"
-        >
-          Back to {assessmentLabel}
-        </Link>
-      </div>
-
-      <div className="grid gap-6">
-        {localQuestions.length === 0 ? (
-          <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed">
-            <p className="text-muted-foreground">No questions associated with this {lowerFirst(assessmentLabel)}.</p>
+      <Card className="border-primary/10 bg-gradient-to-br from-background to-muted/30">
+        <CardHeader className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ClipboardCheck className="h-4 w-4 text-primary" />
+                <span>{getFrameworkTone(assessmentData.framework_name)}</span>
+              </div>
+              <CardTitle className="text-3xl">{assessmentData.display_name || "Questionnaire"}</CardTitle>
+              <CardDescription>
+                Frozen assessment question set. Template edits after creation will not change this {lowerFirst(assessmentLabel)}.
+              </CardDescription>
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {assessmentData.framework_name && <Badge variant="secondary">{assessmentData.framework_name}</Badge>}
+                {assessmentData.template_version && <Badge variant="outline">Template v{assessmentData.template_version}</Badge>}
+                {assessmentData.status && <Badge variant="outline">{assessmentData.status.replace(/_/g, " ")}</Badge>}
+              </div>
+            </div>
+            <Link to={`/assessments/${assessmentId}`}>
+              <Button variant="outline">Back to {assessmentLabel}</Button>
+            </Link>
           </div>
-        ) : (
-          localQuestions.map((q: QuestionnaireQuestion, idx: number) => {
-            const response = responses.find((r: QuestionnaireResponse) => r.question === q.id);
-            return (
-              <QuestionCard
-                key={q.id}
-                index={idx + 1}
-                question={q}
-                existingResponse={response}
-                isEditing={editingIndex === idx}
-                onEdit={() => setEditingIndex(editingIndex === idx ? null : idx)}
-                assessmentId={assessmentId || ""}
-                orgId={orgId || ""}
-                onAddMapping={handleAddMapping}
-              />
-            );
-          })
-        )}
-      </div>
+
+          <Separator />
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-lg border bg-background p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ListChecks className="h-4 w-4" /> Questions
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{localQuestions.length}</div>
+            </div>
+            <div className="rounded-lg border bg-background p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4" /> Answered
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{answeredCount}</div>
+            </div>
+            <div className="rounded-lg border bg-background p-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Layers className="h-4 w-4" /> Completion
+              </div>
+              <div className="mt-2 flex items-center gap-3">
+                <Progress value={completionPercent} className="h-2" />
+                <span className="text-sm font-medium">{completionPercent}%</span>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {localQuestions.length === 0 ? (
+        <div className="text-center py-12 bg-muted rounded-lg border-2 border-dashed">
+          <p className="text-muted-foreground">No questions associated with this {lowerFirst(assessmentLabel)}.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>
+              Showing {pageStart + 1}-{Math.min(pageStart + QUESTIONS_PER_PAGE, localQuestions.length)} of {localQuestions.length}
+            </span>
+            <span>Page {currentPage} of {totalPages}</span>
+          </div>
+
+          {Object.entries(questionsByCategory).map(([category, categoryQuestions]) => (
+            <section key={category} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{category}</h3>
+                <Separator className="flex-1" />
+              </div>
+              <div className="grid gap-4">
+                {categoryQuestions.map((q: QuestionnaireQuestion) => {
+                  const absoluteIndex = localQuestions.findIndex((question) => question.id === q.id);
+                  const response = localResponses.find((r: QuestionnaireResponse) => String(r.question) === String(q.id));
+                  return (
+                    <QuestionCard
+                      key={q.id}
+                      index={absoluteIndex + 1}
+                      question={q}
+                      existingResponse={response}
+                      isEditing={editingIndex === absoluteIndex}
+                      onEdit={() => setEditingIndex(editingIndex === absoluteIndex ? null : absoluteIndex)}
+                      onSaved={upsertLocalResponse}
+                      onSaveFailed={handleSaveFailed}
+                      onOptimisticSave={handleOptimisticSave}
+                      assessmentId={assessmentId || ""}
+                      orgId={orgId || ""}
+                      onAddMapping={handleAddMapping}
+                    />
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  >
+                    Previous
+                  </Button>
+                </PaginationItem>
+                {Array.from({ length: totalPages }).map((_, index) => {
+                  const page = index + 1;
+                  return (
+                    <PaginationItem key={page}>
+                      <Button
+                        type="button"
+                        variant={page === currentPage ? "default" : "ghost"}
+                        size="icon"
+                        onClick={() => setCurrentPage(page)}
+                        aria-label={`Go to page ${page}`}
+                      >
+                        {page}
+                      </Button>
+                    </PaginationItem>
+                  );
+                })}
+                <PaginationItem>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  >
+                    Next
+                  </Button>
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </div>
+      )}
 
       {/* Framework Mapping Modal */}
       {selectedQuestionId && (

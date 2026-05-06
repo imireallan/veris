@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from assessments.models import Assessment, AssessmentReport
+from assessments.models import Assessment, AssessmentReport, AssessmentResponse
 from organizations.models import Organization, OrganizationMembership
 from users.models import User
 from users.roles import UserRole
@@ -323,3 +323,89 @@ class TestFlatAssessmentReportViewSet:
         assert response["Content-Type"] == "application/pdf"
         assert "assessment-report.pdf" in response["Content-Disposition"]
         assert response.content.startswith(b"%PDF-1.4")
+
+
+@pytest.mark.django_db
+class TestFlatAssessmentResponseViewSet:
+    def setup_method(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            email="responses@example.com",
+            password="testpass123",
+            name="Responses User",
+        )
+        self.org1 = Organization.objects.create(
+            name="Responses Org 1", slug="responses-org-1"
+        )
+        self.org2 = Organization.objects.create(
+            name="Responses Org 2", slug="responses-org-2"
+        )
+        OrganizationMembership.objects.create(
+            user=self.user,
+            organization=self.org1,
+            fallback_role=UserRole.OPERATOR,
+        )
+        self.assessment1 = Assessment.objects.create(
+            organization=self.org1,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+            created_by=self.user,
+        )
+        self.assessment2 = Assessment.objects.create(
+            organization=self.org2,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+        )
+        self.response1 = AssessmentResponse.objects.create(
+            assessment=self.assessment1,
+            organization=self.org1,
+            answer_text="Allowed response",
+            created_by=self.user,
+        )
+        self.response2 = AssessmentResponse.objects.create(
+            assessment=self.assessment2,
+            organization=self.org2,
+            answer_text="Other tenant response",
+        )
+
+    def test_detail_does_not_leak_response_from_inaccessible_org(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(f"/api/responses/{self.response2.id}/")
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_detail_respects_active_organization_context(self):
+        OrganizationMembership.objects.create(
+            user=self.user,
+            organization=self.org2,
+            fallback_role=UserRole.OPERATOR,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.get(
+            f"/api/responses/{self.response2.id}/",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_create_rejects_assessment_outside_active_organization(self):
+        OrganizationMembership.objects.create(
+            user=self.user,
+            organization=self.org2,
+            fallback_role=UserRole.OPERATOR,
+        )
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            "/api/responses/",
+            {
+                "assessment": str(self.assessment2.id),
+                "answer_text": "Cross-org create attempt",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN

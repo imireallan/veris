@@ -226,7 +226,7 @@ class Assessment(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="assigned_assessments",
+        related_name="assigned_assessor_reviews",
     )
 
     # Template association (P0 - Template Management)
@@ -402,13 +402,32 @@ class AssessmentTemplate(models.Model):
 
 
 class AssessmentQuestion(models.Model):
-    """Represents a question within an assessment template."""
+    """Represents a question within an assessment template or assessment instance."""
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     template = models.ForeignKey(
         "assessments.AssessmentTemplate",
         on_delete=models.CASCADE,
         related_name="assessment_questions",
+        null=True,
+        blank=True,
+        help_text="Set for reusable template questions. Blank for assessment snapshots.",
+    )
+    assessment = models.ForeignKey(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="assessment_questions",
+        null=True,
+        blank=True,
+        help_text="Set for frozen assessment question snapshots.",
+    )
+    source_template_question = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        related_name="assessment_snapshots",
+        null=True,
+        blank=True,
+        help_text="Original template question this snapshot was copied from.",
     )
     organization = models.ForeignKey(
         "organizations.Organization",
@@ -451,7 +470,9 @@ class AssessmentQuestion(models.Model):
         ordering = ["order"]
 
     def save(self, *args, **kwargs):
-        if not self.organization_id and self.template_id:
+        if not self.organization_id and self.assessment_id:
+            self.organization_id = self.assessment.organization_id
+        elif not self.organization_id and self.template_id:
             self.organization_id = (
                 self.template.organization_id or self.template.owner_org_id
             )

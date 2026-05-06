@@ -124,7 +124,7 @@ export default function App() {
           />
         )}
 
-        <Outlet context={{ user }} />
+        <Outlet context={{ user, theme }} />
         <Toaster position="top-right" richColors closeButton />
       </TooltipProvider>
     </ThemeProvider>

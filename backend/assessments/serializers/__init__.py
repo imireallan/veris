@@ -176,17 +176,30 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "template",
+            "assessment",
+            "source_template_question",
             "organization",
             "text",
             "order",
             "category",
             "scoring_criteria",
             "is_required",
+            "performance_target_level",
+            "external_question_id",
             "framework_mappings",
         ]
-        read_only_fields = ["id", "template", "organization", "order"]
+        read_only_fields = [
+            "id",
+            "template",
+            "assessment",
+            "source_template_question",
+            "organization",
+            "order",
+        ]
         extra_kwargs = {
             "template": {"required": False},
+            "assessment": {"required": False},
+            "source_template_question": {"required": False},
             "organization": {"required": False},
             "order": {"required": False},
         }
@@ -210,6 +223,7 @@ class AssessmentSerializer(serializers.ModelSerializer):
             "focus_area_name",
             "framework",
             "framework_name",
+            "template_version",
             "status",
             "start_date",
             "due_date",
@@ -277,6 +291,10 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
             "organization",
             "focus_area",
             "question",
+            "operator_answer",
+            "operator_score",
+            "operator_submitted",
+            "operator_submitted_at",
             "answer_text",
             "answer_score",
             "evidence_files",
@@ -292,6 +310,9 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "organization", "created_at", "updated_at"]
+        extra_kwargs = {
+            "assessment": {"required": False},
+        }
 
 
 class AIInsightSerializer(serializers.ModelSerializer):
@@ -363,7 +384,7 @@ class SiteSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "created_at", "updated_at"]
+        read_only_fields = ["id", "organization", "created_at", "updated_at"]
 
 
 class AssessmentReportSerializer(serializers.ModelSerializer):

@@ -23,8 +23,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  Sparkle,
-  Copy,
 } from "lucide-react";
 import { cn } from "~/lib/utils";
 import { useWizardForm } from "~/hooks/useWizard";
@@ -53,7 +51,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
   const formData = await request.formData();
-  const selectedOrg = user.activeOrganization ?? null;
+  const selectedOrg = await resolveSelectedOrganization(request, token, user);
   if (!selectedOrg) {
     return {
       error: "Organization required. Please select an organization first.",
@@ -74,7 +72,7 @@ export async function action({ request }: ActionFunctionArgs) {
   if (siteJson) {
     try {
       const { name, type, country_code } = JSON.parse(siteJson as string);
-      const site = await api.post<any>(
+      const site = await api.withOrganization.post<any>(
         "/api/sites/",
         {
           name,
@@ -84,6 +82,7 @@ export async function action({ request }: ActionFunctionArgs) {
           risk_profile: "MEDIUM",
           coordinates: {},
         },
+        selectedOrg.id,
         token,
         request,
       );
@@ -106,10 +105,8 @@ export async function action({ request }: ActionFunctionArgs) {
   };
   if (siteId) data.site = siteId;
   const framework = formData.get("framework");
-  const focusArea = formData.get("focus_area");
   const templateId = (formData.get("template_id") || "").toString().trim();
   if (framework) data.framework = framework;
-  if (focusArea) data.focus_area = focusArea;
   const startDate = formData.get("start_date");
   const dueDate = formData.get("due_date");
   if (startDate) data.start_date = `${startDate}T00:00:00Z`;
@@ -124,9 +121,10 @@ export async function action({ request }: ActionFunctionArgs) {
       };
       if (siteId) instantiatePayload.site_id = siteId;
 
-      const result = await api.post<any>(
+      const result = await api.withOrganization.post<any>(
         `/api/templates/${templateId}/instantiate/`,
         instantiatePayload,
+        selectedOrg.id,
         token,
         request,
       );
@@ -137,9 +135,10 @@ export async function action({ request }: ActionFunctionArgs) {
       return redirect(`/assessments/${assessmentId}`);
     }
 
-    const result = await api.post<any>(
+    const result = await api.withOrganization.post<any>(
       "/api/assessments/",
       data,
+      selectedOrg.id,
       token,
       request,
     );
@@ -161,17 +160,30 @@ export async function action({ request }: ActionFunctionArgs) {
 
 const unwrap = (r: any) => (Array.isArray(r) ? r : (r?.results ?? []));
 
+async function resolveSelectedOrganization(
+  request: Request,
+  token: string | null,
+  user: User,
+) {
+  if (user.activeOrganization) return user.activeOrganization;
+
+  if (!user.isSuperuser) return null;
+
+  const { getAccessibleOrganizations } = await import("~/.server/organizations");
+  const organizations = await getAccessibleOrganizations(request, token).catch(() => []);
+  return organizations[0] ?? null;
+}
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
 
-  const selectedOrg = user.activeOrganization ?? null;
+  const selectedOrg = await resolveSelectedOrganization(request, token, user);
 
   if (!selectedOrg) {
     return {
       sites: [],
       frameworks: [],
-      focusAreas: [],
       templates: [],
       canAccessTemplates: false,
       selectedOrgName: null,
@@ -179,11 +191,20 @@ export async function loader({ request }: LoaderFunctionArgs) {
     };
   }
 
+  if (!user.activeOrganization && user.isSuperuser) {
+    const { setSelectedOrganizationId } = await import("~/.server/sessions");
+    const url = new URL(request.url);
+    throw redirect(`${url.pathname}${url.search}`, {
+      headers: {
+        "Set-Cookie": await setSelectedOrganizationId(request, selectedOrg.id),
+      },
+    });
+  }
+
   if (!RBAC.canCreateAssessments(user)) {
     return {
       sites: [],
       frameworks: [],
-      focusAreas: [],
       templates: [],
       canAccessTemplates: false,
       selectedOrgName: selectedOrg.name,
@@ -191,33 +212,30 @@ export async function loader({ request }: LoaderFunctionArgs) {
     };
   }
 
-  const canAccessTemplates = RBAC.canManageTemplates(user);
+  const canAccessTemplates = RBAC.canCreateAssessments(user);
 
-  const [sites, frameworks, focusAreas, templates] = await Promise.all([
-    api
-      .get<any>("/api/sites/", token, request)
+  const [sites, frameworks, templates] = await Promise.all([
+    api.withOrganization
+      .get<any>("/api/sites/", selectedOrg.id, token, request)
       .then(unwrap)
       .catch(() => []),
-    api
-      .get<any>("/api/frameworks/", token, request)
+    api.withOrganization
+      .get<any>("/api/frameworks/", selectedOrg.id, token, request)
       .then(unwrap)
       .catch(() => []),
-    api
-      .get<any>("/api/focus-areas/", token, request)
-      .then(unwrap)
-      .catch(() => []),
-    // Fetch available templates if user has permission
+    // Fetch published templates available for instantiation in the active org.
     canAccessTemplates
-      ? api
-          .get<any>("/api/templates/public/", token, request)
-          .then(unwrap)
+      ? api.withOrganization
+          .get<any>("/api/templates/public/", selectedOrg.id, token, request)
+          .then((response) =>
+            unwrap(response).filter((t: any) => t.status === "PUBLISHED"),
+          )
           .catch(() => [])
       : Promise.resolve([]),
   ]);
   return {
     sites,
     frameworks,
-    focusAreas,
     templates,
     canAccessTemplates,
     selectedOrgName: selectedOrg.name,
@@ -231,28 +249,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
 const STEPS = [
   { id: 1, label: "Basics", icon: FileText },
   { id: 2, label: "Site", icon: Building2 },
-  { id: 3, label: "Framework", icon: MapPin },
+  { id: 3, label: "Scope", icon: MapPin },
   { id: 4, label: "Schedule", icon: Calendar },
   { id: 5, label: "Review", icon: Eye },
 ] as const;
 
 /* ──────────────────────────── CLIENT ──────────────────────────── */
-
-interface FormState {
-  name: string;
-  site: string;
-  __new_site: string;
-  framework: string;
-  focus_area: string;
-  start_date: string;
-  due_date: string;
-  status: string;
-  risk_level: string;
-  ai_summary: string;
-  // Template selection (new)
-  from_template: string;
-  template_id: string;
-}
 
 /** Collect all form state into one object for draft persistence. */
 interface AssessmentForm {
@@ -260,7 +262,6 @@ interface AssessmentForm {
   name: string;
   site: string;
   framework: string;
-  focusArea: string;
   startDate: string;
   dueDate: string;
   status: string;
@@ -278,7 +279,6 @@ export default function NewAssessmentRoute() {
   const {
     sites,
     frameworks,
-    focusAreas,
     templates,
     canAccessTemplates,
     selectedOrgName,
@@ -305,7 +305,6 @@ export default function NewAssessmentRoute() {
     goTo,
     submit,
     isLastStep,
-    submitting: isHookSubmitting,
   } = useWizardForm<AssessmentForm>({
     persistKey: STORAGE_KEY,
     totalSteps: 5,
@@ -313,7 +312,6 @@ export default function NewAssessmentRoute() {
       name: "",
       site: "",
       framework: "",
-      focusArea: "",
       startDate: "",
       dueDate: "",
       status: "DRAFT",
@@ -334,7 +332,7 @@ export default function NewAssessmentRoute() {
         startDate: "start_date",
         dueDate: "due_date",
         riskLevel: "risk_level",
-        focusArea: "focus_area",
+        templateId: "template_id",
         aiSummary: "ai_summary",
       };
 
@@ -365,7 +363,6 @@ export default function NewAssessmentRoute() {
   const {
     site,
     framework,
-    focusArea,
     startDate,
     dueDate,
     status,
@@ -379,12 +376,10 @@ export default function NewAssessmentRoute() {
 
   const siteList = Array.isArray(sites) ? sites : [];
   const fwList = Array.isArray(frameworks) ? frameworks : [];
-  const faList = Array.isArray(focusAreas) ? focusAreas : [];
 
   // Maps for ID -> name lookup (like assessments.tsx)
   const siteMap = new Map(siteList.map((s: any) => [s.id, s.name]));
   const frameworkMap = new Map(fwList.map((f: any) => [f.id, f.name]));
-  const focusAreaMap = new Map(faList.map((f: any) => [f.id, f.name]));
   const templateMap = new Map<string, string>(templates.map((t: any) => [t.id, t.name]));
 
   // Site type options
@@ -415,7 +410,7 @@ export default function NewAssessmentRoute() {
           (showCreateSite && !!newSiteName && !!newSiteType && !!newSiteCountry)
         );
       case 3:
-        return true;
+        return !!form.templateId || !!framework;
       case 4:
         return !!startDate && !!dueDate;
       default:
@@ -424,8 +419,8 @@ export default function NewAssessmentRoute() {
   };
 
   const fw = fwList.find((f: any) => f.id === framework);
-  const fa = faList.find((f: any) => f.id === focusArea);
   const s = siteList.find((s: any) => s.id === site);
+  const selectedTemplate = templates.find((t: any) => t.id === form.templateId);
 
   if (accessDenied) {
     return (
@@ -541,60 +536,6 @@ export default function NewAssessmentRoute() {
           {/* STEP 1: BASICS */}
           {step === 1 && (
             <StepWrapper title="Basic Details">
-              {/* Template Selection (NEW) */}
-              {canAccessTemplates && templates && templates.length > 0 && (
-                <div className="mb-6 p-4 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Copy className="w-4 h-4 text-primary" />
-                    <h4 className="text-sm font-semibold">
-                      Start from Template
-                    </h4>
-                  </div>
-                  <Select
-                    value={form.fromTemplate}
-                    onValueChange={(value) => {
-                      update("fromTemplate")(value);
-                      const template = templates.find(
-                        (t: any) => t.id === value,
-                      );
-                      if (template) {
-                        update("templateId")(template.id);
-                        update("framework")(template.framework);
-                        update("name")(
-                          `${template.name} - ${new Date().getFullYear()}`,
-                        );
-                      }
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue>
-                        {getDisplayValue(
-                          form.fromTemplate,
-                          templateMap,
-                          "Select a template...",
-                        )}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="">Select a template...</SelectItem>
-                        {templates.map((t: any) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.name} (v{t.version})
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                  {form.fromTemplate && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      ✓ Template selected. Questions will be copied to your
-                      assessment.
-                    </p>
-                  )}
-                </div>
-              )}
-
               <Field label={`${assessmentLabel} Name`}>
                 <input
                   type="text"
@@ -754,67 +695,109 @@ export default function NewAssessmentRoute() {
             </StepWrapper>
           )}
 
-          {/* STEP 3: FRAMEWORK */}
+          {/* STEP 3: SCOPE */}
           {step === 3 && (
-            <StepWrapper title="Framework & Focus Area">
-              <Field label="Framework">
-                <Select
-                  value={framework || "none"}
-                  onValueChange={(value) =>
-                    update("framework")(value === "none" ? "" : value)
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      {getDisplayValue(
-                        framework,
-                        frameworkMap,
-                        "Select framework",
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="none">— Select framework —</SelectItem>
-                      {fwList.map((f: any) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Focus Area">
-                <Select
-                  value={focusArea || "none"}
-                  onValueChange={(value) =>
-                    update("focusArea")(value === "none" ? "" : value)
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue>
-                      {getDisplayValue(
-                        focusArea,
-                        focusAreaMap,
-                        "Select focus area",
-                      )}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="none">
-                        — Select focus area —
-                      </SelectItem>
-                      {faList.map((f: any) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
+            <StepWrapper
+              title="Assessment Scope"
+              description="Choose the template or framework that defines what this assessment checks."
+            >
+              {canAccessTemplates && templates && templates.length > 0 && (
+                <Field label="Assessment Template">
+                  <Select
+                    value={form.templateId || "none"}
+                    onValueChange={(value) => {
+                      if (value === "none") {
+                        update("fromTemplate")("");
+                        update("templateId")("");
+                        update("framework")("");
+                        return;
+                      }
+
+                      const template = templates.find((t: any) => t.id === value);
+                      update("fromTemplate")(value);
+                      update("templateId")(value);
+                      if (template) {
+                        update("framework")(template.framework || "");
+                        if (!form.name) {
+                          update("name")(
+                            `${template.name} - ${new Date().getFullYear()}`,
+                          );
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {getDisplayValue(
+                          form.templateId,
+                          templateMap,
+                          "Select a template",
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">Create manually from framework</SelectItem>
+                        {templates.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name} (v{t.version})
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {selectedTemplate && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Questions will be copied from this template. The framework is inherited automatically.
+                    </p>
+                  )}
+                </Field>
+              )}
+
+              {selectedTemplate ? (
+                <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                  <div className="text-muted-foreground">Framework</div>
+                  <div className="font-medium text-foreground mt-1">
+                    {getDisplayValue(
+                      selectedTemplate.framework,
+                      frameworkMap,
+                      "Framework inherited from template",
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <Field label="Framework">
+                  <Select
+                    value={framework || "none"}
+                    onValueChange={(value) =>
+                      update("framework")(value === "none" ? "" : value)
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue>
+                        {getDisplayValue(
+                          framework,
+                          frameworkMap,
+                          "Select framework",
+                        )}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">— Select framework —</SelectItem>
+                        {fwList.map((f: any) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Manual assessments start without copied template questions.
+                  </p>
+                </Field>
+              )}
             </StepWrapper>
           )}
 
@@ -904,7 +887,11 @@ export default function NewAssessmentRoute() {
                   )}
                 </ReviewSection>
 
-                <ReviewSection title="Framework & Focus Area" icon={MapPin}>
+                <ReviewSection title="Assessment Scope" icon={MapPin}>
+                  <ReviewRow
+                    label="Template"
+                    value={selectedTemplate ? selectedTemplate.name : "Manual assessment"}
+                  />
                   <ReviewRow
                     label="Framework"
                     value={
@@ -912,10 +899,6 @@ export default function NewAssessmentRoute() {
                         ? `${fw.name}${fw.version ? ` (${fw.version})` : ""}`
                         : "Not selected"
                     }
-                  />
-                  <ReviewRow
-                    label="Focus Area"
-                    value={fa ? fa.name : "Not selected"}
                   />
                 </ReviewSection>
 
@@ -984,7 +967,6 @@ export default function NewAssessmentRoute() {
               <button
                 type="button"
                 onClick={submit}
-                // disabled={isSubmittingRemix || isHookSubmitting}
                 className="px-6 py-2 bg-primary text-white rounded-lg"
               >
                 {isSubmittingRemix ? "Creating..." : `Create ${assessmentLabel}`}

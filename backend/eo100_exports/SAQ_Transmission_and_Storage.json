@@ -1,0 +1,555 @@
+{
+    "103": {
+        "1":{
+            "5":{
+                "1":{
+                    "text":"Where operations and/or construction activities may encounter protestors at company offices, facilities and construction projects, the Operator verifies that contractors, subcontractors, and suppliers have trained their personnel to protect their health and safety and the safety and integrity of the protestors.",
+                    "pt":1
+                },
+                "2":{
+                    "text":"Operator conducts joint drills to verify employees and contractors respond appropriately to protests.",
+                    "pt":2
+                },
+                "3":{
+                    "text":"Operator works with industry groups to provide training for stakeholders to appropriately respond to protests.",
+                    "pt":3
+                }
+            },
+            "6":{
+                "1":{
+                    "text":"Operator discloses the amount of  administrative and non-administrative fines issued and the number of sanctions ('Notices of Violation') for violation of environmental laws and regulations.",
+                    "pt":1,
+                    "description": "Documentation of fines from regulatory/government bodies (ex: US EPA, BC OGC, AB AER, state level)."
+                },
+                "2":{
+                    "text":"Operator shall disclose its climate lobbying position and report on how its goals and direct lobbying activities are in the line with the Paris Agreement.",
+                    "pt":1,
+                    "description": "Lobbying policy, disclosures of policy positions, statements from government relations departments."
+                },
+                "3":{
+                    "text":"Operator sets corporate GHG intensity reduction targets (short, medium and long term) in line with requirements under the Task Force on Climate-Related Financial Disclosures (TCFD) with plans to align with requirements to meet the Paris Agreement which includes a strategy towards net-zero emissions by 2050 or sooner.",
+                    "pt":1, 
+                    "description": "Sustainability/ESG report."
+                },
+                "4":{
+                    "text":"Operator provides affected communities with up-to-date information regarding ongoing uncertainties and risks of oil and gas development, including quantitative documentation of uncertainties when appropriate and practicable (e.g., quantified probabilities of risks to water or other resources, and characterization of resulting consequences).",
+                    "pt":2
+                },
+                "5":{
+                    "text":"The Operator discloses all trade association memberships and has a policy commitment to ensure that their lobbying activities are in line with the Paris agreement.",
+                    "pt":2,
+                    "description": "Lobbying policy, disclosures of policy positions, statements from government relations departments."
+                },
+                "6":{
+                    "text":"Operator shows progress towards meeting the targets set under PT1 and that they are on a trajectory to meet or exceed their corporate ambition.",
+                    "pt":2,
+                    "description": "Sustainability/ESG report."
+                },
+                "7":{
+                    "text":"Operator publishes a review of  lobbying activities and positions of the trade associations in which they are a member to ensure they lobby in accordance with the Paris Agreement. If the review of the trade association's lobbying activities shows misalignment with the goals of the Paris Agreement, the operator reports on the actions it has taken in response, including the leaving the association.",
+                    "pt":3,
+                    "description": "Lobbying policy, disclosures of policy positions, statements from government relations departments."
+                },
+                "8":{
+                    "text":"Operator has achieved net zero in its corporate operations.",
+                    "pt":3,
+                    "description": "Sustainability/ESG report."
+                }
+            }
+        },
+        "2":{
+            "2":{
+                "1":{
+                    "text":"Operator conducts meaningful community engagement and consultation around project risks and impacts that allows for broad participation of local communities.",
+                    "pt":1,
+                    "description": "Stakeholder engagement policies, ex: Landowner information guides, consultation with local communities, examples of communications with stakeholders, impact benefit sharing agreements, community development agreements."
+                },
+                "2":{
+                    "text":"Operator has a plan to respond to protests. The plan includes training employees, contractors, subcontractors, suppliers, and security personnel that may be impacted by the protests.  The training will include best practices for the protection of the health & safety of all stakeholders including the protestors.",
+                    "pt":1
+                },
+                "3":{
+                    "text":"Operator will conduct and document annual drills with company, contractor and security personnel and communicate lessons learned.",
+                    "pt":2
+                }, 
+                "4":{
+                    "text":"Operator will maintain records of protests and actions taken to address the concerns of the protestors and minimize the chance of future protests.",
+                    "pt":3
+                }
+            },
+            "7":{
+                "1":{
+                    "text":"Where operations encroach into urban and suburban environments, Operator engages and consults affected communities regarding appropriate setbacks (i.e., the distance between residential, commercial, or other potentially sensitive land use areas and pipeline ROWs, compressor stations and storage well sites) or additional control measures and safeguards that could be implemented in cases where regulation does not align with stakeholder expectations or does not exist, where appropriate and practicable.",
+                    "pt":1,
+                    "description": "Setback policy, compliance with local laws and also consultation records with local communities and landowners, Surface use agreements."
+                }, 
+                "2":{
+                    "text":"Operator works with local landowners, contractors to know the location of pipelines and process for safely working near pipelines.",
+                    "pt":1
+                },
+                "3":{
+                    "text":"Operator maintains ongoing communication with residents and communities located near storage facilities to monitor health and safety related to storage field integrity risks.",
+                    "pt":1
+                },
+                "4":{
+                    "text":"Operator gathers and uses information about community road use to avoid negatively affecting the health of local community members such as ensuring safe driving practices, minimizing use of roads during peak hours and taking special precautions near schools.",
+                    "pt":1
+                }, 
+                "5":{
+                    "text":"Operator evaluates road damage caused by its operations and compensates for or remediates any negative impacts.",
+                    "pt":1
+                }, 
+                "6":{
+                    "text":"Operator develops management plan to maintain the integrity of the pipeline and other assets to minimize impacts that may adversely impact the health & safety of the public.",
+                    "pt":1
+                }, 
+                "7":{
+                    "text":"Operator uses risk-based approach to determine and consistently apply setbacks from occupied buildings such as houses, schools, churches, and commercial establishments and from potentially sensitive land use areas; and related concerns of local community stakeholders during the siting process. Within the Certifiable Unit, different areas such as compressor stations, pigging facilities, tank batteries and storage wells, may require specific setback limits or other mitigation to protect the health & safety of the public.",
+                    "pt":2,
+                    "description": "Setback policy, compliance with local laws and also consultation records with local communities and landowners, Surface use agreements."
+                },  
+                "8":{
+                    "text":"Operator takes prompt action to investigate and mitigate any storage field integrity issues that are apparent or suspected from local community concerns or health related incidents.",
+                    "pt":2
+                }, 
+                "9":{
+                    "text":"Operator adjusts activity schedules to prevent or reduce traffic congestion and maintains a record of traffic accidents involving company and contractor personnel.",
+                    "pt":2
+                },  
+                "10":{
+                    "text":"Operator works with local personnel to improve the safe use of the roads through signage awareness measures.",
+                    "pt":2
+                },  
+                "11":{
+                    "text":"Operator reviews the management plan and status of executing the plan with local stakeholders and incorporates feedback when possible.",
+                    "pt":2
+                },
+                "12":{
+                    "text":"During major projects, operator collaborates with local law enforcement to schedule project activities to minimize impacts to the public.",
+                    "pt":3
+                },
+                "13":{
+                    "text":"Operator improves quality of local roads providing a benefit to the community.",
+                    "pt":3
+                },
+                "14":{
+                    "text":"Operator develops metrics and communicates them to the public demonstrating the integrity of the pipeline and other assets.",
+                    "pt":3
+                }
+            },
+            "8":{
+                "1":{
+                    "text":"Operator sets targets for, and records local job creation and taxes paid to local and state entities that benefit local communities. Operator communicates anticipated job creation numbers and reports actual job creation figures over the course of the project and those related to ongoing operations.",
+                    "pt":2
+                }, 
+                "2":{
+                    "text":"Operator teams with local technology schools and community colleges to develop programs to train local personnel to fill needed positions.",
+                    "pt":3
+                }
+            },
+            "10":{
+                "1":{
+                    "text":"Operator identifies community impact concerns and responds to them. Concerns are discussed and appropriate responses are prepared, budgeted, implemented, and monitored. Operator maintains statistics on local community concerns and reports them to senior management and back to the local community.",
+                    "pt":1,
+                    "description": "Records of community complaints and methods to address them, grievance policies and procedures, examples of responses to concerns."
+                }
+            }
+        },
+        "3":{
+            "1":{
+                "1":{
+                    "text":"Operator obtains Free, Prior and Informed Consent (FPIC) for the construction of new facilities for the disposal or long-term storage of hazardous materials on the lands or territories traditionally occupied or otherwise used or acquired by Indigenous Peoples.  The Operator shall consult with Indigenous Peoples prior to making a decision to use existing facilities in such a location.  If the facilities in question are not accepted or approved by the Indigenous Peoples, the Operator will find alternative facilities.",
+                    "pt":1,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements."
+                }, 
+                "2":{
+                    "text":"Operator commits to not dispose of hazardous material on Indigenous Peoples’ land or territories. The only exceptions would be disposal of produced water into permitted disposal wells and the use of existing disposal or stage sites that have been accepted and approved by the Indigenous Peoples.",
+                    "pt":2,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements."
+                }, 
+                "3":{
+                    "text":"Operator proactively evaluates for historic impacts to land and territories and mitigates the impacts when found. Such as historic burn pits and waste disposal sites.",
+                    "pt":3,
+                    "description": "Impact Benefit Agreements, Consultation and Capacity Agreements."
+                }    
+            }
+        },
+        "4":{
+            "9":{
+                "1":{
+                    "text":"Operator conducts due diligence when hiring contractors regarding health & safety training and certifications required for the assigned task(s); ensures contractor conformance with operator’s health & safety policies and evaluates health & safety performance of contractors. Contractors must meet any applicable training and safety levels required of operator’s employees.",
+                    "pt":1,
+                    "description": "HSE manual, contractor hiring policies, documentation of contractor training."
+                },
+                "2":{
+                    "text":"Operator minimizes risk of traffic accidents by ensuring all employees and contractors receive comprehensive worker training on driving safety, including driving heavy vehicles in residential or commercial areas.",
+                    "pt":1,
+                    "description": "HSE policies, driving safety training."
+                },
+                "3":{
+                    "text":"Operator ensures chemical labeling, training, Personal Protective Equipment (PPE), secondary containment and monitoring procedures are in place to safely manage the handling, storage, and disposal of chemicals.",
+                    "pt":1,
+                    "description": "HSE policies, site safety plans."
+                },
+                "4":{
+                    "text":"Operator conducts hazard risk assessments, including explosion risks, and develops risk management plans to mitigate incidents. Examples of exposure risk include, but are not limited to asbestos, PCBs, benzene, and H2S.",
+                    "pt":1
+                }, 
+                "5":{
+                    "text":"Operator provides a discussion of management systems used to integrate a culture of safety in all operations within the Certifiable Unit including training provided to employees and contractors and frequency of safety inspections.",
+                    "pt":1,
+                    "description": "HSE policies, site safety, documentation of safety trainings, descriptions of practices to instill a culture of safety ex: safety moments before meetings."
+                },
+                "6":{
+                    "text":"Operator regularly monitors worker health, especially where employees are exposed to hazardous chemicals, naturally occurring radioactive materials and/or hydrocarbons. Worker health monitoring includes but is not limited to: Upper respiratory, neurological, gastrointestinal, and dermatological symptoms associated with hydrocarbon, PCBs, asbestos, mercury, and other hazardous chemical exposures.",
+                    "pt":2,
+                    "description": "HSE manual, contractor hiring policies, documentation of contractor training."
+                }, 
+                "7":{
+                    "text":"Operator maintains record of vehicle incidents, investigates the incidents, and communicates lessons learned to employees and contractors.",
+                    "pt":2,
+                    "description": "HSE policies, driving safety training."
+                }, 
+                "8":{
+                    "text":"Operator documents and investigates incidents related to handling of products and takes corrective action to mitigate the risk of future incidents.",
+                    "pt":2,
+                    "description": "HSE policies, site safety plans."
+                },
+                "9":{
+                    "text":"Any airborne or waterborne health impacts identified above regulatory, or industry action levels should trigger additional impact evaluations for nearby populations in potentially affected communities.",
+                    "pt":2
+                }, 
+                "10":{
+                    "text":"Operator discloses (1) Total recordable incident rate (TRIR) including number of fatalities occurring within the Certifiable Unit for the past 1 year, 2 years, and 3 years preceding the assessment. Incident rate includes any recordable incident that occurs including incidents involving contractors or short service employees. Statistics and learnings are shared within the corporation to other business units.",
+                    "pt":2,
+                    "description": "HSE policies, site safety, documentation of safety trainings, descriptions of practices to instill a culture of safety ex: safety moments before meetings."
+                },
+                "11":{
+                    "text":"Operator maintains records any chronic illnesses developed by their employees or contractors such as cancers that could have been caused by exposure to carcinogens.  Operator has this information reviewed annually by health impact specialist if any potential worker exposure has occurred.",
+                    "pt":3,
+                    "description": "HSE manual, contractor hiring policies, documentation of contractor training."
+                }, 
+                "12":{
+                    "text":"Vehicle incident investigations identify corrective actions and the corrective actions are tracked to completion.",
+                    "pt":3,
+                    "description": "HSE policies, driving safety training."
+                },
+                "13":{
+                    "text":"Operator provides a discussion of learnings from incidents or near misses over the course of the 3 years preceding the assessment. The discussion is shared among trade associations, peer operations or publicly disclosed and best practices show evolution with time.",
+                    "pt":3,
+                    "description": "HSE policies, site safety, documentation of safety trainings, descriptions of practices to instill a culture of safety ex: safety moments before meetings."
+                }
+            },
+            "10":{
+                "1":{
+                    "text":"Operator provides proper training for onsite workers in case any exposure to hazardous materials and provides the needed emergency response equipment. Operator ensures emergency protective equipment is accessible and available for immediate use.",
+                    "pt":1,
+                    "description": "Evacuation plans, training programs, records of exercises and drills."
+                }, 
+                "2":{
+                    "text":"Operator shall conduct and document drills annually, including the use of the emergency response equipment to verify it is used correctly and in good condition.",
+                    "pt":2,
+                    "description": "Evacuation plans, training programs, records of exercises and drills."
+                }, 
+                "3":{
+                    "text":"Operator works with industry and agencies to evaluate incidents and develop standards and best practices to drive the incidents to zero.",
+                    "pt":3,
+                    "description": "Evacuation plans, training programs, records of exercises and drills."
+                }
+            }
+        },
+        "5":{
+            "2":{
+                "1":{
+                    "text":"Operator has developed/adopted and implemented engineering specifications, construction practices, operational procedures, contingency plans, appropriate equipment, and permanent control points to minimize the risk of spills and evaluates the contingency plans at least annually. Operator has procedures in place for responding to injuries, spills, releases pipeline and storage field incidents, including local experts and specialists that are technically qualified to respond to emergencies in a timely manner. For storage field operators the plan will cover staffing for long term incidents.",
+                    "pt":1,
+                    "description": "HSE spill policy, spill notification hotline, site safety plan."
+                },
+                "2":{
+                    "text":"Operator shall disclose the volume and number of hydrocarbon spills over a threshold of 1 barrel (IPIECA spill guidance) and all chemical spills to soil and water annually to the environment outside of primary and secondary containment.",
+                    "pt":1
+                }, 
+                "3":{
+                    "text":"Operator demonstrates that root causes and contributing factors to injuries, spills and pipeline incidents have been thoroughly investigated.",
+                    "pt":1,
+                    "description": "Spill response plan, examples of root cause analysis."
+                },
+                "4":{
+                    "text":"Operator ensures that public access to a facility where flaring and pipeline blowdowns occur is restricted. Operator develops Emergency Response Plans (ERPs) and predetermines Emergency Planning Zones (EPZs) wherein any residents, businesses or schools located within the EPZs are alerted during planned and unplanned pipeline blowdown events or other flaring events.",
+                    "pt":1
+                },  
+                "5":{
+                    "text":"Operator conducts and documents emergency response drills at least annually involving employees, appropriate contractors, and local emergency response personnel.",
+                    "pt":2,
+                    "description": "HSE spill policy, spill notification hotline, site safety plan."
+                }, 
+                "6":{
+                    "text":"Corrective measures have been adopted and learnings from incidents have been incorporated into operational protocols for preventing future incidents.",
+                    "pt":2,
+                    "description": "Spill response plan, examples of root cause analysis."
+                },
+                "7":{
+                    "text":"Operator establishes targets to reduce flaring and pipeline blowdown events, communicates the targets to stakeholders and provides reports on the progress toward achieving the targets.",
+                    "pt":2
+                },
+                "8":{
+                    "text":"Operator communicates lessons learned from the annual drills to employees, contractors and emergency response personnel and documents corrective actions.",
+                    "pt":3,
+                    "description": "HSE spill policy, spill notification hotline, site safety plan."
+                },
+                "9":{
+                    "text":"Incident investigation reports as well as corrective action plans are publicly available.",
+                    "pt":3,
+                    "description": "Spill response plan, examples of root cause analysis."
+                }
+            },     
+            "5":{
+                "1":{
+                    "text":"Within Certifiable Unit, operator discloses a list of active assets with decommissioning plans, facilities and sites that have been decommissioned, and those facilities in the process of being decommissioned.",
+                    "pt":1
+                },
+                "2":{
+                    "text":"Operator discloses total amount of financial provisions made by the organization for decommissioning and closure, as well as post-decommissioning and closure monitoring and aftercare for their assets.",
+                    "pt":1
+                },
+                "3":{
+                    "text":"Before divesting assets, Operator conducts a due diligence process in which they confirm that the buyer has adequate financial means to close, abandon and reclaim facilities and wells when they reach end of life.",
+                    "pt":1
+                },
+                "4":{
+                    "text":"Operator conducts a risk-based analysis of liabilities to prioritize closure and remediation. Factors that should be considered are age, presence of H2S, and proximity: livestock, known wildlife habitats, communities, residences, ground, and surface water.",
+                    "pt":2
+                },
+                "5":{
+                    "text":"Operator works with buyer to escrow funds to fund closure, abandonment, and restoration of the property.",
+                    "pt":2
+                },
+                "6":{
+                    "text":"Operator reviews decommissioning plans and the status of ongoing decommission work with landowners and other stakeholders.",
+                    "pt":3
+                }
+            },
+            "7":{
+                "1":{
+                    "text":"Operator reports methane intensity at the Certifiable Unit following the NGSI intensity calculation methodology for the transmission and storage segment.",
+                    "pt":1,
+                    "description": "ESG report."
+                },
+                "2":{
+                    "text":"Operator employs best management practices to control methane emissions at all facilities within the Certifiable Unit and documents efforts in a methane management plan. These best management practices include: training employees and implementing a leak detection and repair program at all facilities; training operators to look for leaks and report the leaks to management; repair leaks at the earliest practicable timeframe according to leak management plan and implement best management practices: Controlled blowdowns (refer to AGA 2020), ensuring proper tank handling, ensuring proper flare/combustion device operation and proper compressor maintenance. Operator installs or retrofits low-bleed or no-bleed pneumatic devices at all facilities within the Certifiable Unit.",
+                    "pt":1
+                },
+                "3":{
+                    "text":"Operator has policies and procedures in place to eliminate routine and non-routine natural gas venting. During unit and station shut-downs, or storage well completions, operator either captures gas, or re-routes to flare, incinerator or other combustion device instead of venting.",
+                    "pt":1,
+                    "description": "Environmental policy/procedure on venting."
+                }, 
+                "4":{
+                    "text":"Operator employs semi-annual LDAR at minimum at all facilities and well pads within the Certifiable Unit.",
+                    "pt":1
+                }, 
+                "5":{
+                    "text":"Operator ensures flares/combustion devices are operating properly by use of monitoring devices to ensure proper ignition and notification if flare/combustion device goes out (i.e. Unlit flares are unacceptable).",
+                    "pt":1
+                }, 
+                "6":{
+                    "text":"Operator reports GHG emission intensity of the Certifiable Unit according to the EO Carbon Intensity Quantification Methodology which includes both Scope 1 and Scope 2 emissions.",
+                    "pt":1
+                },
+                "7":{
+                    "text":"Operator estimates and quantifies scope 3 emissions upstream of operations, using GHG Protocol or another industry accepted protocol, for the Certifiable Unit including: (a) emissions associated with upstream oil and natural gas exploration and production, and (b) emissions during processing of the product to meet customer quality commitments.",
+                    "pt":2
+                }, 
+                "8":{
+                    "text":"Operator demonstrates annual reductions in methane intensity in the transmission and storage segment. Operator shows initiative to reduce methane emissions by implementing a suite of control measures.",
+                    "pt":2,
+                    "description": "ESG report."
+                }, 
+                "9":{
+                    "text":"Operator employs good design/operating practices to new facilities or modifications to existing facilities including: (a) installation of low-emitting compressor seals or route to a control device, (b) non-venting pipeline blowdowns (c) enhanced flare/combustion device functionality systems to ensure highest efficiency, (d) new facilities built with no-bleed pneumatic devices.",
+                    "pt":2
+                }, 
+                "10":{
+                    "text":"Operator employs quarterly LDAR surveys, at minimum, at all facilities and well pads within the Certifiable Unit.",
+                    "pt":2
+                },  
+                "11":{
+                    "text":"Operator progressively reduces routine flaring intensity on a throughput basis at its ongoing operations and provides evidence of year over year reduction in flaring intensity.",
+                    "pt":2
+                },
+                "12":{
+                    "text":"Operator shows annual improvement in GHG emission intensity of the Certifiable Unit.",
+                    "pt":2
+                },
+                "13":{
+                    "text":"Operator estimates and quantifies scope 3 emissions, using GHG Protocol or another industry accepted protocol, downstream of their supply chain including refining into end use fuels such as hydrogen, CNG, LNG (including pathways to end use) and combustion of natural gas. Note: estimates of downstream emissions using emission factors is permissible.",
+                    "pt":3
+                },
+                "14":{
+                    "text":"Operator quantifies and reports methane emissions at level 5 under OGMP 2.0 or equivalent program such as Project Veritas or MiQ grade A.",
+                    "pt":3,
+                    "description": "ESG report."
+                },
+                "15":{
+                    "text":"Operator employs best design practices to new facilities or modifications to existing facilities including: (a) use of no-bleed pneumatic controllers, (b) vapour recovery systems installed on compressors, turbines and tanks to capture leaks and unit venting emissions, (c) installing vapour capture on well casings, (d) employing electric drive compressors where low emission power is available (e) including advanced detection technologies such as continuous monitoring or top-down surveys.",
+                    "pt":3
+                },
+                "16":{
+                    "text":"Operator employs quarterly LDAR surveys and annual top-down surveys at all facilities and storage well pads within the Certifiable Unit.",
+                    "pt":3
+                },
+                "17":{
+                    "text":"Certifiable Unit achieves zero routine flaring (ZRF).",
+                    "pt":3
+                },
+                "18":{
+                    "text":"Operator achieves near zero GHG emissions intensity of the Certifiable Unit.",
+                    "pt":3
+                }
+            },
+            "10":{
+                "1":{
+                    "text":"Operator uses best management practices to control dust. Dust suppression techniques such as enclosures and covers, spraying, irrigation, stabilization, and revegetation of cleared land. Project roads should be sealed as far as practicable to minimize dust from vehicles and equipment.",
+                    "pt":1,
+                    "description": "Use of products to control dust (ex: Ultra Bond 2000), Compliance with regulatory guidelines around dust control (ex: Ministry of Energy and Mines guidelines in Canada), Fugitive dust management plan."
+                }, 
+                "2":{
+                    "text":"Operator reports releases of air pollutants: NOx, SOx, CO, H2S, VOCs, and PM2.5 from emission sources and ensures compliance with applicable permits and regulatory requirements regarding air pollutant emissions.",
+                    "pt":1
+                }, 
+                "3":{
+                    "text":"Operator considers effects of the operations on ambient air quality by doing any of the following: a. belonging to a monitoring network, b. random sampling of ambient air quality within the site, c. passive monitoring of ambient air quality within the site, d. performing an impact assessment to determine minimal or negligible effects expected on the ambient air quality, or e. show evidence of ambient air quality not materially affected at nearby monitoring stations over a year's time frame. Operator discloses which methods were used (from a, b, c, d, e above).",
+                    "pt":1
+                }, 
+                "4":{
+                    "text":"Operator employs best management practices to minimize air pollutant emissions. Where diesel engines are in service, use the lowest sulfur content fuel available in the area and employ TIER 3 or 4 emission controls for NOx and PM2.5. Sulfur oxides are controlled by using the best available sulfur recovery technologies, natural gas engines and boilers/heaters employ emission controls for NOx.",
+                    "pt":2
+                }, 
+                "5":{
+                    "text":"Operator regularly monitors ambient air quality in the vicinity of operations through either site level continuous air quality monitoring or through participation in the local airshed monitoring network.",
+                    "pt":2
+                }, 
+                "6":{
+                    "text":"Operator employs best available emissions controls technology to minimize air pollutant emissions. Natural gas engines, turbines and boilers employ best available emission controls for NOx (Combustion system retrofits, Low NOx emissions systems, SCR, NSCR) and methane slip (A/F ratio controllers, vapour recovery systems).",
+                    "pt":3
+                },
+                "7":{
+                    "text":"Operator summarizes and discloses incidents of exceeding ambient air quality objectives or standards set by regulatory bodies. Operator investigates the root cause of the exceedances, takes corrective action to minimize repeat events and publicly reports the events and corrective actions. Operator works with local stakeholders including other operators, agencies, landowners, and non-governmental organizations to establish best practices to enhance ambient air quality and minimize exceedances.",
+                    "pt":3
+                }
+            },
+            "11":{
+                "1":{
+                    "text":"Operator respects water rights and water use rights of local and Indigenous communities, both formal and informal, that are affected by the site’s water use. In countries where water rights are commoditized, fair compensation is made to appropriate parties for acquisition of the necessary water.",
+                    "pt":1,
+                    "description": "Reporting to appropriate government bodies (ex: US EPA, state/province energy departments), use of FracFocus."
+                }, 
+                "2":{
+                    "text":"Operator assesses and documents freshwater use by measuring water use from all sources: aquifer, river, basin, catchment. Operator assesses and reports methods to recycle and reduce overall water use.",
+                    "pt":1,
+                    "description": "Water source protection plans."
+                }, 
+                "3":{
+                    "text":"Operator manages impacts related to storm water and extreme flow events.",
+                    "pt":1,
+                    "description": "Water management plan (submitted with well permit and/or general water policy), compliance with regulations on water management, water data in ESG report."
+                },
+                "4":{
+                    "text":"At storage facilities, Operator ensures the integrity of the casing to reduce the risk of leakage of hydrocarbons into a shallow aquifer due to imperfect sealing of the cement column around the casing.",
+                    "pt":1, 
+                    "description": "Maintenance of minimum flow limits, consideration of seasonal rainfall."
+                }, 
+                "5":{
+                    "text":"At storage facilities, Operator employs annular pressure monitoring and annular pressure management program to ensure well-bore integrity over time.",
+                    "pt":1
+                },
+                "6":{
+                    "text":"Operator conducts baseline and post-completion sampling of individual drinking/agricultural water wells and surface water within a minimum radius of 2,500 ft or regulatory limit, whichever is greater, prior to drilling and following completion of gas storage wells.",
+                    "pt":1
+                },
+                "7":{
+                    "text":"Operator installs and annually inspects groundwater monitoring wells near storage facilities to monitor any potential impacts on groundwater aquifers. Results of the inspections are documented.",
+                    "pt":1,
+                    "description": "Pressure testing, documentation of frac procedure, surface casing vent flow reports."
+                }, 
+                "8":{
+                    "text":"Operator develops local source water protection plans that include addressing regional water risks, engaging with key stakeholders, and supporting projects that improve watersheds and aquifers.",
+                    "pt":2,
+                    "description": "Water source protection plans."
+                },
+                "9":{
+                    "text":"Operator monitors surface water withdrawals tied to seasonal flows to ensure flow rates are not significantly impacted considering cumulative impacts and are in line with local regulations and with sustainability of local community access and use where regulations do not exist.",
+                    "pt":2,
+                    "description": "Water management plan (submitted with well permit and/or general water policy), compliance with regulations on water management, water data in ESG report."
+                },
+                "10":{
+                    "text":"Operator conducts quarterly monitoring of groundwater monitoring wells near storage facilities to monitor any potential impacts on groundwater aquifers. Results of the inspections are documented.",
+                    "pt":2,
+                    "description": "Pressure testing, documentation of frac procedure, surface casing vent flow reports."
+                },  
+                "11":{
+                    "text":"Operator conducts monthly monitoring of groundwater monitoring wells near storage facilities to monitor any potential impacts on groundwater aquifers. Results are documented and reported to local stakeholders.",
+                    "pt":3,
+                    "description": "Pressure testing, documentation of frac procedure, surface casing vent flow reports."
+                }
+            },
+            "12":{
+                "1":{
+                    "text":"Operator evaluates and reports potential risks and impacts to wildlife migratory corridors and habitat for species native to the site area when locating infrastructure.",
+                    "pt":1,
+                    "description": "Applicable studies and assessments, collaboration and reporting to regulatory bodies (ex: US Fish and Wildlife Service)."
+                }, 
+                "2":{
+                    "text":"Where practical, operator co-locates infrastructure (e.g., roads and pipelines in the same right of way) to minimize surface disturbance.",
+                    "pt":2, 
+                    "description": "Diagrams showing pad layout."
+                }, 
+                "3":{
+                    "text":"After construction is complete, the operator restores the land and vegetation in accordance with approved project restoration plan.",
+                    "pt":2,
+                    "description": "Applicable studies and assessments, collaboration and reporting to regulatory bodies (ex: US Fish and Wildlife Service)."
+                }
+            },
+            "14":{
+                "1":{
+                    "text":"Operator designs and operates the system to minimize and mitigate high levels of noise exposure to the public.",
+                    "pt":1
+                }, 
+                "2":{
+                    "text":"Operator implements best practices to eliminate sources and actions that could create high levels of noise exposure to the public.  When mitigation is not possible for short term high noise levels, the operator will notify the public of pending work that will involve high levels of noise.",
+                    "pt":2
+                }, 
+                "3":{
+                    "text":"Operator tracks and reports each event involving high levels of noise impacting the public. Metrics are established and tracked to reduce the events to zero.",
+                    "pt":3
+                }
+            },
+            "15":{
+                "1":{
+                    "text":"Operator develops screening tools to analyze the risks associated with each chemical and hazardous product used and requires increasing levels of management approval for higher toxicity/dangerous chemicals and products.  Examples include asbestos containing material, cleaning solvents and sulfuric acid.",
+                    "pt":1,
+                    "description": "SDS for chemicals used, procedures for handling additives."
+                }, 
+                "2":{
+                    "text":"Operator publicly reports progress in reducing volumes of toxic chemicals used, as well as substitution of less-toxic chemicals used in its operations. Operator includes all chemicals such as corrosion inhibitors, acids, solvents and lubricants in the progress report and reduction plans.",
+                    "pt":1,
+                    "description": "Reporting to chemical disclosure platforms (ex: FracFocus), ESG report on chemicals,  targets and thresholds for chemical additive."
+                },
+                "3":{
+                    "text":"Where trade secret protection is asserted, such assertions are made public and substantiated by a public body, where possible and in accordance with national, state, or other applicable law. Operator discloses whether chemical disclosure includes exemptions for confidential business information. Operator discloses the % of chemicals that public disclosure of is reported.",
+                    "pt":1
+                },  
+                "4":{
+                    "text":"Operator mitigates the risk of spills through secure storage of chemicals on site in fully contained in stable, weather-proof storage containers. Should have secondary containment through use of double walled containers or separate secondary containment.",
+                    "pt":1,
+                    "description": "Reporting to chemical disclosure platforms (ex: FracFocus)."
+                }, 
+                "5":{
+                    "text":"Operator evaluates safer and eco-friendly alternatives to hazardous chemicals (corrosion inhibitors, acids and cleaning solvents) used and demonstrates use of safer and eco-friendly alternatives by public disclosure.",
+                    "pt":2,
+                    "description": "Reporting to chemical disclosure platforms (ex: FracFocus), ESG report on chemicals,  targets and thresholds for chemical additive."
+                }
+            }
+        }  
+    }
+}

@@ -2,7 +2,7 @@ import { useLoaderData, Link, Form, redirect } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { Plus, Save, Trash2, MessageSquare, GripVertical, ChevronRight } from "lucide-react";
+import { Plus, Save, Trash2, MessageSquare, GripVertical, ChevronRight, CheckCircle } from "lucide-react";
 import { 
   Card, 
   CardContent, 

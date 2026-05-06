@@ -7,7 +7,6 @@ Usage:
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-
 from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
 
 

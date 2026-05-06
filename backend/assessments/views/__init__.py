@@ -271,17 +271,13 @@ class AssessmentResponseViewSet(ResponseValidationMixin, viewsets.ModelViewSet):
         if not org_id:
             return AssessmentResponse.objects.none()
 
-        has_access = (
-            AssessmentAccessService.get_accessible_assessments(self.request.user)
-            .filter(id=assessment_pk, organization_id=org_id)
-            .exists()
-        )
+        has_access = AssessmentAccessService.get_accessible_assessments(
+            self.request.user
+        ).filter(id=assessment_pk, organization_id=org_id).exists()
         if not has_access:
             return AssessmentResponse.objects.none()
 
-        return qs.filter(
-            assessment_id=assessment_pk, assessment__organization_id=org_id
-        )
+        return qs.filter(assessment_id=assessment_pk, assessment__organization_id=org_id)
 
     def perform_create(self, serializer):
         assessment = serializer.validated_data.get("assessment")
@@ -295,16 +291,12 @@ class AssessmentResponseViewSet(ResponseValidationMixin, viewsets.ModelViewSet):
 
         org_id = get_request_organization_id(self.request, self.kwargs)
         if org_id and str(assessment.organization_id) != str(org_id):
-            raise PermissionDenied(
-                "Assessment does not belong to the selected organization."
-            )
+            raise PermissionDenied("Assessment does not belong to the selected organization.")
 
         if not self.request.user.is_superuser:
-            has_access = (
-                AssessmentAccessService.get_accessible_assessments(self.request.user)
-                .filter(id=assessment.id)
-                .exists()
-            )
+            has_access = AssessmentAccessService.get_accessible_assessments(
+                self.request.user
+            ).filter(id=assessment.id).exists()
             if not has_access:
                 raise PermissionDenied("You do not have access to this assessment.")
 

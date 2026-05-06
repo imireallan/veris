@@ -6,6 +6,7 @@ Usage:
 
 Prerequisites:
     Copy EO100 JSON files from ~/projects/TDi/backend/data/ to backend/eo100_exports/
+    
     mkdir -p backend/eo100_exports
     cp ~/projects/TDi/backend/data/SAQ_Default.json backend/eo100_exports/
     cp ~/projects/TDi/backend/data/SAQ_Processing.json backend/eo100_exports/
@@ -20,10 +21,8 @@ This creates:
 
 import json
 from pathlib import Path
-
 from django.utils import timezone
-
-from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
+from assessments.models import Framework, AssessmentTemplate, AssessmentQuestion
 
 
 def seed_eo100_saq():
@@ -118,7 +117,7 @@ def seed_eo100_saq():
         # Delete existing if re-seeding
         if not created:
             template.assessment_questions.all().delete()
-            print("  Cleared existing questions for re-seed")
+            print(f"  Cleared existing questions for re-seed")
 
         print(f"  ✓ Template: {template.name}")
 
@@ -151,7 +150,7 @@ def seed_eo100_saq():
                 "max_score": pt_scores.get(pt_level, 33),
             }
 
-            AssessmentQuestion.objects.create(
+            question = AssessmentQuestion.objects.create(
                 template=template,
                 text=q_data.get("text", ""),
                 order=objective_num,
@@ -171,18 +170,16 @@ def seed_eo100_saq():
         template.status = AssessmentTemplate.Status.PUBLISHED
         template.published_at = timezone.now()
         template.save()
-        print("  ✓ Template published")
+        print(f"  ✓ Template published")
 
     # Summary
     print(f"\n{'='*60}")
     print("✅ EO100 seeding complete!")
     print(f"{'='*60}")
     print(f"  Framework: {framework.name}")
-    print(
-        f"  Templates: {AssessmentTemplate.objects.filter(framework=framework).count()}"
-    )
+    print(f"  Templates: {AssessmentTemplate.objects.filter(framework=framework).count()}")
     print(f"  Total Questions: {total_questions}")
-    print("\n  Supplements:")
+    print(f"\n  Supplements:")
     for supplement_type, _ in supplements.values():
         count = AssessmentTemplate.objects.filter(
             framework=framework,
@@ -190,7 +187,7 @@ def seed_eo100_saq():
         ).count()
         print(f"    - {supplement_type}: {count} template(s)")
 
-    print("\n  Test instantiation:")
+    print(f"\n  Test instantiation:")
     template = AssessmentTemplate.objects.filter(framework=framework).first()
     if template:
         print(f"    POST /api/templates/{template.id}/instantiate/")

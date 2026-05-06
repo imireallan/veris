@@ -89,13 +89,10 @@ def upload_evidence_document(request):
     org_id = (
         str(organization.id)
         if organization
-        else request.META.get("HTTP_X_ORGANIZATION_ID")
-        or request.data.get("organization_id")
+        else request.META.get("HTTP_X_ORGANIZATION_ID") or request.data.get("organization_id")
     )
     assessment_id = request.data.get("assessment_id")
-    response_id = (
-        request.data.get("response_id") or request.data.get("question_id") or "pending"
-    )
+    response_id = request.data.get("response_id") or request.data.get("question_id") or "pending"
 
     if not org_id:
         return Response(
@@ -106,9 +103,7 @@ def upload_evidence_document(request):
     if assessment_id:
         from assessments.models import Assessment
 
-        if not Assessment.objects.filter(
-            id=assessment_id, organization_id=org_id
-        ).exists():
+        if not Assessment.objects.filter(id=assessment_id, organization_id=org_id).exists():
             return Response(
                 {"error": "Assessment does not belong to the selected organization"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -117,9 +112,7 @@ def upload_evidence_document(request):
     # Generate unique filename under tenant/assessment scoped path
     safe_name = os.path.basename(uploaded_file.name)
     unique_name = f"{uuid.uuid4().hex}_{safe_name}"
-    upload_path = (
-        f"evidence/{org_id}/{assessment_id or 'unassigned'}/{response_id}/{unique_name}"
-    )
+    upload_path = f"evidence/{org_id}/{assessment_id or 'unassigned'}/{response_id}/{unique_name}"
 
     # Save file using configured storage (local or S3)
     file_path = default_storage.save(upload_path, uploaded_file)

@@ -214,21 +214,31 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     def get_queryset(self):
-        # Filter questions by the template associated with the specific assessment
         assessment_pk = self.kwargs.get("assessment_pk")
         org_pk = self.kwargs.get("org_pk")
 
         if assessment_pk:
-            # Get the template associated with this assessment
             from assessments.models import Assessment
 
             try:
                 assessment = Assessment.objects.get(id=assessment_pk)
-                template = assessment.template
-                if template:
-                    return AssessmentQuestion.objects.filter(template=template)
             except Assessment.DoesNotExist:
                 return AssessmentQuestion.objects.none()
+
+            # Durable path: render frozen assessment-owned snapshots.
+            snapshot_qs = AssessmentQuestion.objects.filter(
+                assessment=assessment
+            ).order_by("order")
+            if snapshot_qs.exists():
+                return snapshot_qs
+
+            # Backward-compatible fallback for assessments created before snapshotting.
+            if assessment.template_id:
+                return AssessmentQuestion.objects.filter(
+                    template=assessment.template
+                ).order_by("order")
+
+            return AssessmentQuestion.objects.none()
 
         # Fallback: Filter questions by organization if assessment_pk is missing
         if org_pk:
@@ -236,7 +246,7 @@ class AssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
             if organization and str(organization.id) == str(org_pk):
                 return AssessmentQuestion.objects.filter(
                     template__owner_org=organization
-                )
+                ).order_by("order")
         return AssessmentQuestion.objects.none()
 
 
@@ -249,13 +259,49 @@ class AssessmentResponseViewSet(ResponseValidationMixin, viewsets.ModelViewSet):
         if not assessment_pk:
             return AssessmentResponse.objects.none()
 
-        return AssessmentResponse.objects.filter(assessment_id=assessment_pk)
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        qs = AssessmentResponse.objects.select_related("assessment", "organization")
+
+        if self.request.user.is_superuser:
+            qs = qs.filter(assessment_id=assessment_pk)
+            if org_id:
+                qs = qs.filter(assessment__organization_id=org_id)
+            return qs
+
+        if not org_id:
+            return AssessmentResponse.objects.none()
+
+        has_access = AssessmentAccessService.get_accessible_assessments(
+            self.request.user
+        ).filter(id=assessment_pk, organization_id=org_id).exists()
+        if not has_access:
+            return AssessmentResponse.objects.none()
+
+        return qs.filter(assessment_id=assessment_pk, assessment__organization_id=org_id)
 
     def perform_create(self, serializer):
         assessment = serializer.validated_data.get("assessment")
+        assessment_pk = self.kwargs.get("assessment_pk")
+
+        if not assessment and assessment_pk:
+            assessment = Assessment.objects.filter(id=assessment_pk).first()
+
         if not assessment:
             raise PermissionDenied("Assessment is required.")
+
+        org_id = get_request_organization_id(self.request, self.kwargs)
+        if org_id and str(assessment.organization_id) != str(org_id):
+            raise PermissionDenied("Assessment does not belong to the selected organization.")
+
+        if not self.request.user.is_superuser:
+            has_access = AssessmentAccessService.get_accessible_assessments(
+                self.request.user
+            ).filter(id=assessment.id).exists()
+            if not has_access:
+                raise PermissionDenied("You do not have access to this assessment.")
+
         serializer.save(
+            assessment=assessment,
             organization_id=assessment.organization_id,
             created_by=self.request.user,
         )

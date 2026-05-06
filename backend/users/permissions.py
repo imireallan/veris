@@ -237,6 +237,9 @@ class CanManageTemplates(permissions.BasePermission):
         if getattr(view, "action", None) == "public":
             return True
 
+        if getattr(view, "action", None) == "instantiate":
+            return has_membership_permission(request, "assessment:create", view)
+
         if request.method in SAFE_METHODS:
             return get_request_membership(request, view) is not None
 

@@ -3,6 +3,7 @@ Flat API routes for assessment resources — used by assessment detail page.
 These are org-scoped via permission checks and query params, not URL kwargs.
 """
 
+from django.db.models import Q
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -221,27 +222,121 @@ class FlatAssessmentResponseViewSet(
 
     serializer_class = AssessmentResponseSerializer
     permission_classes = [permissions.IsAuthenticated]
+    lookup_field = "id"
 
     def get_queryset(self):
-        qs = AssessmentResponse.objects.all()
+        qs = AssessmentResponse.objects.select_related("assessment", "organization")
+
+        if self.action in ["retrieve", "update", "partial_update", "destroy"]:
+            return self.filter_detail_queryset(qs)
+
         return self.filter_by_assessment(qs)
+
+    def filter_detail_queryset(self, queryset):
+        """Keep ID-based response detail routes tenant-scoped."""
+        org_id = get_request_organization_id(self.request)
+
+        if self.request.user.is_superuser:
+            if org_id:
+                return queryset.filter(assessment__organization_id=org_id)
+            return queryset
+
+        accessible_assessments = AssessmentAccessService.get_accessible_assessments(
+            self.request.user
+        )
+        queryset = queryset.filter(
+            assessment_id__in=accessible_assessments.values("id")
+        )
+
+        if org_id:
+            queryset = queryset.filter(assessment__organization_id=org_id)
+
+        return queryset
+
+    def perform_create(self, serializer):
+        assessment = serializer.validated_data.get("assessment")
+        assessment_id = self.request.query_params.get("assessment")
+
+        if not assessment and assessment_id:
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+
+        if not assessment:
+            raise PermissionDenied("Assessment is required.")
+
+        org_id = get_request_organization_id(self.request)
+        if org_id and str(assessment.organization_id) != str(org_id):
+            raise PermissionDenied(
+                "Assessment does not belong to the selected organization."
+            )
+
+        if not self.request.user.is_superuser:
+            has_access = (
+                AssessmentAccessService.get_accessible_assessments(self.request.user)
+                .filter(id=assessment.id)
+                .exists()
+            )
+            if not has_access:
+                raise PermissionDenied("You do not have access to this assessment.")
+
+        serializer.save(
+            assessment=assessment,
+            organization_id=assessment.organization_id,
+            created_by=self.request.user,
+        )
 
 
 class FlatAssessmentQuestionViewSet(viewsets.ReadOnlyModelViewSet):
-    """Flat question routes — /api/questions/ (filtered by template query param)."""
+    """Flat question routes — /api/questions/ filtered by assessment or template query param."""
 
     serializer_class = AssessmentQuestionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        assessment_id = self.request.query_params.get("assessment")
         template_id = self.request.query_params.get("template")
         organization_id = get_request_organization_id(self.request)
-        queryset = AssessmentQuestion.objects.select_related("assessment_template")
+
+        queryset = AssessmentQuestion.objects.select_related(
+            "assessment", "template", "source_template_question"
+        ).order_by("order")
+
+        if assessment_id:
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if not assessment:
+                return AssessmentQuestion.objects.none()
+
+            if organization_id and str(assessment.organization_id) != str(
+                organization_id
+            ):
+                return AssessmentQuestion.objects.none()
+
+            if not self.request.user.is_superuser:
+                has_access = (
+                    AssessmentAccessService.get_accessible_assessments(
+                        self.request.user
+                    )
+                    .filter(id=assessment.id)
+                    .exists()
+                )
+                if not has_access:
+                    return AssessmentQuestion.objects.none()
+
+            snapshot_qs = queryset.filter(assessment_id=assessment_id)
+            if snapshot_qs.exists():
+                return snapshot_qs
+
+            if assessment.template_id:
+                return queryset.filter(
+                    template_id=assessment.template_id, assessment__isnull=True
+                )
+            return AssessmentQuestion.objects.none()
+
         if template_id:
-            queryset = queryset.filter(assessment_template_id=template_id)
+            queryset = queryset.filter(template_id=template_id, assessment__isnull=True)
         if organization_id:
             queryset = queryset.filter(
-                assessment_template__owner_org_id=organization_id
+                Q(organization_id=organization_id)
+                | Q(template__owner_org_id=organization_id)
             )
         elif not self.request.user.is_superuser:
             return AssessmentQuestion.objects.none()
@@ -358,3 +453,11 @@ class FlatSiteViewSet(viewsets.ModelViewSet):
             return Site.objects.all()
 
         return Site.objects.none()
+
+    def perform_create(self, serializer):
+        organization = getattr(self.request, "organization", None)
+
+        if not organization:
+            raise PermissionDenied("Organization context is required.")
+
+        serializer.save(organization=organization)

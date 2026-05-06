@@ -11,7 +11,8 @@ This creates:
 """
 
 from django.utils import timezone
-from assessments.models import Framework, AssessmentTemplate, AssessmentQuestion
+
+from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
 
 
 def seed_cgwg_saq():
@@ -256,7 +257,7 @@ def seed_cgwg_saq():
     # Create questions
     print(f"\n✓ Creating {len(questions_data)} questions...")
     for q_data in questions_data:
-        question = AssessmentQuestion.objects.create(
+        AssessmentQuestion.objects.create(
             template=template,
             text=q_data["text"],
             order=q_data["order"],
@@ -273,11 +274,11 @@ def seed_cgwg_saq():
     template.published_at = timezone.now()
     template.save()
 
-    print(f"\n✅ CGWG SAQ seeding complete!")
+    print("\n✅ CGWG SAQ seeding complete!")
     print(f"  Framework: {framework.name}")
     print(f"  Template: {template.name} ({template.slug})")
     print(f"  Questions: {template.assessment_questions.count()}")
-    print(f"\n  Test instantiation:")
+    print("\n  Test instantiation:")
     print(f"    POST /api/templates/{template.id}/instantiate/")
 
 

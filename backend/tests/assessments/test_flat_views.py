@@ -334,8 +334,12 @@ class TestFlatAssessmentResponseViewSet:
             password="testpass123",
             name="Responses User",
         )
-        self.org1 = Organization.objects.create(name="Responses Org 1", slug="responses-org-1")
-        self.org2 = Organization.objects.create(name="Responses Org 2", slug="responses-org-2")
+        self.org1 = Organization.objects.create(
+            name="Responses Org 1", slug="responses-org-1"
+        )
+        self.org2 = Organization.objects.create(
+            name="Responses Org 2", slug="responses-org-2"
+        )
         OrganizationMembership.objects.create(
             user=self.user,
             organization=self.org1,

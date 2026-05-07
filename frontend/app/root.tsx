@@ -159,10 +159,13 @@ export function ErrorBoundary() {
     } else if (apiError.status === 404) {
       message = "Not Found";
       details = "The requested resource could not be found.";
+    } else if (apiError.status >= 500) {
+      message = "Service temporarily unavailable";
+      details = "The backend returned an error. Please refresh or try again in a moment.";
     } else {
       details = error.message;
     }
-    stack = error.stack;
+    stack = import.meta.env.DEV ? error.stack : undefined;
   }
 
   return (

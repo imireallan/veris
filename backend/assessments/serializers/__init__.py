@@ -1,13 +1,16 @@
+from django.db import transaction
 from rest_framework import serializers
 
 from assessments.models import (
     AIInsight,
     Assessment,
+    AssessmentActionInstance,
     AssessmentPlan,
     AssessmentQuestion,
     AssessmentReport,
     AssessmentResponse,
     AssessmentTemplate,
+    AssessmentWorkflowInstance,
     CIPCycle,
     ESGFocusArea,
     ExternalRating,
@@ -16,7 +19,11 @@ from assessments.models import (
     FrameworkImportJob,
     Site,
     Task,
+    WorkflowAction,
+    WorkflowStep,
+    WorkflowTemplate,
 )
+from assessments.services.workflows import user_can_complete_action_instance
 
 
 class FrameworkSerializer(serializers.ModelSerializer):
@@ -333,6 +340,258 @@ class AIInsightSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+class WorkflowActionSerializer(serializers.ModelSerializer):
+    step = serializers.PrimaryKeyRelatedField(read_only=True)
+    step_code = serializers.CharField(source="step.code", read_only=True)
+    step_title = serializers.CharField(source="step.title", read_only=True)
+
+    class Meta:
+        model = WorkflowAction
+        fields = [
+            "id",
+            "step",
+            "step_code",
+            "step_title",
+            "code",
+            "title",
+            "description",
+            "order",
+            "assigned_roles",
+            "submit_roles",
+            "required_evidence",
+            "prerequisite_codes",
+            "due_offset_days",
+        ]
+        read_only_fields = ["id", "step"]
+
+
+class WorkflowStepSerializer(serializers.ModelSerializer):
+    template = serializers.PrimaryKeyRelatedField(read_only=True)
+    actions = WorkflowActionSerializer(many=True, required=False)
+
+    class Meta:
+        model = WorkflowStep
+        fields = [
+            "id",
+            "template",
+            "code",
+            "title",
+            "description",
+            "order",
+            "actions",
+        ]
+        read_only_fields = ["id", "template"]
+
+
+class WorkflowTemplateSerializer(serializers.ModelSerializer):
+    steps = WorkflowStepSerializer(many=True, required=False)
+
+    class Meta:
+        model = WorkflowTemplate
+        fields = [
+            "id",
+            "name",
+            "slug",
+            "framework_slug",
+            "description",
+            "role_mapping",
+            "is_active",
+            "steps",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    @transaction.atomic
+    def create(self, validated_data):
+        steps_data = validated_data.pop("steps", [])
+        template = WorkflowTemplate.objects.create(**validated_data)
+        self._replace_steps(template, steps_data)
+        return template
+
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        steps_data = validated_data.pop("steps", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        if steps_data is not None:
+            self._replace_steps(instance, steps_data)
+        return instance
+
+    def _replace_steps(self, template, steps_data):
+        template.steps.all().delete()
+        for step_order, step_data in enumerate(steps_data, start=1):
+            actions_data = step_data.pop("actions", [])
+            step = WorkflowStep.objects.create(
+                template=template,
+                order=step_data.get("order") or step_order,
+                code=step_data["code"],
+                title=step_data["title"],
+                description=step_data.get("description", ""),
+            )
+            for action_order, action_data in enumerate(actions_data, start=1):
+                WorkflowAction.objects.create(
+                    step=step,
+                    order=action_data.get("order") or action_order,
+                    code=action_data["code"],
+                    title=action_data["title"],
+                    description=action_data.get("description", ""),
+                    assigned_roles=action_data.get("assigned_roles", []),
+                    submit_roles=action_data.get(
+                        "submit_roles", action_data.get("assigned_roles", [])
+                    ),
+                    required_evidence=action_data.get("required_evidence", []),
+                    prerequisite_codes=action_data.get("prerequisite_codes", []),
+                    due_offset_days=action_data.get("due_offset_days"),
+                )
+
+
+class AssessmentActionInstanceSerializer(serializers.ModelSerializer):
+    action_code = serializers.CharField(source="action.code", read_only=True)
+    title = serializers.CharField(source="action.title", read_only=True)
+    description = serializers.CharField(source="action.description", read_only=True)
+    order = serializers.IntegerField(source="action.order", read_only=True)
+    step_code = serializers.CharField(source="action.step.code", read_only=True)
+    step_title = serializers.CharField(source="action.step.title", read_only=True)
+    assigned_roles = serializers.JSONField(
+        source="action.assigned_roles", read_only=True
+    )
+    submit_roles = serializers.JSONField(source="action.submit_roles", read_only=True)
+    required_evidence = serializers.JSONField(
+        source="action.required_evidence", read_only=True
+    )
+    prerequisite_codes = serializers.JSONField(
+        source="action.prerequisite_codes", read_only=True
+    )
+    completed_by_name = serializers.CharField(
+        source="completed_by.full_name", read_only=True
+    )
+    can_complete = serializers.SerializerMethodField()
+
+    def get_can_complete(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user or not request.user.is_authenticated:
+            return False
+        return user_can_complete_action_instance(request.user, obj)
+
+    class Meta:
+        model = AssessmentActionInstance
+        fields = [
+            "id",
+            "workflow",
+            "assessment",
+            "organization",
+            "action",
+            "action_code",
+            "step_code",
+            "step_title",
+            "title",
+            "description",
+            "order",
+            "status",
+            "assigned_roles",
+            "submit_roles",
+            "required_evidence",
+            "prerequisite_codes",
+            "notes",
+            "completed_by",
+            "completed_by_name",
+            "can_complete",
+            "completed_at",
+            "due_date",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "id",
+            "workflow",
+            "assessment",
+            "organization",
+            "action",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class AssessmentWorkflowInstanceSerializer(serializers.ModelSerializer):
+    template_name = serializers.CharField(source="template.name", read_only=True)
+    template_slug = serializers.CharField(source="template.slug", read_only=True)
+    actions = serializers.SerializerMethodField()
+    steps = serializers.SerializerMethodField()
+    completed_actions = serializers.SerializerMethodField()
+    total_actions = serializers.SerializerMethodField()
+    progress_percent = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AssessmentWorkflowInstance
+        fields = [
+            "id",
+            "assessment",
+            "organization",
+            "template",
+            "template_name",
+            "template_slug",
+            "status",
+            "current_step_code",
+            "started_at",
+            "completed_at",
+            "total_actions",
+            "completed_actions",
+            "progress_percent",
+            "steps",
+            "actions",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]
+
+    def get_actions(self, obj):
+        instances = obj.action_instances.select_related(
+            "action", "action__step", "completed_by"
+        ).order_by("action__step__order", "action__order")
+        return AssessmentActionInstanceSerializer(
+            instances, many=True, context=self.context
+        ).data
+
+    def get_steps(self, obj):
+        action_instances = list(
+            obj.action_instances.select_related("action", "action__step").order_by(
+                "action__step__order", "action__order"
+            )
+        )
+        grouped = {}
+        for instance in action_instances:
+            step = instance.action.step
+            step_data = grouped.setdefault(
+                step.code,
+                {
+                    "id": str(step.id),
+                    "code": step.code,
+                    "title": step.title,
+                    "description": step.description,
+                    "order": step.order,
+                    "actions": [],
+                },
+            )
+            step_data["actions"].append(
+                AssessmentActionInstanceSerializer(instance, context=self.context).data
+            )
+        return list(grouped.values())
+
+    def get_total_actions(self, obj):
+        return obj.action_instances.count()
+
+    def get_completed_actions(self, obj):
+        return obj.action_instances.filter(status="COMPLETED").count()
+
+    def get_progress_percent(self, obj):
+        total = self.get_total_actions(obj)
+        if total == 0:
+            return 0
+        return round((self.get_completed_actions(obj) / total) * 100)
 
 
 class TaskSerializer(serializers.ModelSerializer):

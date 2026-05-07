@@ -3,11 +3,13 @@ from django.contrib import admin
 from assessments.models import (
     AIInsight,
     Assessment,
+    AssessmentActionInstance,
     AssessmentPlan,
     AssessmentQuestion,
     AssessmentReport,
     AssessmentResponse,
     AssessmentTemplate,
+    AssessmentWorkflowInstance,
     CIPCycle,
     ESGFocusArea,
     ExternalRating,
@@ -15,6 +17,9 @@ from assessments.models import (
     Framework,
     Site,
     Task,
+    WorkflowAction,
+    WorkflowStep,
+    WorkflowTemplate,
 )
 
 
@@ -69,6 +74,12 @@ class AssessmentTaskInline(admin.TabularInline):
     readonly_fields = ("id", "created_at", "updated_at")
 
 
+class AssessmentActionInstanceInline(admin.TabularInline):
+    model = AssessmentActionInstance
+    extra = 0
+    readonly_fields = ("id", "created_at", "updated_at", "completed_at")
+
+
 class AIInsightInline(admin.TabularInline):
     model = AIInsight
     extra = 0
@@ -88,7 +99,12 @@ class AssessmentAdmin(admin.ModelAdmin):
     list_filter = ("status", "risk_level", "framework")
     search_fields = ("organization__name",)
     readonly_fields = ("id", "created_at", "updated_at", "completed_at")
-    inlines = [AssessmentResponseInline, AssessmentTaskInline, AIInsightInline]
+    inlines = [
+        AssessmentResponseInline,
+        AssessmentTaskInline,
+        AssessmentActionInstanceInline,
+        AIInsightInline,
+    ]
 
 
 @admin.register(AssessmentTemplate)
@@ -193,6 +209,46 @@ class AIInsightAdmin(admin.ModelAdmin):
     )
     list_filter = ("insight_type", "action_required")
     search_fields = ("insight_text",)
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(WorkflowTemplate)
+class WorkflowTemplateAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "framework_slug", "is_active", "updated_at")
+    list_filter = ("is_active", "framework_slug")
+    search_fields = ("name", "slug", "description")
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(WorkflowStep)
+class WorkflowStepAdmin(admin.ModelAdmin):
+    list_display = ("title", "template", "code", "order")
+    list_filter = ("template",)
+    search_fields = ("title", "code", "description")
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(WorkflowAction)
+class WorkflowActionAdmin(admin.ModelAdmin):
+    list_display = ("title", "step", "code", "order")
+    list_filter = ("step__template", "step")
+    search_fields = ("title", "code", "description")
+    readonly_fields = ("id", "created_at", "updated_at")
+
+
+@admin.register(AssessmentWorkflowInstance)
+class AssessmentWorkflowInstanceAdmin(admin.ModelAdmin):
+    list_display = ("assessment", "template", "status", "current_step_code")
+    list_filter = ("status", "template")
+    search_fields = ("assessment__organization__name", "current_step_code")
+    readonly_fields = ("id", "started_at", "created_at", "updated_at")
+
+
+@admin.register(AssessmentActionInstance)
+class AssessmentActionInstanceAdmin(admin.ModelAdmin):
+    list_display = ("action", "assessment", "status", "completed_by", "due_date")
+    list_filter = ("status", "action__step")
+    search_fields = ("action__title", "assessment__organization__name", "notes")
     readonly_fields = ("id", "created_at", "updated_at")
 
 

@@ -11,31 +11,41 @@ from rest_framework.response import Response
 
 from assessments.models import (
     Assessment,
+    AssessmentActionInstance,
     AssessmentPlan,
     AssessmentQuestion,
     AssessmentReport,
     AssessmentResponse,
+    AssessmentWorkflowInstance,
     CIPCycle,
     Finding,
     Site,
     Task,
+    WorkflowTemplate,
 )
 from assessments.serializers import (
+    AssessmentActionInstanceSerializer,
     AssessmentPlanSerializer,
     AssessmentQuestionSerializer,
     AssessmentReportSerializer,
     AssessmentResponseSerializer,
     AssessmentSerializer,
+    AssessmentWorkflowInstanceSerializer,
     CIPCycleSerializer,
     FindingSerializer,
     SiteSerializer,
     TaskSerializer,
+    WorkflowTemplateSerializer,
 )
 from assessments.services.access import AssessmentAccessService
+from assessments.services.workflows import (
+    complete_action_instance,
+    ensure_assessment_workflow,
+)
 from assessments.views.base import BaseAssessmentScopedViewSet
 from assessments.views.mixins import ReportExportMixin, ResponseValidationMixin
 from organizations.models import OrganizationMembership
-from users.permissions import CanViewReports
+from users.permissions import CanManageTemplates, CanViewReports
 
 
 def get_request_organization_id(request):
@@ -191,6 +201,122 @@ class FlatTaskViewSet(viewsets.ModelViewSet):
                     return qs.filter(assessment_id=assessment_id)
             return qs.none()
         return qs
+
+
+class FlatWorkflowTemplateViewSet(viewsets.ModelViewSet):
+    """Configurable workflow template routes — /api/workflow-templates/."""
+
+    serializer_class = WorkflowTemplateSerializer
+    permission_classes = [CanManageTemplates]
+
+    def get_queryset(self):
+        qs = WorkflowTemplate.objects.filter(is_active=True).prefetch_related(
+            "steps", "steps__actions"
+        )
+        framework_slug = self.request.query_params.get("framework_slug")
+        if framework_slug:
+            qs = qs.filter(framework_slug=framework_slug)
+        return qs
+
+
+class FlatAssessmentWorkflowViewSet(viewsets.ReadOnlyModelViewSet):
+    """Assessment workflow routes — /api/assessment-workflows/?assessment=<id>."""
+
+    serializer_class = AssessmentWorkflowInstanceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = AssessmentWorkflowInstance.objects.select_related(
+            "assessment", "organization", "template"
+        ).prefetch_related("action_instances", "action_instances__action")
+        assessment_id = self.request.query_params.get("assessment")
+        if not assessment_id:
+            return qs.none()
+
+        assessment = Assessment.objects.filter(id=assessment_id).first()
+        if not assessment:
+            return qs.none()
+        if not self.request.user.is_superuser:
+            has_access = (
+                AssessmentAccessService.get_accessible_assessments(self.request.user)
+                .filter(id=assessment_id)
+                .exists()
+            )
+            if not has_access:
+                return qs.none()
+
+        org_id = get_request_organization_id(self.request)
+        if org_id and str(assessment.organization_id) != str(org_id):
+            return qs.none()
+
+        workflow = ensure_assessment_workflow(assessment)
+        return qs.filter(id=workflow.id)
+
+
+class FlatAssessmentActionViewSet(viewsets.ModelViewSet):
+    """Assessment workflow action routes with controlled state transitions."""
+
+    serializer_class = AssessmentActionInstanceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        qs = AssessmentActionInstance.objects.select_related(
+            "assessment",
+            "organization",
+            "workflow",
+            "action",
+            "action__step",
+            "completed_by",
+        )
+        if self.action in [
+            "retrieve",
+            "update",
+            "partial_update",
+            "destroy",
+            "complete",
+        ]:
+            if self.request.user.is_superuser:
+                return qs
+            accessible_assessments = AssessmentAccessService.get_accessible_assessments(
+                self.request.user
+            )
+            return qs.filter(assessment_id__in=accessible_assessments.values("id"))
+
+        assessment_id = self.request.query_params.get("assessment")
+        if assessment_id:
+            assessment = Assessment.objects.filter(id=assessment_id).first()
+            if not assessment:
+                return qs.none()
+            if not self.request.user.is_superuser:
+                has_access = (
+                    AssessmentAccessService.get_accessible_assessments(
+                        self.request.user
+                    )
+                    .filter(id=assessment.id)
+                    .exists()
+                )
+                if not has_access:
+                    return qs.none()
+            org_id = get_request_organization_id(self.request)
+            if org_id and str(assessment.organization_id) != str(org_id):
+                return qs.none()
+            ensure_assessment_workflow(assessment)
+            return qs.filter(assessment_id=assessment_id)
+        if self.request.user.is_superuser:
+            return qs
+        return qs.none()
+
+    @action(detail=True, methods=["post"])
+    def complete(self, request, pk=None):
+        action_instance = self.get_object()
+        notes = request.data.get("notes", "") if hasattr(request, "data") else ""
+        try:
+            updated = complete_action_instance(
+                action_instance, request.user, notes=notes
+            )
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(self.get_serializer(updated).data)
 
 
 class FlatAssessmentReportViewSet(ReportExportMixin, BaseAssessmentScopedViewSet):

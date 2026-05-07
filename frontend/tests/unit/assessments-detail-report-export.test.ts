@@ -216,13 +216,17 @@ describe("assessment detail report view UI state", () => {
       canView: true,
       showTab: true,
       state: "empty",
-      message: "No Scorecard has been generated for this Audit yet.",
+      message: "No scorecard has been generated for this audit yet.",
+    });
+
+    const deniedUser = makeUser({
+      activePermissions: ["assessment:view"],
     });
 
     // Demo Automotive Inc terminology
     expect(
       getReportViewUiState({
-        user,
+        user: deniedUser,
         hasReport: true,
         reportLabel: "Summary",
         assessmentLabel: "Review",
@@ -231,7 +235,7 @@ describe("assessment detail report view UI state", () => {
       canView: false,
       showTab: true,
       state: "denied",
-      message: "You don't have permission to view this Summary.",
+      message: "You don't have permission to view this summary.",
     });
   });
 });

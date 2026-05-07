@@ -8,7 +8,16 @@ from rest_framework import status
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from assessments.models import Assessment, AssessmentReport, AssessmentResponse
+from assessments.models import (
+    Assessment,
+    AssessmentActionInstance,
+    AssessmentReport,
+    AssessmentResponse,
+)
+from assessments.services.workflows import (
+    ensure_assessment_workflow,
+    refresh_workflow_state,
+)
 from organizations.models import Organization, OrganizationMembership
 from users.models import User
 from users.roles import UserRole
@@ -409,3 +418,132 @@ class TestFlatAssessmentResponseViewSet:
         )
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.django_db
+class TestFlatAssessmentWorkflowActionRoles:
+    def setup_method(self):
+        self.client = APIClient()
+        self.org = Organization.objects.create(name="Workflow Org", slug="workflow-org")
+        self.assessor = User.objects.create_user(
+            email="workflow-assessor@example.com",
+            password="testpass123",
+            name="Workflow Assessor",
+        )
+        self.operator = User.objects.create_user(
+            email="workflow-operator@example.com",
+            password="testpass123",
+            name="Workflow Operator",
+        )
+        self.other_assessor = User.objects.create_user(
+            email="other-assessor@example.com",
+            password="testpass123",
+            name="Other Assessor",
+        )
+        OrganizationMembership.objects.create(
+            user=self.assessor,
+            organization=self.org,
+            fallback_role=UserRole.ASSESSOR,
+        )
+        OrganizationMembership.objects.create(
+            user=self.operator,
+            organization=self.org,
+            fallback_role=UserRole.OPERATOR,
+        )
+        OrganizationMembership.objects.create(
+            user=self.other_assessor,
+            organization=self.org,
+            fallback_role=UserRole.ASSESSOR,
+        )
+        self.assessment = Assessment.objects.create(
+            organization=self.org,
+            assigned_assessor=self.assessor,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+            created_by=self.operator,
+        )
+        self.workflow = ensure_assessment_workflow(self.assessment)
+
+    def complete_prerequisites_for(self, action_code, visited=None):
+        visited = visited or set()
+        action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code=action_code,
+        )
+        for prerequisite_code in action.action.prerequisite_codes or []:
+            if prerequisite_code in visited:
+                continue
+            visited.add(prerequisite_code)
+            self.complete_prerequisites_for(prerequisite_code, visited)
+            prerequisite = AssessmentActionInstance.objects.get(
+                workflow=self.workflow,
+                action__code=prerequisite_code,
+            )
+            prerequisite.status = AssessmentActionInstance.Status.COMPLETED
+            prerequisite.completed_by = self.operator
+            prerequisite.save(update_fields=["status", "completed_by", "updated_at"])
+
+    def make_action_available(self, action_code):
+        self.complete_prerequisites_for(action_code)
+        refresh_workflow_state(self.workflow)
+        action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code=action_code,
+        )
+        return action
+
+    def test_assessor_can_only_complete_assessor_steps(self):
+        assessor_action = self.make_action_available("site_scope_submitted")
+
+        self.client.force_authenticate(user=self.assessor)
+        allowed_response = self.client.post(
+            f"/api/assessment-actions/{assessor_action.id}/complete/",
+            {},
+            format="json",
+        )
+        supplier_action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code="supplier_questionnaire_submitted",
+        )
+        denied_response = self.client.post(
+            f"/api/assessment-actions/{supplier_action.id}/complete/",
+            {},
+            format="json",
+        )
+
+        assert allowed_response.status_code == status.HTTP_200_OK
+        assert denied_response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_unassigned_assessor_cannot_complete_lead_assessor_step(self):
+        assessor_action = self.make_action_available("site_scope_submitted")
+
+        self.client.force_authenticate(user=self.other_assessor)
+        response = self.client.post(
+            f"/api/assessment-actions/{assessor_action.id}/complete/",
+            {},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_workflow_serializer_marks_only_current_user_actions_completable(self):
+        assessor_action = self.make_action_available("site_scope_submitted")
+        supplier_action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code="supplier_questionnaire_submitted",
+        )
+
+        self.client.force_authenticate(user=self.assessor)
+        response = self.client.get(
+            f"/api/assessment-workflows/?assessment={self.assessment.id}&org={self.org.id}"
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        workflow = response.json()["results"][0]
+        actions = {
+            action["id"]: action
+            for step in workflow["steps"]
+            for action in step["actions"]
+        }
+        assert actions[str(assessor_action.id)]["can_complete"] is True
+        assert actions[str(supplier_action.id)]["can_complete"] is False

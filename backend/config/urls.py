@@ -24,15 +24,18 @@ from assessments.views import (
 )
 from assessments.views.dashboard import DashboardSummaryView
 from assessments.views.flat_views import (
+    FlatAssessmentActionViewSet,
     FlatAssessmentPlanViewSet,
     FlatAssessmentQuestionViewSet,
     FlatAssessmentReportViewSet,
     FlatAssessmentResponseViewSet,
     FlatAssessmentViewSet,
+    FlatAssessmentWorkflowViewSet,
     FlatCIPCycleViewSet,
     FlatFindingViewSet,
     FlatSiteViewSet,
     FlatTaskViewSet,
+    FlatWorkflowTemplateViewSet,
 )
 from assessments.views.framework_import import FrameworkImportViewSet
 from assessments.views.template_views import (
@@ -127,6 +130,21 @@ router.register(r"api/findings", FlatFindingViewSet, basename="flat-finding")
 router.register(r"api/cip-cycles", FlatCIPCycleViewSet, basename="flat-cipcycle")
 router.register(r"api/plans", FlatAssessmentPlanViewSet, basename="flat-plan")
 router.register(r"api/tasks", FlatTaskViewSet, basename="flat-task")
+router.register(
+    r"api/workflow-templates",
+    FlatWorkflowTemplateViewSet,
+    basename="flat-workflow-template",
+)
+router.register(
+    r"api/assessment-workflows",
+    FlatAssessmentWorkflowViewSet,
+    basename="flat-assessment-workflow",
+)
+router.register(
+    r"api/assessment-actions",
+    FlatAssessmentActionViewSet,
+    basename="flat-assessment-action",
+)
 router.register(r"api/reports", FlatAssessmentReportViewSet, basename="flat-report")
 router.register(
     r"api/responses", FlatAssessmentResponseViewSet, basename="flat-response"

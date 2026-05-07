@@ -177,7 +177,7 @@ export default function InvitationAcceptRoute() {
           Join <span className="font-medium text-foreground">{invitation.organization.name}</span> on Veris and continue with the access flow configured for your account.
         </>
       }
-      widthClassName="max-w-2xl"
+      widthClassName="max-w-5xl"
     >
       <AuthCard>
         <AuthPanelHeader
@@ -196,24 +196,24 @@ export default function InvitationAcceptRoute() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Organization</p>
-              <div className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                <Building2 className="h-4 w-4 text-primary" />
-                <span>{invitation.organization.name}</span>
+              <div className="mt-2 flex min-w-0 items-start gap-2 text-sm font-medium text-foreground">
+                <Building2 className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{invitation.organization.name}</span>
               </div>
             </div>
 
             <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Work email</p>
-              <div className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                <Mail className="h-4 w-4 text-primary" />
-                <span>{invitation.email}</span>
+              <div className="mt-2 flex min-w-0 items-start gap-2 text-sm font-medium text-foreground">
+                <Mail className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{invitation.email}</span>
               </div>
             </div>
 
             <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Assigned role</p>
-              <div className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                <User className="h-4 w-4 text-primary" />
+              <div className="mt-2 flex min-w-0 items-start gap-2 text-sm font-medium text-foreground">
+                <User className="h-4 w-4 shrink-0 text-primary" />
                 <Badge variant="secondary" className="rounded-full px-2.5 py-1">
                   {invitation.role_name}
                 </Badge>
@@ -222,9 +222,9 @@ export default function InvitationAcceptRoute() {
 
             <div className="rounded-2xl border border-border/70 bg-muted/30 p-4">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Invited by</p>
-              <div className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                <User className="h-4 w-4 text-primary" />
-                <span>{invitation.invited_by}</span>
+              <div className="mt-2 flex min-w-0 items-start gap-2 text-sm font-medium text-foreground">
+                <User className="h-4 w-4 shrink-0 text-primary" />
+                <span className="min-w-0 break-words [overflow-wrap:anywhere]">{invitation.invited_by}</span>
               </div>
             </div>
           </div>
@@ -236,24 +236,40 @@ export default function InvitationAcceptRoute() {
             </AlertDescription>
           </Alert>
 
-          <fetcher.Form method="post" className="space-y-3">
-            <input type="hidden" name="action" value="accept" />
-
-            <Button type="submit" className="h-11 w-full rounded-xl text-sm font-medium" disabled={isProcessing}>
-              {isProcessing ? (
-                "Processing invitation..."
-              ) : (
-                <>
-                  {invitation.needs_onboarding
-                    ? "Continue to Set Password"
-                    : hasSession
-                      ? "Accept Invitation"
-                      : "Login to Accept Invitation"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
+          {invitation.needs_onboarding ? (
+            <Button
+              type="button"
+              className="h-11 w-full rounded-xl text-sm font-medium"
+              onClick={() => navigate(`/onboarding/set-password/${token}`)}
+            >
+              Continue to Set Password
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
-          </fetcher.Form>
+          ) : !hasSession ? (
+            <Button
+              type="button"
+              className="h-11 w-full rounded-xl text-sm font-medium"
+              onClick={() => navigate(`/login?redirectTo=${encodeURIComponent(`/invitations/${token}`)}`)}
+            >
+              Login to Accept Invitation
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          ) : (
+            <fetcher.Form method="post" className="space-y-3">
+              <input type="hidden" name="action" value="accept" />
+
+              <Button type="submit" className="h-11 w-full rounded-xl text-sm font-medium" disabled={isProcessing}>
+                {isProcessing ? (
+                  "Processing invitation..."
+                ) : (
+                  <>
+                    Accept Invitation
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </fetcher.Form>
+          )}
 
           <p className="text-center text-sm text-muted-foreground">
             Already have a Veris account?{" "}

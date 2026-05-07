@@ -312,7 +312,13 @@ class DashboardSummaryView(APIView):
         if not org_ids:
             return queryset.none()
         return queryset.filter(organization_id__in=org_ids).select_related(
-            "organization", "site", "framework", "assigned_to", "created_by"
+            "organization",
+            "site",
+            "framework",
+            "assigned_to",
+            "assigned_assessor",
+            "assigned_platform_reviewer",
+            "created_by",
         )
 
     def _apply_viewer_scope(
@@ -329,7 +335,12 @@ class DashboardSummaryView(APIView):
             return assessments, tasks, findings, responses, documents
 
         user = request.user
-        assessments = assessments.filter(assigned_to=user)
+        assignment_filter = (
+            models.Q(assigned_to=user)
+            | models.Q(assigned_assessor=user)
+            | models.Q(assigned_platform_reviewer=user)
+        )
+        assessments = assessments.filter(assignment_filter)
         scoped_assessment_ids = list(assessments.values_list("id", flat=True))
         tasks = tasks.filter(assigned_to=user, assessment_id__in=scoped_assessment_ids)
         findings = findings.filter(assessment_id__in=scoped_assessment_ids)

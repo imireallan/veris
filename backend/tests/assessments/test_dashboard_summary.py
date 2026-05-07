@@ -409,6 +409,47 @@ class TestDashboardSummaryApi:
             for item in data["attention_items"]
         )
 
+    def test_assessor_dashboard_includes_assessments_assigned_as_lead_assessor(
+        self, make_user, make_org, make_membership
+    ):
+        assessor = make_user(email="lead-assessor@test.com")
+        admin = make_user(email="lead-admin@test.com")
+        org = make_org(name="Lead Scoped Org", slug="lead-scoped-org")
+
+        make_membership(user=assessor, organization=org, fallback_role="ASSESSOR")
+        make_membership(user=admin, organization=org, fallback_role="ADMIN")
+
+        now = timezone.now()
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=now - timezone.timedelta(days=5),
+            due_date=now + timezone.timedelta(days=3),
+            created_by=admin,
+            assigned_assessor=assessor,
+        )
+        Assessment.objects.create(
+            organization=org,
+            status=Assessment.Status.IN_PROGRESS,
+            start_date=now - timezone.timedelta(days=5),
+            due_date=now + timezone.timedelta(days=6),
+            created_by=admin,
+            assigned_assessor=admin,
+        )
+
+        self.client.force_authenticate(user=assessor)
+        response = self.client.get(
+            "/api/dashboard/summary/",
+            HTTP_X_ORGANIZATION_ID=str(org.id),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["viewer"]["scope"] == "assigned"
+        assert data["kpis"]["active_assessments"] == 1
+        assert data["assessment_status_breakdown"]["in_progress"] == 1
+        assert data["assessment_status_breakdown"]["draft"] == 0
+
     def test_rejects_dashboard_access_for_unrelated_organization(
         self, make_user, make_org, make_membership
     ):

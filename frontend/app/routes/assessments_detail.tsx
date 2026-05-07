@@ -1,7 +1,7 @@
-import { useLoaderData, Link, Form, redirect, useFetcher } from "react-router";
+import { useActionData, useLoaderData, Link, Form, redirect, useFetcher } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/lib/api";
+import { ApiError, api } from "~/.server/lib/api";
 import { useState, useRef } from "react";
 import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import {
@@ -115,33 +115,90 @@ export function getReportViewUiState({
   };
 }
 
+type LoaderWarning = {
+  key: string;
+  label: string;
+  message: string;
+};
+
+function getApiErrorMessage(err: unknown, fallback = "The backend returned an error.") {
+  if (err instanceof ApiError) return err.message || fallback;
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
+
+function emptyPaginatedResponse() {
+  return { results: [] };
+}
+
+async function safeLoadResource<T>(
+  label: string,
+  requestFn: () => Promise<T>,
+  warnings: LoaderWarning[],
+  fallback: T,
+): Promise<T> {
+  try {
+    return await requestFn();
+  } catch (err) {
+    console.warn(`Failed to fetch ${label}:`, getApiErrorMessage(err));
+    warnings.push({
+      key: label.toLowerCase().replace(/\s+/g, "-"),
+      label,
+      message: `${label} could not be loaded right now. The rest of the assessment is still available.`,
+    });
+    return fallback;
+  }
+}
+
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const user = await requireUser(request);
   const token = await getUserToken(request);
+  const warnings: LoaderWarning[] = [];
   
   // We need to resolve the assessment first to get its organization context
   // since the route /assessments/:id doesn't explicitly have orgId in the URL
-  const assessment = await api.get<any>(`/api/assessments/${params.id}/`, token, request).catch((err: any) => {
+  let assessment: any | null = null;
+  let loadError: string | null = null;
+
+  try {
+    assessment = await api.get<any>(`/api/assessments/${params.id}/`, token, request);
+  } catch (err: any) {
     if (err.status === 403) {
       console.warn("Permission denied: User cannot access this assessment");
-      return null;
+      loadError = "permission_denied";
+    } else if (err.status === 404) {
+      console.warn("Assessment not found");
+      loadError = "not_found";
+    } else {
+      console.warn("Failed to fetch assessment:", getApiErrorMessage(err));
+      loadError = "backend_error";
     }
-    console.warn("Failed to fetch assessment:", err.message);
-    return null;
-  });
+  }
   
   if (!assessment) {
-    return { assessment: null, findings: [], cipCycles: [], plan: null, tasks: [], report: null, user, error: "permission_denied" };
+    return {
+      assessment: null,
+      findings: [],
+      cipCycles: [],
+      plan: null,
+      tasks: [],
+      workflow: null,
+      report: null,
+      user,
+      error: loadError ?? "backend_error",
+      warnings,
+    };
   }
 
   const orgId = assessment.organization;
 
-  const [findingsRes, cipCyclesRes, planRes, tasksRes, reportRes] = await Promise.all([
-    api.get<any>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
-    api.get<any>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
-    api.get<any>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
-    api.get<any>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
-    api.get<any>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token, request).catch(() => ({ results: [] })),
+  const [findingsRes, cipCyclesRes, planRes, tasksRes, workflowRes, reportRes] = await Promise.all([
+    safeLoadResource("Findings", () => api.get<any>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
+    safeLoadResource("CIP cycles", () => api.get<any>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
+    safeLoadResource("Assessment plan", () => api.get<any>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
+    safeLoadResource("Tasks", () => api.get<any>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
+    safeLoadResource("Development Steps", () => api.get<any>(`/api/assessment-workflows/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
+    safeLoadResource("Reports", () => api.get<any>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
   ]);
 
   // Handle paginated responses (results array) or direct arrays
@@ -149,6 +206,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const cipCycles = cipCyclesRes.results || (Array.isArray(cipCyclesRes) ? cipCyclesRes : []);
   const plan = planRes.results?.[0] ?? (Array.isArray(planRes) ? planRes[0] : null);
   const tasks = tasksRes.results || (Array.isArray(tasksRes) ? tasksRes : []);
+  const workflow = workflowRes.results?.[0] ?? (Array.isArray(workflowRes) ? workflowRes[0] : null);
   const report = reportRes.results?.[0] ?? (Array.isArray(reportRes) ? reportRes[0] : null);
 
   return {
@@ -157,8 +215,10 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     cipCycles: cipCycles,
     plan: plan,
     tasks: tasks,
+    workflow: workflow,
     report: report,
     user,
+    warnings,
   };
 }
 
@@ -174,7 +234,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         risk_level: formData.get("risk_level"),
         overall_score: Number(formData.get("overall_score")) || 0,
         ai_summary: formData.get("ai_summary") ?? "",
-      }, token);
+      }, token, request);
       return redirect(`/assessments/${params.id}`);
     }
 
@@ -185,7 +245,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         summary: "",
         severity: "MEDIUM",
         status: "OPEN",
-      }, token), request;
+      }, token, request);
       return redirect(`/assessments/${params.id}`);
     }
 
@@ -198,17 +258,28 @@ export async function action({ request, params }: ActionFunctionArgs) {
         severity: formData.get("severity"),
         status: formData.get("status"),
         responsible_party: formData.get("responsible_party"),
-      }, token);
+      }, token, request);
       return redirect(`/assessments/${params.id}`);
     }
 
     if (intent === "delete-finding") {
       const id = formData.get("finding_id");
-      await api.delete(`/api/findings/${id}/`, token), request;
+      await api.delete(`/api/findings/${id}/`, token, request);
+      return redirect(`/assessments/${params.id}`);
+    }
+
+    if (intent === "complete-workflow-action") {
+      const id = formData.get("action_instance_id");
+      await api.post(`/api/assessment-actions/${id}/complete/`, {
+        notes: formData.get("notes") ?? "",
+      }, token, request);
       return redirect(`/assessments/${params.id}`);
     }
   } catch (err: any) {
-    return { error: err.message ?? "Action failed" };
+    console.warn(`Assessment action failed (${intent}):`, getApiErrorMessage(err));
+    return {
+      error: getApiErrorMessage(err, "That action could not be completed right now."),
+    };
   }
 
   return { error: "Unknown intent" };
@@ -216,6 +287,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
 export default function AssessmentDetailRoute() {
   const data = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
   const [editMode, setEditMode] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -233,14 +305,23 @@ export default function AssessmentDetailRoute() {
   const tasksLabel = terminology.plural.task;
   const reportLabel = terminology.report;
 
-  // Handle permission denied error
-  if (data.error === "permission_denied" || !data.assessment) {
+  // Handle inaccessible or temporarily unavailable assessment data
+  if (data.error || !data.assessment) {
+    const isBackendError = data.error === "backend_error";
+    const isNotFound = data.error === "not_found";
+
     return (
       <div className="text-center py-12 space-y-4">
-        <AlertTriangle className="w-12 h-12 mx-auto text-orange-500" />
-        <h2 className="text-xl font-medium">Access Denied</h2>
+        <AlertTriangle className={`w-12 h-12 mx-auto ${isBackendError ? "text-destructive" : "text-orange-500"}`} />
+        <h2 className="text-xl font-medium">
+          {isBackendError ? `${assessmentLabel} temporarily unavailable` : isNotFound ? `${assessmentLabel} not found` : "Access Denied"}
+        </h2>
         <p className="text-muted-foreground max-w-md mx-auto">
-          {`You don't have permission to view this ${lowerFirst(assessmentLabel)}. Contact your organization admin if you believe this is an error.`}
+          {isBackendError
+            ? `The backend could not load this ${lowerFirst(assessmentLabel)} right now. Try refreshing in a moment.`
+            : isNotFound
+              ? `This ${lowerFirst(assessmentLabel)} could not be found.`
+              : `You don't have permission to view this ${lowerFirst(assessmentLabel)}. Contact your organization admin if you believe this is an error.`}
         </p>
         <Link to="/assessments" className="text-primary hover:underline">
           ← Back to {lowerFirst(assessmentsLabel)}
@@ -357,6 +438,24 @@ export default function AssessmentDetailRoute() {
         <input type="hidden" name="ai_summary" value={formData.ai_summary} />
       </Form>
 
+      {actionData?.error && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{actionData.error}</span>
+        </div>
+      )}
+
+      {data.warnings?.length > 0 && (
+        <div className="space-y-2">
+          {data.warnings.map((warning) => (
+            <div key={warning.key} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{warning.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <Card>
         <CardContent className="p-4">
           <div className="flex flex-wrap items-center gap-6">
@@ -430,6 +529,7 @@ export default function AssessmentDetailRoute() {
           { key: "findings", label: "Findings", count: data.findings.length },
           { key: "plan", label: "Plan" },
           { key: "cip", label: "CIP", count: data.cipCycles.length },
+          { key: "development-steps", label: "Development Steps", count: data.workflow?.total_actions ?? 0 },
           { key: "tasks", label: tasksLabel, count: data.tasks.length },
           ...(reportViewUiState.showTab ? [{ key: "report", label: reportLabel }] : []),
         ]}
@@ -524,6 +624,10 @@ export default function AssessmentDetailRoute() {
         </div>
       )}
 
+      {activeTab === "development-steps" && (
+        <DevelopmentStepsTab workflow={data.workflow} />
+      )}
+
       {activeTab === "tasks" && (
         <div className="space-y-3">
           {data.tasks.length === 0 ? (
@@ -576,6 +680,125 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
       {children}
     </div>
   );
+}
+
+function DevelopmentStepsTab({ workflow }: { workflow: any | null }) {
+  if (!workflow) {
+    return (
+      <EmptyState
+        icon={FileText}
+        title="No workflow configured"
+        description="Development Steps will appear once a workflow is attached to this assessment."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <SectionCard
+        title={workflow.template_name || "Assessment workflow"}
+        description={`${workflow.completed_actions} of ${workflow.total_actions} tasks complete. Current step: ${formatDisplayLabel(workflow.current_step_code)}`}
+        padding="compact"
+      >
+        <ProgressBar value={workflow.progress_percent ?? 0} size="md" />
+      </SectionCard>
+
+      <div className="space-y-4">
+        {(workflow.steps ?? []).map((step: any, index: number) => {
+          const actions = step.actions ?? [];
+          const completed = actions.filter((action: any) => action.status === "COMPLETED").length;
+          const isCurrent = workflow.current_step_code === step.code;
+
+          return (
+            <Card key={step.code} className={isCurrent ? "border-primary/50 shadow-sm" : ""}>
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${isCurrent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+                      {index + 1}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{step.title}</h3>
+                        {isCurrent && <Badge>Current</Badge>}
+                      </div>
+                      {step.description && (
+                        <p className="text-sm text-muted-foreground mt-1">{step.description}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge variant={completed === actions.length ? "default" : "secondary"}>
+                    {completed}/{actions.length} complete
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  {actions.map((action: any) => (
+                    <WorkflowActionRow key={action.id} action={action} />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowActionRow({ action }: { action: any }) {
+  const canComplete = Boolean(action.can_complete);
+
+  return (
+    <div className="rounded-lg border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant={workflowStatusVariant(action.status)} className="text-[10px]">
+              {formatDisplayLabel(action.status)}
+            </Badge>
+            <h4 className="text-sm font-medium">{action.title}</h4>
+          </div>
+          {action.description && (
+            <p className="text-sm text-muted-foreground mt-1">{action.description}</p>
+          )}
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {(action.assigned_roles ?? []).length > 0 && (
+              <span>Assigned: {(action.assigned_roles ?? []).map(formatDisplayLabel).join(", ")}</span>
+            )}
+            {(action.required_evidence ?? []).length > 0 && (
+              <span>Required: {(action.required_evidence ?? []).join(", ")}</span>
+            )}
+            {action.completed_at && <span>Completed {new Date(action.completed_at).toLocaleDateString()}</span>}
+          </div>
+        </div>
+        {canComplete && (
+          <Form method="post" className="shrink-0">
+            <input type="hidden" name="intent" value="complete-workflow-action" />
+            <input type="hidden" name="action_instance_id" value={action.id} />
+            <Button type="submit" size="sm" variant="outline" className="gap-1.5">
+              <Save className="w-3.5 h-3.5" />
+              Mark done
+            </Button>
+          </Form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function workflowStatusVariant(status: string) {
+  switch (status) {
+    case "COMPLETED":
+      return "default";
+    case "AVAILABLE":
+    case "IN_PROGRESS":
+      return "secondary";
+    case "BLOCKED":
+      return "outline";
+    default:
+      return "outline";
+  }
 }
 
 function ReportTab({

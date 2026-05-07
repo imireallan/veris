@@ -650,6 +650,179 @@ class AIInsight(models.Model):
         return f"AI Insight ({self.insight_type}) - {self.assessment_id}"
 
 
+class WorkflowTemplate(models.Model):
+    """Reusable workflow template for Bettercoal, EO100, CGWG, and future client flows."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    slug = models.SlugField(max_length=200, unique=True)
+    framework_slug = models.SlugField(max_length=200, blank=True, default="")
+    description = models.TextField(blank=True, default="")
+    role_mapping = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "workflow_templates"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class WorkflowStep(models.Model):
+    """A Development Step / phase inside a workflow template."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    template = models.ForeignKey(
+        "assessments.WorkflowTemplate",
+        on_delete=models.CASCADE,
+        related_name="steps",
+    )
+    code = models.SlugField(max_length=100)
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, default="")
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "workflow_steps"
+        ordering = ["order"]
+        unique_together = [("template", "code")]
+
+    def __str__(self):
+        return f"{self.template.name} — {self.title}"
+
+
+class WorkflowAction(models.Model):
+    """A task/action in a workflow step, with prerequisite and role metadata."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    step = models.ForeignKey(
+        "assessments.WorkflowStep",
+        on_delete=models.CASCADE,
+        related_name="actions",
+    )
+    code = models.SlugField(max_length=120)
+    title = models.CharField(max_length=250)
+    description = models.TextField(blank=True, default="")
+    order = models.PositiveIntegerField(default=0)
+    assigned_roles = models.JSONField(default=list, blank=True)
+    submit_roles = models.JSONField(default=list, blank=True)
+    required_evidence = models.JSONField(default=list, blank=True)
+    prerequisite_codes = models.JSONField(default=list, blank=True)
+    due_offset_days = models.PositiveIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "workflow_actions"
+        ordering = ["step__order", "order"]
+        unique_together = [("step", "code")]
+
+    def __str__(self):
+        return self.title
+
+
+class AssessmentWorkflowInstance(models.Model):
+    """Workflow state-machine attached to a concrete assessment."""
+
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        COMPLETED = "COMPLETED", "Completed"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    assessment = models.OneToOneField(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="workflow_instance",
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="assessment_workflows",
+    )
+    template = models.ForeignKey(
+        "assessments.WorkflowTemplate",
+        on_delete=models.PROTECT,
+        related_name="assessment_instances",
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIVE
+    )
+    current_step_code = models.SlugField(max_length=100, blank=True, default="")
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "assessment_workflow_instances"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.assessment_id} — {self.template.name}"
+
+
+class AssessmentActionInstance(models.Model):
+    """Per-assessment task state for a workflow action."""
+
+    class Status(models.TextChoices):
+        BLOCKED = "BLOCKED", "Blocked"
+        AVAILABLE = "AVAILABLE", "Available"
+        IN_PROGRESS = "IN_PROGRESS", "In Progress"
+        COMPLETED = "COMPLETED", "Completed"
+        SKIPPED = "SKIPPED", "Skipped"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    workflow = models.ForeignKey(
+        "assessments.AssessmentWorkflowInstance",
+        on_delete=models.CASCADE,
+        related_name="action_instances",
+    )
+    assessment = models.ForeignKey(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="workflow_actions",
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="assessment_workflow_actions",
+    )
+    action = models.ForeignKey(
+        "assessments.WorkflowAction",
+        on_delete=models.PROTECT,
+        related_name="instances",
+    )
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.BLOCKED
+    )
+    notes = models.TextField(blank=True, default="")
+    completed_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="completed_workflow_actions",
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+    due_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "assessment_action_instances"
+        ordering = ["action__step__order", "action__order"]
+        unique_together = [("workflow", "action")]
+
+    def __str__(self):
+        return f"{self.action.title} — {self.status}"
+
+
 class Task(models.Model):
     """Tracks improvement actions from assessments."""
 

@@ -58,6 +58,7 @@ def noop_reverse(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
+    atomic = False
 
     dependencies = [
         ("assessments", "0017_assessment_assessor_due_date_and_more"),

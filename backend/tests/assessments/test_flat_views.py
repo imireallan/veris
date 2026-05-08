@@ -11,8 +11,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from assessments.models import (
     Assessment,
     AssessmentActionInstance,
+    AssessmentQuestion,
     AssessmentReport,
     AssessmentResponse,
+    AssessmentTemplate,
+    AssessmentWorkflowInstance,
+    Framework,
+    WorkflowTemplate,
 )
 from assessments.services.workflows import (
     ensure_assessment_workflow,
@@ -196,6 +201,62 @@ class TestFlatAssessmentViewSet:
         assert str(self.assessment1.id) in assessment_ids
         assert str(self.assessment2.id) in assessment_ids
         assert str(assessment3.id) in assessment_ids
+
+    def test_create_with_template_snapshots_questionnaire_questions_and_responses(self):
+        """Flat assessment creation must not create empty questionnaires when template is selected."""
+        self.membership1.fallback_role = UserRole.ADMIN
+        self.membership1.save(update_fields=["fallback_role"])
+        framework = Framework.objects.create(name="CGWG", version="2024")
+        template = AssessmentTemplate.objects.create(
+            name="CGWG SAQ",
+            slug="cgwg-saq-flat-create",
+            framework=framework,
+            organization=self.org1,
+            owner_org=self.org1,
+            is_public=False,
+            status=AssessmentTemplate.Status.PUBLISHED,
+            version="2024",
+        )
+        template_question = AssessmentQuestion.objects.create(
+            template=template,
+            organization=self.org1,
+            text="Does the supplier have a due diligence policy?",
+            category="Governance",
+            order=1,
+            scoring_criteria={"type": "yes_no"},
+            external_question_id="CGWG-1",
+        )
+
+        refresh = RefreshToken.for_user(self.user)
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {refresh.access_token}",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+        response = self.client.post(
+            "/api/assessments/",
+            {
+                "organization": str(self.org1.id),
+                "template": str(template.id),
+                "framework": str(framework.id),
+                "start_date": "2026-05-01T00:00:00Z",
+                "due_date": "2026-06-01T23:59:59Z",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assessment = Assessment.objects.get(id=response.json()["id"])
+        snapshot_question = AssessmentQuestion.objects.get(assessment=assessment)
+        assert snapshot_question.template is None
+        assert snapshot_question.source_template_question == template_question
+        assert snapshot_question.text == template_question.text
+        assert AssessmentResponse.objects.filter(
+            assessment=assessment,
+            question=snapshot_question,
+            organization=self.org1,
+            created_by=self.user,
+        ).exists()
 
 
 @pytest.mark.django_db
@@ -455,14 +516,34 @@ class TestFlatAssessmentWorkflowActionRoles:
             organization=self.org,
             fallback_role=UserRole.ASSESSOR,
         )
+        bettercoal_framework = Framework.objects.create(
+            name="Bettercoal Assurance Framework",
+            slug="bettercoal",
+            version="2024",
+        )
         self.assessment = Assessment.objects.create(
             organization=self.org,
+            framework=bettercoal_framework,
             assigned_assessor=self.assessor,
             start_date="2024-01-01T00:00:00Z",
             due_date="2024-12-31T23:59:59Z",
             created_by=self.operator,
         )
         self.workflow = ensure_assessment_workflow(self.assessment)
+        self.question = AssessmentQuestion.objects.create(
+            assessment=self.assessment,
+            organization=self.org,
+            text="Does the supplier have a management system?",
+            order=1,
+            is_required=True,
+        )
+        self.response = AssessmentResponse.objects.create(
+            assessment=self.assessment,
+            organization=self.org,
+            question=self.question,
+            created_by=self.operator,
+            answer_text="",
+        )
 
     def complete_prerequisites_for(self, action_code, visited=None):
         visited = visited or set()
@@ -547,3 +628,275 @@ class TestFlatAssessmentWorkflowActionRoles:
         }
         assert actions[str(assessor_action.id)]["can_complete"] is True
         assert actions[str(supplier_action.id)]["can_complete"] is False
+
+    def test_platform_superuser_can_complete_available_supplier_questionnaire_step(
+        self,
+    ):
+        """Platform admins can unblock QA/demo workflows without tenant membership."""
+        supplier_action = self.make_action_available("supplier_questionnaire_submitted")
+        superuser = User.objects.create_superuser(
+            email="workflow-superuser@example.com",
+            password="testpass123",
+            name="Workflow Superuser",
+        )
+
+        self.client.force_authenticate(user=superuser)
+        response = self.client.post(
+            f"/api/assessment-actions/{supplier_action.id}/complete/",
+            {},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        supplier_action.refresh_from_db()
+        assert supplier_action.status == AssessmentActionInstance.Status.COMPLETED
+
+    def test_platform_superuser_can_force_submit_blocked_questionnaire_step(self):
+        """Questionnaire submit can complete blocked questionnaire action for platform QA."""
+        supplier_action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code="supplier_questionnaire_submitted",
+        )
+        assert supplier_action.status == AssessmentActionInstance.Status.BLOCKED
+        superuser = User.objects.create_superuser(
+            email="workflow-force-superuser@example.com",
+            password="testpass123",
+            name="Workflow Force Superuser",
+        )
+
+        self.client.force_authenticate(user=superuser)
+        response = self.client.post(
+            f"/api/assessment-actions/{supplier_action.id}/complete/",
+            {"force": True},
+            format="json",
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        supplier_action.refresh_from_db()
+        assert supplier_action.status == AssessmentActionInstance.Status.COMPLETED
+        for prerequisite_code in supplier_action.action.prerequisite_codes:
+            prerequisite = AssessmentActionInstance.objects.get(
+                workflow=self.workflow,
+                action__code=prerequisite_code,
+            )
+            assert prerequisite.status == AssessmentActionInstance.Status.COMPLETED
+
+    def test_blocked_questionnaire_submit_does_not_auto_force_for_operator(self):
+        self.response.answer_text = "Yes, documented."
+        self.response.save(update_fields=["answer_text", "updated_at"])
+        supplier_action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code="supplier_questionnaire_submitted",
+        )
+        assert supplier_action.status == AssessmentActionInstance.Status.BLOCKED
+
+        self.client.force_authenticate(user=self.operator)
+        response = self.client.post(
+            f"/api/assessments/{self.assessment.id}/submit-questionnaire/",
+            {"force": False},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org.id),
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "blocked" in response.json()["error"].lower()
+        supplier_action.refresh_from_db()
+        assert supplier_action.status == AssessmentActionInstance.Status.BLOCKED
+
+    def test_platform_superuser_cannot_force_submit_questionnaire_with_missing_answers(
+        self,
+    ):
+        superuser = User.objects.create_superuser(
+            email="workflow-force-missing@example.com",
+            password="testpass123",
+            name="Workflow Force Missing",
+        )
+        self.client.force_authenticate(user=superuser)
+
+        response = self.client.post(
+            f"/api/assessments/{self.assessment.id}/submit-questionnaire/",
+            {"force": True},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org.id),
+        )
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["readiness"]["missing_required_count"] == 1
+
+    def test_platform_superuser_can_force_submit_questionnaire_after_required_answers(
+        self,
+    ):
+        self.response.answer_text = "Yes, documented."
+        self.response.save(update_fields=["answer_text", "updated_at"])
+        superuser = User.objects.create_superuser(
+            email="workflow-force-submit@example.com",
+            password="testpass123",
+            name="Workflow Force Submit",
+        )
+        self.client.force_authenticate(user=superuser)
+
+        response = self.client.post(
+            f"/api/assessments/{self.assessment.id}/submit-questionnaire/",
+            {"force": True},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org.id),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        supplier_action = AssessmentActionInstance.objects.get(
+            workflow=self.workflow,
+            action__code="supplier_questionnaire_submitted",
+        )
+        assert supplier_action.status == AssessmentActionInstance.Status.COMPLETED
+        assert response.json()["readiness"]["status"] == "SUBMITTED"
+
+    def test_questionnaire_readiness_returns_blocking_prerequisite_titles(self):
+        self.response.answer_text = "Yes, documented."
+        self.response.save(update_fields=["answer_text", "updated_at"])
+        self.client.force_authenticate(user=self.operator)
+
+        response = self.client.get(
+            f"/api/assessments/{self.assessment.id}/questionnaire-readiness/",
+            HTTP_X_ORGANIZATION_ID=str(self.org.id),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["status"] == "BLOCKED"
+        assert data["can_submit"] is False
+        assert (
+            data["blocking_prerequisites"][0]["title"]
+            == "Site assessment scope submitted"
+        )
+
+
+@pytest.mark.django_db
+class TestFrameworkSpecificAssessmentWorkflows:
+    def setup_method(self):
+        self.org = Organization.objects.create(
+            name="Framework Workflow Org", slug="framework-workflow-org"
+        )
+        self.user = User.objects.create_user(
+            email="framework-workflow@example.com",
+            password="testpass123",
+            name="Framework Workflow User",
+        )
+        OrganizationMembership.objects.create(
+            user=self.user,
+            organization=self.org,
+            fallback_role=UserRole.OPERATOR,
+        )
+
+    def test_eo100_assessment_uses_eo100_workflow_not_bettercoal(self):
+        framework = Framework.objects.create(
+            name="EO100 Standard",
+            slug="eo100-standard",
+            version="2024",
+        )
+        assessment = Assessment.objects.create(
+            organization=self.org,
+            framework=framework,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+            created_by=self.user,
+        )
+
+        workflow = ensure_assessment_workflow(assessment)
+        step_titles = list(
+            workflow.template.steps.order_by("order").values_list("title", flat=True)
+        )
+        action_codes = set(
+            AssessmentActionInstance.objects.filter(workflow=workflow).values_list(
+                "action__code", flat=True
+            )
+        )
+
+        assert workflow.template.slug == "eo100-certification"
+        assert workflow.template.framework_slug == "eo100"
+        assert "Due Diligence" in step_titles
+        assert "Peer Review" in step_titles
+        assert "Producer Commitment" not in step_titles
+        assert "letter_of_commitment_uploaded" not in action_codes
+        assert "self_assessment_submitted" in action_codes
+
+    def test_cgwg_assessment_uses_questionnaire_workflow(self):
+        framework = Framework.objects.create(
+            name="CGWG Supplier Assessment Questionnaire",
+            slug="cgwg-saq",
+            version="2024",
+        )
+        assessment = Assessment.objects.create(
+            organization=self.org,
+            framework=framework,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+            created_by=self.user,
+        )
+
+        workflow = ensure_assessment_workflow(assessment)
+        step_titles = list(
+            workflow.template.steps.order_by("order").values_list("title", flat=True)
+        )
+
+        assert workflow.template.slug == "cgwg-saq"
+        assert workflow.template.framework_slug == "cgwg"
+        assert step_titles == [
+            "Supplier Intake",
+            "Self-assessment",
+            "Review",
+            "Closeout",
+        ]
+
+    def test_unknown_framework_uses_generic_workflow(self):
+        framework = Framework.objects.create(
+            name="Custom Responsible Sourcing Standard",
+            slug="custom-responsible-sourcing",
+            version="1.0",
+        )
+        assessment = Assessment.objects.create(
+            organization=self.org,
+            framework=framework,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+            created_by=self.user,
+        )
+
+        workflow = ensure_assessment_workflow(assessment)
+        step_titles = list(
+            workflow.template.steps.order_by("order").values_list("title", flat=True)
+        )
+
+        assert workflow.template.slug == "generic-assessment"
+        assert workflow.template.framework_slug == ""
+        assert step_titles == ["Setup", "Questionnaire", "Review", "Reporting"]
+
+    def test_empty_wrong_workflow_is_replaced_when_framework_changes(self):
+        bettercoal_template = WorkflowTemplate.objects.create(
+            name="Bettercoal Assurance Workflow",
+            slug="bettercoal-assurance",
+            framework_slug="bettercoal",
+        )
+        framework = Framework.objects.create(
+            name="EO100 Standard",
+            slug="eo100-standard",
+            version="2024",
+        )
+        assessment = Assessment.objects.create(
+            organization=self.org,
+            framework=framework,
+            start_date="2024-01-01T00:00:00Z",
+            due_date="2024-12-31T23:59:59Z",
+            created_by=self.user,
+        )
+        wrong_workflow = AssessmentWorkflowInstance.objects.create(
+            assessment=assessment,
+            organization=self.org,
+            template=bettercoal_template,
+            current_step_code="producer_commitment",
+        )
+
+        workflow = ensure_assessment_workflow(assessment)
+
+        assert workflow.id == wrong_workflow.id
+        assert workflow.template.slug == "eo100-certification"
+        assert workflow.current_step_code == "due_diligence"

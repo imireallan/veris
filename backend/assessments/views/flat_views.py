@@ -38,6 +38,11 @@ from assessments.serializers import (
     WorkflowTemplateSerializer,
 )
 from assessments.services.access import AssessmentAccessService
+from assessments.services.questionnaires import (
+    ensure_assessment_questionnaire_snapshots,
+    get_questionnaire_readiness,
+    submit_questionnaire_for_assessment,
+)
 from assessments.services.workflows import (
     complete_action_instance,
     ensure_assessment_workflow,
@@ -119,7 +124,63 @@ class FlatAssessmentViewSet(viewsets.ModelViewSet):
         if not organization and not user.is_superuser:
             raise PermissionDenied("Organization context is required.")
 
-        serializer.save(organization=organization, created_by=user)
+        assessment = serializer.save(organization=organization, created_by=user)
+        ensure_assessment_questionnaire_snapshots(assessment, created_by=user)
+
+    @action(detail=True, methods=["GET"], url_path="questionnaire-readiness")
+    def questionnaire_readiness(self, request, pk=None):
+        assessment = self.get_object()
+        org_id = get_request_organization_id(request)
+        if org_id and str(assessment.organization_id) != str(org_id):
+            raise PermissionDenied(
+                "Assessment does not belong to the selected organization."
+            )
+        return Response(get_questionnaire_readiness(assessment, request.user))
+
+    @action(detail=True, methods=["POST"], url_path="submit-questionnaire")
+    def submit_questionnaire(self, request, pk=None):
+        assessment = self.get_object()
+        org_id = get_request_organization_id(request)
+        if org_id and str(assessment.organization_id) != str(org_id):
+            raise PermissionDenied(
+                "Assessment does not belong to the selected organization."
+            )
+
+        raw_force = request.data.get("force", False)
+        force = (
+            raw_force
+            if isinstance(raw_force, bool)
+            else str(raw_force).lower() in {"1", "true", "yes", "on"}
+        )
+        notes = request.data.get("notes", "")
+        try:
+            action_instance = submit_questionnaire_for_assessment(
+                assessment,
+                request.user,
+                force=force,
+                notes=notes,
+            )
+        except ValueError as exc:
+            readiness = get_questionnaire_readiness(assessment, request.user)
+            return Response(
+                {"error": str(exc), "readiness": readiness},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        readiness = get_questionnaire_readiness(assessment, request.user)
+        return Response(
+            {
+                "success": True,
+                "action": (
+                    AssessmentActionInstanceSerializer(
+                        action_instance, context={"request": request}
+                    ).data
+                    if action_instance
+                    else None
+                ),
+                "readiness": readiness,
+            }
+        )
 
 
 class FlatFindingViewSet(BaseAssessmentScopedViewSet):
@@ -312,7 +373,10 @@ class FlatAssessmentActionViewSet(viewsets.ModelViewSet):
         notes = request.data.get("notes", "") if hasattr(request, "data") else ""
         try:
             updated = complete_action_instance(
-                action_instance, request.user, notes=notes
+                action_instance,
+                request.user,
+                notes=notes,
+                force=request.data.get("force", False),
             )
         except ValueError as exc:
             return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useLoaderData, Link, Form, redirect, useNavigation, useFetcher } from "react-router";
+import { useLoaderData, Link, Form, redirect, useNavigation, useFetcher, useActionData } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
@@ -14,7 +14,8 @@ import {
   ClipboardCheck,
   Layers,
   ListChecks,
-  Plus
+  Lock,
+  AlertTriangle
 } from "lucide-react";
 import { 
   Card, 
@@ -53,6 +54,7 @@ interface QuestionnaireQuestion {
   framework_mappings?: FrameworkMapping[];
   external_question_id?: string | null;
   performance_target_level?: number | null;
+  is_required?: boolean;
 }
 
 interface QuestionnaireResponse {
@@ -72,6 +74,25 @@ interface QuestionnaireAssessment {
   framework_name?: string | null;
   template_version?: string | null;
   status?: string;
+}
+
+interface QuestionnaireReadiness {
+  status: "BLOCKED" | "INCOMPLETE" | "READY" | "SUBMITTED";
+  can_view: boolean;
+  can_save_draft: boolean;
+  can_submit: boolean;
+  can_force_submit: boolean;
+  required_total: number;
+  required_answered: number;
+  missing_required_count: number;
+  workflow_action_id?: string | null;
+  workflow_action_code?: string | null;
+  workflow_action_title?: string | null;
+  workflow_action_status?: string | null;
+  workflow_action_can_complete?: boolean;
+  completed_at?: string | null;
+  completed_by_name?: string;
+  blocking_prerequisites: Array<{ code: string; title: string }>;
 }
 
 const QUESTIONS_PER_PAGE = 6;
@@ -95,6 +116,27 @@ function getFrameworkTone(frameworkName?: string | null) {
   if (normalized.includes("eo100") || normalized.includes("eo 100")) return "EO100 performance target review";
   if (normalized.includes("cgwg")) return "CGWG supplier questionnaire";
   return "Framework questionnaire";
+}
+
+const QUESTIONNAIRE_WORKFLOW_ACTION_CODES = new Set([
+  "supplier_questionnaire_submitted",
+  "questionnaire_submitted",
+  "self_assessment_submitted",
+]);
+
+function findQuestionnaireWorkflowAction(workflow: any) {
+  const actions = Array.isArray(workflow?.actions)
+    ? workflow.actions
+    : (workflow?.steps ?? []).flatMap((step: any) => step.actions ?? []);
+  return actions.find((action: any) =>
+    QUESTIONNAIRE_WORKFLOW_ACTION_CODES.has(action.action_code || action.code),
+  );
+}
+
+function flattenApiList<T = any>(value: any): T[] {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.results)) return value.results;
+  return [];
 }
 
 function UploadEvidenceButton({
@@ -207,17 +249,22 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     throw new Response("Assessment is not associated with an organization", { status: 400 });
   }
 
-  const [questions, responses] = await Promise.all([
+  const [questions, responses, workflowRes, readiness] = await Promise.all([
     api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/questions/`, token, request),
     api.get<any[]>(`/api/organizations/${orgId}/assessments/${assessmentId}/responses/`, token, request),
+    api.get<any>(`/api/assessment-workflows/?assessment=${assessmentId}&org=${orgId}`, token, request).catch(() => null),
+    api.get<QuestionnaireReadiness>(`/api/assessments/${assessmentId}/questionnaire-readiness/?org=${orgId}`, token, request).catch(() => null),
   ]);
+  const workflow = flattenApiList(workflowRes)[0] ?? null;
   
   return {
     assessmentId,
     assessment,
     orgId,
-    questions: Array.isArray(questions) ? questions : (questions as any)?.results ?? [],
-    responses: Array.isArray(responses) ? responses : (responses as any)?.results ?? [],
+    questions: flattenApiList<QuestionnaireQuestion>(questions),
+    responses: flattenApiList<QuestionnaireResponse>(responses),
+    workflow,
+    readiness,
     user,
   };
 }
@@ -239,6 +286,71 @@ export async function action({ request, params }: ActionFunctionArgs) {
       } catch (err) {
         return { error: "Could not determine organization for this assessment" };
       }
+    }
+  }
+
+  if (intent === "submit-questionnaire") {
+    const orgId = formData.get("org_id") as string;
+    if (!orgId) {
+      return { error: "Organization ID is required to submit this questionnaire" };
+    }
+
+    try {
+      const [questionsRes, responsesRes] = await Promise.all([
+        api.withOrganization.get<any[]>(
+          `/api/organizations/${orgId}/assessments/${assessmentId}/questions/`,
+          orgId,
+          token,
+          request,
+        ),
+        api.withOrganization.get<any[]>(
+          `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
+          orgId,
+          token,
+          request,
+        ),
+      ]);
+      const questions = flattenApiList<QuestionnaireQuestion>(questionsRes);
+      const responses = flattenApiList<QuestionnaireResponse>(responsesRes);
+      const unansweredRequired = questions.filter((question) => {
+        if (question.is_required === false) return false;
+        return !responses.some(
+          (response) =>
+            String(response.question) === String(question.id) &&
+            Boolean((response.answer_text || "").trim()),
+        );
+      });
+
+      if (unansweredRequired.length > 0) {
+        return {
+          error: `Answer all required questions before submitting. ${unansweredRequired.length} required question${unansweredRequired.length === 1 ? "" : "s"} remaining.`,
+        };
+      }
+
+      const force = formData.get("force") === "true";
+      const result = await api.withOrganization.post<any>(
+        `/api/assessments/${assessmentId}/submit-questionnaire/`,
+        {
+          notes: force
+            ? "Force-completed by platform admin during questionnaire submission override."
+            : "Questionnaire submitted from assessment questionnaire page.",
+          force,
+        },
+        orgId,
+        token,
+        request,
+      );
+
+      if (result?.success) {
+        return redirect(`/assessments/${assessmentId}`);
+      }
+
+      return {
+        error: result?.error ?? "Failed to submit questionnaire",
+        readiness: result?.readiness,
+      };
+    } catch (err: any) {
+      return { error: err?.body?.detail ?? err?.body?.error ?? err.message ?? "Failed to submit questionnaire" };
     }
   }
 
@@ -420,6 +532,7 @@ function QuestionCard({
   assessmentId,
   orgId,
   onAddMapping,
+  canEditResponses,
 }: {
   question: QuestionnaireQuestion;
   index: number;
@@ -432,6 +545,7 @@ function QuestionCard({
   assessmentId: string;
   orgId: string;
   onAddMapping: (questionId: string) => void;
+  canEditResponses: boolean;
 }) {
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
   const [localAnswer, setLocalAnswer] = useState(existingResponse?.answer_text || "");
@@ -569,7 +683,7 @@ function QuestionCard({
                   variant="outline"
                   size="sm"
                   className="h-7 px-2 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50"
-                  disabled={isValidating || !existingResponse.answer_text}
+                  disabled={isValidating || !existingResponse.answer_text || !canEditResponses}
                 >
                   {isValidating ? (
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -580,7 +694,7 @@ function QuestionCard({
                 </Button>
               </Form>
             )}
-            {!isEditing && (
+            {!isEditing && canEditResponses && (
               <button
                 type="button"
                 onClick={onEdit}
@@ -693,12 +807,14 @@ function QuestionCard({
                   <Paperclip className="w-4 h-4" />
                   <span className="text-xs">Evidence attached: {existingResponse?.evidence_files?.length || 0}</span>
                 </div>
-                <UploadEvidenceButton
-                  responseId={existingResponse?.id}
-                  questionId={question.id}
-                  assessmentId={assessmentId}
-                  orgId={orgId}
-                />
+                {canEditResponses && (
+                  <UploadEvidenceButton
+                    responseId={existingResponse?.id}
+                    questionId={question.id}
+                    assessmentId={assessmentId}
+                    orgId={orgId}
+                  />
+                )}
               </div>
             </div>
 
@@ -728,7 +844,9 @@ function QuestionCard({
 }
 
 export default function QuestionnaireRoute() {
-  const { assessmentId, assessment, orgId, questions, responses, user } = useLoaderData<typeof loader>();
+  const { assessmentId, assessment, orgId, questions, responses, workflow, readiness, user } = useLoaderData<typeof loader>();
+  const actionData = useActionData<typeof action>();
+  const navigation = useNavigation();
   const assessmentData = assessment as QuestionnaireAssessment;
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [mappingModalOpen, setMappingModalOpen] = useState(false);
@@ -742,6 +860,59 @@ export default function QuestionnaireRoute() {
   const answeredCount = localQuestions.filter((question) =>
     localResponses.some((response) => String(response.question) === String(question.id) && Boolean(response.answer_text))
   ).length;
+  const requiredQuestions = localQuestions.filter((question) => question.is_required !== false);
+  const unansweredRequiredCount = requiredQuestions.filter((question) =>
+    !localResponses.some((response) => String(response.question) === String(question.id) && Boolean((response.answer_text || "").trim()))
+  ).length;
+  const questionnaireWorkflowAction = findQuestionnaireWorkflowAction(workflow);
+  const fallbackReadiness: QuestionnaireReadiness = {
+    status: questionnaireWorkflowAction?.status === "COMPLETED"
+      ? "SUBMITTED"
+      : unansweredRequiredCount > 0
+        ? "INCOMPLETE"
+        : questionnaireWorkflowAction?.status === "BLOCKED"
+          ? "BLOCKED"
+          : "READY",
+    can_view: true,
+    can_save_draft: questionnaireWorkflowAction?.status !== "COMPLETED",
+    can_submit: localQuestions.length > 0 && unansweredRequiredCount === 0 && Boolean(questionnaireWorkflowAction?.can_complete),
+    can_force_submit: false,
+    required_total: requiredQuestions.length,
+    required_answered: requiredQuestions.length - unansweredRequiredCount,
+    missing_required_count: unansweredRequiredCount,
+    workflow_action_id: questionnaireWorkflowAction?.id,
+    workflow_action_code: questionnaireWorkflowAction?.action_code || questionnaireWorkflowAction?.code,
+    workflow_action_title: questionnaireWorkflowAction?.title,
+    workflow_action_status: questionnaireWorkflowAction?.status,
+    workflow_action_can_complete: questionnaireWorkflowAction?.can_complete,
+    completed_at: questionnaireWorkflowAction?.completed_at,
+    completed_by_name: questionnaireWorkflowAction?.completed_by_name,
+    blocking_prerequisites: questionnaireWorkflowAction?.status === "BLOCKED"
+      ? (questionnaireWorkflowAction.prerequisite_codes || []).map((code: string) => ({ code, title: code.replace(/_/g, " ") }))
+      : [],
+  };
+  const serverReadiness = ((actionData as any)?.readiness || readiness || fallbackReadiness) as QuestionnaireReadiness;
+  const readinessState: QuestionnaireReadiness = {
+    ...serverReadiness,
+    required_total: requiredQuestions.length,
+    required_answered: requiredQuestions.length - unansweredRequiredCount,
+    missing_required_count: unansweredRequiredCount,
+    status: serverReadiness.status === "SUBMITTED"
+      ? "SUBMITTED"
+      : serverReadiness.status === "BLOCKED"
+        ? "BLOCKED"
+        : unansweredRequiredCount > 0
+          ? "INCOMPLETE"
+          : "READY",
+    can_submit: localQuestions.length > 0
+      && unansweredRequiredCount === 0
+      && serverReadiness.status !== "BLOCKED"
+      && serverReadiness.status !== "SUBMITTED"
+      && Boolean(serverReadiness.workflow_action_can_complete || serverReadiness.can_submit),
+  };
+  const canEditResponses = Boolean(readinessState.can_save_draft);
+  const canSubmitQuestionnaire = localQuestions.length > 0 && Boolean(readinessState.can_submit);
+  const isSubmittingQuestionnaire = navigation.state === "submitting" && navigation.formData?.get("intent") === "submit-questionnaire";
   const completionPercent = localQuestions.length ? Math.round((answeredCount / localQuestions.length) * 100) : 0;
   const totalPages = Math.max(1, Math.ceil(localQuestions.length / QUESTIONS_PER_PAGE));
   const pageStart = (currentPage - 1) * QUESTIONS_PER_PAGE;
@@ -852,6 +1023,19 @@ export default function QuestionnaireRoute() {
             </Link>
           </div>
 
+          {actionData && "error" in actionData && actionData.error && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{actionData.error}</span>
+            </div>
+          )}
+          {actionData && "success" in actionData && actionData.success && "message" in actionData && actionData.message && (
+            <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700 dark:border-green-900/50 dark:bg-green-950/40 dark:text-green-300">
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{actionData.message}</span>
+            </div>
+          )}
+
           <Separator />
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -874,6 +1058,68 @@ export default function QuestionnaireRoute() {
               <div className="mt-2 flex items-center gap-3">
                 <Progress value={completionPercent} className="h-2" />
                 <span className="text-sm font-medium">{completionPercent}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-lg border bg-background p-4 space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  {readinessState.status === "BLOCKED" ? <Lock className="h-4 w-4 text-amber-600" /> : null}
+                  {readinessState.status === "INCOMPLETE" ? <AlertTriangle className="h-4 w-4 text-amber-600" /> : null}
+                  {readinessState.status === "READY" ? <CheckCircle className="h-4 w-4 text-primary" /> : null}
+                  {readinessState.status === "SUBMITTED" ? <ShieldCheck className="h-4 w-4 text-primary" /> : null}
+                  Submit questionnaire
+                  <Badge variant={readinessState.status === "READY" || readinessState.status === "SUBMITTED" ? "default" : "outline"}>
+                    {readinessState.status.toLowerCase()}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {readinessState.status === "BLOCKED"
+                    ? "Questionnaire submission is blocked by earlier workflow milestones. Draft answers may be saved only when allowed by this framework."
+                    : readinessState.status === "INCOMPLETE"
+                      ? `${readinessState.missing_required_count} required question${readinessState.missing_required_count === 1 ? "" : "s"} still need answers.`
+                      : readinessState.status === "SUBMITTED"
+                        ? `Submitted${readinessState.completed_by_name ? ` by ${readinessState.completed_by_name}` : ""}${readinessState.completed_at ? ` on ${new Date(readinessState.completed_at).toLocaleDateString()}` : ""}. Responses are now read-only.`
+                        : "All required questions are answered. Submit to advance the workflow milestone."}
+                </p>
+                {readinessState.blocking_prerequisites?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {readinessState.blocking_prerequisites.map((item) => (
+                      <Badge key={item.code} variant="outline" className="text-[10px]">
+                        Blocked by: {item.title}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {!canEditResponses && readinessState.status !== "SUBMITTED" && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Draft saving is locked until this framework's prerequisite milestone is available.
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 md:justify-end">
+                <Form method="post">
+                  <input type="hidden" name="intent" value="submit-questionnaire" />
+                  <input type="hidden" name="org_id" value={orgId || ""} />
+                  <input type="hidden" name="force" value="false" />
+                  <Button type="submit" disabled={!canSubmitQuestionnaire || isSubmittingQuestionnaire}>
+                    {isSubmittingQuestionnaire ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                    {readinessState.status === "SUBMITTED" ? "Submitted" : "Submit questionnaire"}
+                  </Button>
+                </Form>
+                {readinessState.can_force_submit && (
+                  <Form method="post">
+                    <input type="hidden" name="intent" value="submit-questionnaire" />
+                    <input type="hidden" name="org_id" value={orgId || ""} />
+                    <input type="hidden" name="force" value="true" />
+                    <Button type="submit" variant="outline" disabled={isSubmittingQuestionnaire}>
+                      <ShieldCheck className="mr-2 h-4 w-4" />
+                      Force submit
+                    </Button>
+                  </Form>
+                )}
               </div>
             </div>
           </div>
@@ -917,6 +1163,7 @@ export default function QuestionnaireRoute() {
                       assessmentId={assessmentId || ""}
                       orgId={orgId || ""}
                       onAddMapping={handleAddMapping}
+                      canEditResponses={canEditResponses}
                     />
                   );
                 })}

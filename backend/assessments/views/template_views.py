@@ -19,16 +19,14 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
-from assessments.models import (
-    Assessment,
-    AssessmentQuestion,
-    AssessmentResponse,
-    AssessmentTemplate,
-)
+from assessments.models import Assessment, AssessmentQuestion, AssessmentTemplate
 from assessments.serializers import (
     AssessmentQuestionSerializer,
     AssessmentTemplateDetailSerializer,
     AssessmentTemplateSerializer,
+)
+from assessments.services.questionnaires import (
+    ensure_assessment_questionnaire_snapshots,
 )
 from users.permissions import CanManageTemplates
 
@@ -270,31 +268,10 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
                 site_id=request.data.get("site_id"),
             )
 
-            # Snapshot template questions into assessment-owned questions.
-            # Historical assessments must remain stable even if the template changes later.
-            for template_question in template.assessment_questions.all().order_by(
-                "order"
-            ):
-                snapshot_question = AssessmentQuestion.objects.create(
-                    template=None,
-                    assessment=assessment,
-                    source_template_question=template_question,
-                    organization=org,
-                    text=template_question.text,
-                    order=template_question.order,
-                    category=template_question.category,
-                    scoring_criteria=template_question.scoring_criteria,
-                    is_required=template_question.is_required,
-                    performance_target_level=template_question.performance_target_level,
-                    external_question_id=template_question.external_question_id,
-                    framework_mappings=template_question.framework_mappings,
-                )
-                AssessmentResponse.objects.create(
-                    assessment=assessment,
-                    organization=org,
-                    question=snapshot_question,
-                    created_by=request.user,
-                )
+            ensure_assessment_questionnaire_snapshots(
+                assessment,
+                created_by=request.user,
+            )
 
         return Response(
             {

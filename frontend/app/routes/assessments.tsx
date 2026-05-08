@@ -1,10 +1,10 @@
 import { useLoaderData, Link, useSearchParams } from "react-router";
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, Filter, FileText, Plus } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, Clock3, Filter, FileText, Plus } from "lucide-react";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
-import { SearchBar, EmptyState, Button, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "~/components/ui";
+import { Badge, Button, Card, CardContent, EmptyState, Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SearchBar } from "~/components/ui";
 import { AssessmentCard } from "~/components/AssessmentCard";
 import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 import { RBAC } from "~/types/rbac";
@@ -51,11 +51,57 @@ export async function loader({ request }: LoaderFunctionArgs) {
       fetchWithLog("/api/focus-areas/", "focusAreas"),
     ]);
 
-  return { assessments, frameworks, focusAreas, organizations, selectedOrg, scope, user };
+  const workflowsAndTasks = await Promise.all(
+    assessments.map(async (assessment: any) => {
+      const orgId = assessment.organization;
+      if (!assessment.id || !orgId) {
+        return [assessment.id, { workflow: null, tasks: [] }];
+      }
+
+      const [workflow, tasks] = await Promise.all([
+        (async () => {
+          try {
+            const workflowRes = await api.get<any>(
+              `/api/assessment-workflows/?assessment=${assessment.id}&org=${orgId}`,
+              token,
+              request,
+            );
+            return workflowRes.results?.[0] ?? (Array.isArray(workflowRes) ? workflowRes[0] : null);
+          } catch (err: any) {
+            console.warn(`Failed to fetch workflow for assessment ${assessment.id}:`, err.message);
+            return null;
+          }
+        })(),
+        (async () => {
+          try {
+            const tasksRes = await api.get<any>(
+              `/api/tasks/?assessment=${assessment.id}&org=${orgId}`,
+              token,
+              request,
+            );
+            return tasksRes.results ?? (Array.isArray(tasksRes) ? tasksRes : []);
+          } catch (err: any) {
+            console.warn(`Failed to fetch tasks for assessment ${assessment.id}:`, err.message);
+            return [];
+          }
+        })(),
+      ]);
+
+      return [assessment.id, { workflow, tasks }];
+    }),
+  );
+  const workflowsByAssessmentId = Object.fromEntries(
+    workflowsAndTasks.map(([assessmentId, value]: any) => [assessmentId, value.workflow]),
+  );
+  const tasksByAssessmentId = Object.fromEntries(
+    workflowsAndTasks.map(([assessmentId, value]: any) => [assessmentId, value.tasks]),
+  );
+
+  return { assessments, frameworks, focusAreas, organizations, selectedOrg, scope, user, workflowsByAssessmentId, tasksByAssessmentId };
 }
 
 export default function AssessmentsListRoute() {
-  const { assessments, frameworks, focusAreas, organizations, selectedOrg, scope, user } =
+  const { assessments, frameworks, focusAreas, organizations, selectedOrg, scope, user, workflowsByAssessmentId, tasksByAssessmentId } =
     useLoaderData<typeof loader>();
   const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
@@ -103,6 +149,14 @@ export default function AssessmentsListRoute() {
   const assessmentsLabel = terminology.plural.assessment;
   const currentOrgName = selectedOrg?.name ?? "Current Organization";
   const canCreateInSelectedOrg = RBAC.canCreateAssessments(user);
+  const pendingByAssessmentId = buildPendingActionsByAssessment({
+    assessments: allItems,
+    workflowsByAssessmentId,
+    tasksByAssessmentId,
+    userId: user?.id,
+  });
+  const myPendingActions = Object.values(pendingByAssessmentId).flat();
+  const visiblePendingActions = paginatedItems.flatMap((assessment: any) => pendingByAssessmentId[assessment.id] ?? []);
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -231,6 +285,13 @@ export default function AssessmentsListRoute() {
         placeholder={`Search ${lowerFirst(assessmentsLabel)}...`}
       />
 
+      <MyPendingActionsPanel
+        pendingActions={visiblePendingActions}
+        totalPendingCount={myPendingActions.length}
+        assessmentLabel={assessmentLabel}
+        assessmentsLabel={assessmentsLabel}
+      />
+
       {items.length === 0 ? (
         <EmptyState
           icon={FileText}
@@ -277,5 +338,142 @@ export default function AssessmentsListRoute() {
         </>
       )}
     </div>
+  );
+}
+
+type PendingAction = {
+  id: string;
+  assessmentId: string;
+  assessmentName: string;
+  title: string;
+  source: "workflow" | "task";
+  stepTitle?: string;
+  status?: string;
+  dueDate?: string | null;
+};
+
+function buildPendingActionsByAssessment({
+  assessments,
+  workflowsByAssessmentId,
+  tasksByAssessmentId,
+  userId,
+}: {
+  assessments: any[];
+  workflowsByAssessmentId: Record<string, any>;
+  tasksByAssessmentId: Record<string, any[]>;
+  userId?: string;
+}) {
+  return Object.fromEntries(
+    assessments.map((assessment: any) => {
+      const workflow = workflowsByAssessmentId?.[assessment.id];
+      const workflowActions: PendingAction[] = (workflow?.actions ?? [])
+        .filter((action: any) => action.can_complete && ["AVAILABLE", "IN_PROGRESS"].includes(action.status))
+        .map((action: any) => ({
+          id: action.id,
+          assessmentId: assessment.id,
+          assessmentName: assessment.display_name || `Assessment ${assessment.id.slice(0, 8)}`,
+          title: action.title,
+          source: "workflow" as const,
+          stepTitle: action.step_title,
+          status: action.status,
+          dueDate: action.due_date,
+        }));
+
+      const taskActions: PendingAction[] = (tasksByAssessmentId?.[assessment.id] ?? [])
+        .filter((task: any) => {
+          const isAssignedToMe = userId && String(task.assigned_to) === String(userId);
+          return isAssignedToMe && !["COMPLETED", "CANCELLED", "DONE"].includes(task.status);
+        })
+        .map((task: any) => ({
+          id: task.id,
+          assessmentId: assessment.id,
+          assessmentName: assessment.display_name || `Assessment ${assessment.id.slice(0, 8)}`,
+          title: task.title,
+          source: "task" as const,
+          status: task.status,
+          dueDate: task.due_date,
+        }));
+
+      return [assessment.id, [...workflowActions, ...taskActions]];
+    }),
+  );
+}
+
+function MyPendingActionsPanel({
+  pendingActions,
+  totalPendingCount,
+  assessmentLabel,
+  assessmentsLabel,
+}: {
+  pendingActions: PendingAction[];
+  totalPendingCount: number;
+  assessmentLabel: string;
+  assessmentsLabel: string;
+}) {
+  const visibleCount = pendingActions.length;
+
+  return (
+    <Card className="border-primary/20 bg-primary/5">
+      <CardContent className="p-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold">My pending actions</h2>
+              <Badge variant={totalPendingCount > 0 ? "default" : "secondary"}>{totalPendingCount}</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Role-specific workflow actions you can complete now. Workflow actions are framework milestones; tasks are ad hoc follow-ups assigned to a person.
+            </p>
+          </div>
+          {totalPendingCount === 0 && (
+            <div className="flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              Nothing is waiting on your role.
+            </div>
+          )}
+        </div>
+
+        {visibleCount > 0 && (
+          <div className="mt-4 grid gap-2 lg:grid-cols-2">
+            {pendingActions.slice(0, 6).map((action) => (
+              <Link
+                key={`${action.source}-${action.id}`}
+                to={`/assessments/${action.assessmentId}`}
+                className="rounded-lg border bg-background p-3 transition-colors hover:border-primary/40 hover:bg-primary/5"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={action.source === "workflow" ? "default" : "secondary"} className="text-[10px]">
+                        {action.source === "workflow" ? "Workflow" : "Task"}
+                      </Badge>
+                      {action.stepTitle && <span className="text-xs text-muted-foreground">{action.stepTitle}</span>}
+                    </div>
+                    <div className="truncate text-sm font-medium">{action.title}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {action.assessmentName || `${assessmentLabel} ${action.assessmentId.slice(0, 8)}`}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-xs text-muted-foreground">
+                    {action.dueDate ? (
+                      <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" /> {new Date(action.dueDate).toLocaleDateString()}</span>
+                    ) : (
+                      "Open"
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {totalPendingCount > visibleCount && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            {totalPendingCount - visibleCount} more pending action(s) are attached to {lowerFirst(assessmentsLabel)} outside this page/filter.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }

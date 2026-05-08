@@ -9,7 +9,7 @@ import {
 } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
-import { api } from "~/.server/lib/api";
+import { ApiError, api } from "~/.server/lib/api";
 import {
   ArrowLeft,
   ArrowRight,
@@ -88,11 +88,7 @@ export async function action({ request }: ActionFunctionArgs) {
       );
       siteId = site.id;
     } catch (err: any) {
-      const msg =
-        err?.body?.non_field_errors?.[0] ??
-        err?.body?.detail ??
-        err?.message ??
-        "Failed to create site";
+      const msg = getApiErrorMessage(err, "Failed to create site");
       return { error: `Site creation failed: ${msg}` };
     }
   }
@@ -159,6 +155,30 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 const unwrap = (r: any) => (Array.isArray(r) ? r : (r?.results ?? []));
+
+function getApiErrorMessage(err: unknown, fallback = "The backend returned an error.") {
+  if (err instanceof ApiError) {
+    const body = err.body as Record<string, any> | undefined;
+    if (body) {
+      if (typeof body.detail === "string") return body.detail;
+      if (typeof body.error === "string") return body.error;
+      if (Array.isArray(body.non_field_errors) && body.non_field_errors[0]) {
+        return String(body.non_field_errors[0]);
+      }
+      for (const [field, value] of Object.entries(body)) {
+        if (Array.isArray(value) && value[0]) {
+          return `${field}: ${String(value[0])}`;
+        }
+        if (typeof value === "string") {
+          return `${field}: ${value}`;
+        }
+      }
+    }
+    return err.message || fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
 
 async function resolveSelectedOrganization(
   request: Request,
@@ -384,11 +404,18 @@ export default function NewAssessmentRoute() {
 
   // Site type options
   const siteTypeOptions = [
-    { id: "FACTORY", name: "Factory" },
     { id: "MINE", name: "Mine" },
-    { id: "OFFICE", name: "Office" },
+    { id: "OPERATION", name: "Oil/Gas Operation" },
+    { id: "WELL", name: "Well Pad / Well Site" },
+    { id: "FACILITY", name: "Processing Facility" },
+    { id: "REFINERY", name: "Refinery" },
+    { id: "PORT", name: "Port / Storage Facility" },
+    { id: "OFFICE", name: "Regional Office" },
+    { id: "TRANSPORT", name: "Transport Infrastructure" },
+    { id: "FARM", name: "Farm / Plantation" },
+    { id: "FACTORY", name: "Factory / Manufacturing" },
     { id: "WAREHOUSE", name: "Warehouse" },
-    { id: "PLANT", name: "Plant" },
+    { id: "RETAIL", name: "Retail Location" },
   ];
 
   const getDisplayValue = (

@@ -84,7 +84,10 @@ jobs:
                   '  chown "$DEPLOY_USER":"$DEPLOY_USER" .env.production || true',
                   'fi',
                   "docker compose --env-file .env.production -f docker-compose.prod.yml pull caddy db",
-                  "docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --remove-orphans",
+                  "docker compose --env-file .env.production -f docker-compose.prod.yml up -d db",
+                  "docker compose --env-file .env.production -f docker-compose.prod.yml build backend frontend ai_engine",
+                  "docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py migrate --noinput",
+                  "docker compose --env-file .env.production -f docker-compose.prod.yml up -d --remove-orphans",
                   "docker compose --env-file .env.production -f docker-compose.prod.yml ps",
                   "docker image prune -f",
               ]

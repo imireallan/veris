@@ -3,6 +3,7 @@ ViewSet for framework import functionality.
 Handles file upload, preview, and async import job processing.
 """
 
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -111,10 +112,10 @@ class FrameworkImportViewSet(viewsets.ViewSet):
 
         temp_path = None
         try:
-            # Save file temporarily
-            temp_path = (
-                settings.MEDIA_ROOT / "framework_imports" / f"{uuid.uuid4()}{ext}"
-            )
+            # Save file temporarily. In production USE_S3=True makes MEDIA_ROOT None,
+            # but the importer needs a local file path for openpyxl/csv parsing.
+            temp_root = settings.MEDIA_ROOT or Path(tempfile.gettempdir()) / "veris"
+            temp_path = temp_root / "framework_imports" / f"{uuid.uuid4()}{ext}"
             temp_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(temp_path, "wb+") as f:

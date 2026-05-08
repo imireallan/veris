@@ -37,6 +37,9 @@ from assessments.serializers import (
     TaskSerializer,
 )
 from assessments.services.access import AssessmentAccessService
+from assessments.services.questionnaires import (
+    ensure_assessment_questionnaire_snapshots,
+)
 from assessments.views.mixins import ReportExportMixin, ResponseValidationMixin
 from users.permissions import (
     CanManageAssessments,
@@ -133,7 +136,13 @@ class AssessmentViewSet(viewsets.ModelViewSet):
                 "You must select an active organization to create assessments"
             )
 
-        serializer.save(created_by=self.request.user, organization=organization)
+        assessment = serializer.save(
+            created_by=self.request.user, organization=organization
+        )
+        ensure_assessment_questionnaire_snapshots(
+            assessment,
+            created_by=self.request.user,
+        )
 
 
 class AssessmentDetailViewSet(viewsets.ReadOnlyModelViewSet):

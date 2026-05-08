@@ -3,7 +3,7 @@ import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { ApiError, api } from "~/.server/lib/api";
 import { useState, useRef } from "react";
-import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Plus, Trash2, Edit3, Save, X, FileText, Download, ChevronLeft, ChevronRight, CheckCircle2, CircleDot, Clock3, Info, Lock, Users } from "lucide-react";
 import {
   Badge,
   Button,
@@ -24,6 +24,19 @@ import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
+  Alert,
+  AlertDescription,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Progress,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "~/components/ui";
 import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
 import type { TerminologyLabels } from "~/lib/terminology";
@@ -180,7 +193,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       assessment: null,
       findings: [],
       cipCycles: [],
-      plan: null,
       tasks: [],
       workflow: null,
       report: null,
@@ -192,19 +204,17 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 
   const orgId = assessment.organization;
 
-  const [findingsRes, cipCyclesRes, planRes, tasksRes, workflowRes, reportRes] = await Promise.all([
+  const [findingsRes, cipCyclesRes, tasksRes, workflowRes, reportRes] = await Promise.all([
     safeLoadResource("Findings", () => api.get<any>(`/api/findings/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
     safeLoadResource("CIP cycles", () => api.get<any>(`/api/cip-cycles/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
-    safeLoadResource("Assessment plan", () => api.get<any>(`/api/plans/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
     safeLoadResource("Tasks", () => api.get<any>(`/api/tasks/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
-    safeLoadResource("Development Steps", () => api.get<any>(`/api/assessment-workflows/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
+    safeLoadResource("Workflow", () => api.get<any>(`/api/assessment-workflows/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
     safeLoadResource("Reports", () => api.get<any>(`/api/reports/?assessment=${params.id}&org=${orgId}`, token, request), warnings, emptyPaginatedResponse()),
   ]);
 
   // Handle paginated responses (results array) or direct arrays
   const findings = findingsRes.results || (Array.isArray(findingsRes) ? findingsRes : []);
   const cipCycles = cipCyclesRes.results || (Array.isArray(cipCyclesRes) ? cipCyclesRes : []);
-  const plan = planRes.results?.[0] ?? (Array.isArray(planRes) ? planRes[0] : null);
   const tasks = tasksRes.results || (Array.isArray(tasksRes) ? tasksRes : []);
   const workflow = workflowRes.results?.[0] ?? (Array.isArray(workflowRes) ? workflowRes[0] : null);
   const report = reportRes.results?.[0] ?? (Array.isArray(reportRes) ? reportRes[0] : null);
@@ -213,7 +223,6 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     assessment: assessment,
     findings: findings,
     cipCycles: cipCycles,
-    plan: plan,
     tasks: tasks,
     workflow: workflow,
     report: report,
@@ -526,24 +535,15 @@ export default function AssessmentDetailRoute() {
       <TabsSection
         tabs={[
           { key: "overview", label: "Overview" },
-          { key: "findings", label: "Findings", count: data.findings.length },
-          { key: "plan", label: "Plan" },
-          { key: "cip", label: "CIP", count: data.cipCycles.length },
-          { key: "development-steps", label: "Development Steps", count: data.workflow?.total_actions ?? 0 },
+          { key: "development-steps", label: "Workflow", count: data.workflow?.total_actions ?? 0 },
+          { key: "questionnaire", label: "Questionnaire" },
+          { key: "findings-cip", label: "Findings & CIP", count: data.findings.length + data.cipCycles.length },
           { key: "tasks", label: tasksLabel, count: data.tasks.length },
           ...(reportViewUiState.showTab ? [{ key: "report", label: reportLabel }] : []),
         ]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
-      <Link
-        to={`/assessments/${a.id}/questionnaire`}
-        className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-      >
-        <FileText className="w-4 h-4" />
-        Open Questionnaire
-      </Link>
-
       {activeTab === "overview" && (
         <SectionCard title={`${assessmentLabel} summary`} padding="compact">
           {a.ai_summary ? (
@@ -565,67 +565,21 @@ export default function AssessmentDetailRoute() {
         </SectionCard>
       )}
 
-      {activeTab === "findings" && (
-        <FindingsTab
+      {activeTab === "development-steps" && (
+        <DevelopmentStepsTab workflow={data.workflow} />
+      )}
+
+      {activeTab === "questionnaire" && (
+        <QuestionnaireTab assessmentId={a.id} assessmentLabel={assessmentLabel} />
+      )}
+
+      {activeTab === "findings-cip" && (
+        <FindingsAndCipTab
           findings={data.findings}
+          cipCycles={data.cipCycles}
           editingFinding={editingFinding}
           setEditingFinding={setEditingFinding}
         />
-      )}
-
-      {activeTab === "plan" && (
-        <SectionCard title={`${assessmentLabel} Plan`}>
-          {data.plan ? (
-            <PlanDetails plan={data.plan} terminology={terminology} />
-          ) : (
-            <EmptyState
-              icon={FileText}
-              title={`No ${lowerFirst(assessmentLabel)} plan yet`}
-              description="Create a plan to outline key dates and milestones."
-            />
-          )}
-        </SectionCard>
-      )}
-
-      {activeTab === "cip" && (
-        <div className="space-y-3">
-          {data.cipCycles.length === 0 ? (
-            <EmptyState
-              icon={FileText}
-              title="No CIP cycles configured"
-              description="Continuous Improvement cycles will appear here."
-            />
-          ) : (
-            data.cipCycles.map((c: any) => (
-              <Card key={c.id}>
-                <CardContent className="p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{c.label}</h4>
-                    <Badge variant={c.status === "ACTIVE" ? "default" : "secondary"}>
-                      {c.status}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Period</div>
-                      <div className="font-medium">{c.deadline_period_months} months</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Start Date</div>
-                      <div className="font-medium">
-                        {c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
-      )}
-
-      {activeTab === "development-steps" && (
-        <DevelopmentStepsTab workflow={data.workflow} />
       )}
 
       {activeTab === "tasks" && (
@@ -688,102 +642,237 @@ function DevelopmentStepsTab({ workflow }: { workflow: any | null }) {
       <EmptyState
         icon={FileText}
         title="No workflow configured"
-        description="Development Steps will appear once a workflow is attached to this assessment."
+        description="Workflow milestones will appear once a workflow is attached to this assessment."
       />
     );
   }
 
+  const actions = workflow.actions ?? [];
+  const myPendingActions = actions.filter((action: any) => action.can_complete && ["AVAILABLE", "IN_PROGRESS"].includes(action.status));
+  const blockedCount = actions.filter((action: any) => action.status === "BLOCKED").length;
+  const completedCount = workflow.completed_actions ?? 0;
+  const totalCount = workflow.total_actions ?? actions.length;
+  const currentStepTitle = (workflow.steps ?? []).find((step: any) => step.code === workflow.current_step_code)?.title;
+
   return (
     <div className="space-y-4">
+      <Alert className="border-primary/20 bg-primary/5">
+        <Info className="h-4 w-4 text-primary" />
+        <AlertDescription>
+          Workflow milestones are reusable framework gates with prerequisite unlocking and role-based completion. Tasks are ad hoc operational follow-ups assigned to a specific person. Use this tab for assurance progress; use Tasks for one-off work.
+        </AlertDescription>
+      </Alert>
+
+      <div className="grid gap-3 md:grid-cols-4">
+        <WorkflowMetric label="Progress" value={`${Math.round(workflow.progress_percent ?? 0)}%`} helper={`${completedCount}/${totalCount} complete`} />
+        <WorkflowMetric label="Current milestone" value={currentStepTitle || formatDisplayLabel(workflow.current_step_code)} helper="Unlocked by prerequisites" />
+        <WorkflowMetric label="Waiting on my role" value={String(myPendingActions.length)} helper="Available now" emphasized={myPendingActions.length > 0} />
+        <WorkflowMetric label="Blocked" value={String(blockedCount)} helper="Needs earlier milestones" />
+      </div>
+
       <SectionCard
         title={workflow.template_name || "Assessment workflow"}
-        description={`${workflow.completed_actions} of ${workflow.total_actions} tasks complete. Current step: ${formatDisplayLabel(workflow.current_step_code)}`}
+        description="Role-specific actions unlock as prerequisites are completed."
         padding="compact"
       >
-        <ProgressBar value={workflow.progress_percent ?? 0} size="md" />
+        <Progress value={workflow.progress_percent ?? 0} />
       </SectionCard>
 
-      <div className="space-y-4">
+      {myPendingActions.length > 0 && (
+        <SectionCard title="My next actions" description="Actions currently available to your role." padding="compact">
+          <div className="grid gap-2 lg:grid-cols-2">
+            {myPendingActions.map((action: any) => (
+              <WorkflowActionCard key={action.id} action={action} compact />
+            ))}
+          </div>
+        </SectionCard>
+      )}
+
+      <Accordion className="space-y-3" defaultValue={workflow.current_step_code ? [workflow.current_step_code] : undefined}>
         {(workflow.steps ?? []).map((step: any, index: number) => {
-          const actions = step.actions ?? [];
-          const completed = actions.filter((action: any) => action.status === "COMPLETED").length;
+          const stepActions = step.actions ?? [];
+          const completed = stepActions.filter((action: any) => action.status === "COMPLETED").length;
           const isCurrent = workflow.current_step_code === step.code;
+          const available = stepActions.filter((action: any) => ["AVAILABLE", "IN_PROGRESS"].includes(action.status)).length;
 
           return (
-            <Card key={step.code} className={isCurrent ? "border-primary/50 shadow-sm" : ""}>
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${isCurrent ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-                      {index + 1}
+            <AccordionItem key={step.code} value={step.code} className={`rounded-xl border bg-card px-4 ${isCurrent ? "border-primary/50 shadow-sm" : ""}`}>
+              <AccordionTrigger className="hover:no-underline">
+                <div className="flex w-full items-start justify-between gap-4 pr-3">
+                  <div className="flex items-start gap-3 text-left">
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${isCurrent ? "bg-primary text-primary-foreground" : completed === stepActions.length ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+                      {completed === stepActions.length ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="font-semibold">{step.title}</h3>
                         {isCurrent && <Badge>Current</Badge>}
+                        {available > 0 && <Badge variant="secondary">{available} available</Badge>}
                       </div>
                       {step.description && (
-                        <p className="text-sm text-muted-foreground mt-1">{step.description}</p>
+                        <p className="mt-1 text-sm font-normal text-muted-foreground">{step.description}</p>
                       )}
                     </div>
                   </div>
-                  <Badge variant={completed === actions.length ? "default" : "secondary"}>
-                    {completed}/{actions.length} complete
+                  <Badge variant={completed === stepActions.length ? "default" : "secondary"}>
+                    {completed}/{stepActions.length}
                   </Badge>
                 </div>
-
-                <div className="space-y-2">
-                  {actions.map((action: any) => (
-                    <WorkflowActionRow key={action.id} action={action} />
-                  ))}
+              </AccordionTrigger>
+              <AccordionContent className="pb-4">
+                <div className="overflow-hidden rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Action</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Roles</TableHead>
+                        <TableHead className="text-right">Next step</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stepActions.map((action: any) => (
+                        <WorkflowActionRow key={action.id} action={action} />
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              </CardContent>
-            </Card>
+              </AccordionContent>
+            </AccordionItem>
           );
         })}
+      </Accordion>
+    </div>
+  );
+}
+
+function WorkflowMetric({ label, value, helper, emphasized = false }: { label: string; value: string; helper: string; emphasized?: boolean }) {
+  return (
+    <Card className={emphasized ? "border-primary/40 bg-primary/5" : ""}>
+      <CardContent className="p-4">
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className="mt-1 text-2xl font-semibold">{value}</div>
+        <div className="mt-1 text-xs text-muted-foreground">{helper}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function WorkflowActionCard({ action, compact = false }: { action: any; compact?: boolean }) {
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={workflowStatusVariant(action.status)} className="text-[10px]">
+              {formatDisplayLabel(action.status)}
+            </Badge>
+            {action.step_title && <span className="text-xs text-muted-foreground">{action.step_title}</span>}
+          </div>
+          <h4 className="text-sm font-medium">{action.title}</h4>
+          {!compact && action.description && <p className="text-sm text-muted-foreground">{action.description}</p>}
+        </div>
+        <CompleteWorkflowActionButton action={action} />
       </div>
     </div>
   );
 }
 
 function WorkflowActionRow({ action }: { action: any }) {
-  const canComplete = Boolean(action.can_complete);
+  const roles = (action.submit_roles?.length ? action.submit_roles : action.assigned_roles ?? []).map(formatDisplayLabel).join(", ");
+  const blockedBy = action.prerequisite_codes?.length ? action.prerequisite_codes.map(formatDisplayLabel).join(", ") : "Earlier actions";
 
   return (
-    <div className="rounded-lg border border-border bg-card p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={workflowStatusVariant(action.status)} className="text-[10px]">
-              {formatDisplayLabel(action.status)}
-            </Badge>
-            <h4 className="text-sm font-medium">{action.title}</h4>
-          </div>
-          {action.description && (
-            <p className="text-sm text-muted-foreground mt-1">{action.description}</p>
-          )}
-          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            {(action.assigned_roles ?? []).length > 0 && (
-              <span>Assigned: {(action.assigned_roles ?? []).map(formatDisplayLabel).join(", ")}</span>
-            )}
-            {(action.required_evidence ?? []).length > 0 && (
-              <span>Required: {(action.required_evidence ?? []).join(", ")}</span>
-            )}
+    <TableRow>
+      <TableCell className="align-top">
+        <div className="space-y-1">
+          <div className="font-medium">{action.title}</div>
+          {action.description && <div className="text-sm text-muted-foreground">{action.description}</div>}
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {action.required_evidence?.length > 0 && <span>Evidence: {action.required_evidence.join(", ")}</span>}
             {action.completed_at && <span>Completed {new Date(action.completed_at).toLocaleDateString()}</span>}
           </div>
         </div>
-        {canComplete && (
-          <Form method="post" className="shrink-0">
-            <input type="hidden" name="intent" value="complete-workflow-action" />
-            <input type="hidden" name="action_instance_id" value={action.id} />
-            <Button type="submit" size="sm" variant="outline" className="gap-1.5">
-              <Save className="w-3.5 h-3.5" />
-              Mark done
-            </Button>
-          </Form>
+      </TableCell>
+      <TableCell className="align-top">
+        <Badge variant={workflowStatusVariant(action.status)} className="text-[10px]">
+          {formatDisplayLabel(action.status)}
+        </Badge>
+      </TableCell>
+      <TableCell className="align-top text-sm text-muted-foreground">
+        <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" />{roles || "Any permitted role"}</span>
+      </TableCell>
+      <TableCell className="align-top text-right">
+        {action.can_complete ? (
+          <CompleteWorkflowActionButton action={action} />
+        ) : action.status === "COMPLETED" ? (
+          <span className="inline-flex items-center gap-1 text-sm text-primary"><CheckCircle2 className="h-4 w-4" />Done</span>
+        ) : action.status === "BLOCKED" ? (
+          <Tooltip>
+            <TooltipTrigger>
+              <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><Lock className="h-4 w-4" />Blocked</span>
+            </TooltipTrigger>
+            <TooltipContent>{blockedBy}</TooltipContent>
+          </Tooltip>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-sm text-muted-foreground"><CircleDot className="h-4 w-4" />Not assigned to you</span>
         )}
-      </div>
-    </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function getWorkflowActionCode(action: any) {
+  return action.action_code || action.code || "";
+}
+
+function getWorkflowActionCta(action: any) {
+  const code = getWorkflowActionCode(action);
+  if (["supplier_questionnaire_submitted", "questionnaire_submitted", "self_assessment_submitted"].includes(code)) {
+    return {
+      kind: "link" as const,
+      label: "Open questionnaire",
+      to: `/assessments/${action.assessment}/questionnaire`,
+    };
+  }
+  if (["evidence_uploaded", "evidence_submitted", "due_diligence_document_uploaded"].includes(code)) {
+    return {
+      kind: "link" as const,
+      label: "Upload evidence",
+      to: `/assessments/${action.assessment}/questionnaire`,
+    };
+  }
+  return {
+    kind: "complete" as const,
+    label: "Complete action",
+  };
+}
+
+function CompleteWorkflowActionButton({ action }: { action: any }) {
+  const fetcher = useFetcher<typeof action>();
+  const isSubmitting = fetcher.state !== "idle";
+  const cta = getWorkflowActionCta(action);
+
+  if (cta.kind === "link") {
+    return (
+      <Link to={cta.to} className="shrink-0">
+        <Button size="sm" variant="default" className="gap-1.5">
+          <FileText className="h-3.5 w-3.5" />
+          {cta.label}
+        </Button>
+      </Link>
+    );
+  }
+
+  return (
+    <fetcher.Form method="post" className="shrink-0">
+      <input type="hidden" name="intent" value="complete-workflow-action" />
+      <input type="hidden" name="action_instance_id" value={action.id} />
+      <Button type="submit" size="sm" variant="default" className="gap-1.5" disabled={isSubmitting}>
+        {isSubmitting ? <Clock3 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+        {isSubmitting ? "Completing..." : cta.label}
+      </Button>
+    </fetcher.Form>
   );
 }
 
@@ -1015,6 +1104,103 @@ const taskStatusVariant = (s: string) => {
       return "outline";
   }
 };
+
+function QuestionnaireTab({
+  assessmentId,
+  assessmentLabel,
+}: {
+  assessmentId: string;
+  assessmentLabel: string;
+}) {
+  return (
+    <SectionCard
+      title="Questionnaire"
+      description={`Open the structured ${lowerFirst(assessmentLabel)} questionnaire workspace to collect and submit responses.`}
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h3 className="font-medium">Supplier questionnaire</h3>
+          <p className="text-sm text-muted-foreground">
+            Workflow uses the questionnaire submission as a milestone; answers still live in the dedicated questionnaire workspace.
+          </p>
+        </div>
+        <Link
+          to={`/assessments/${assessmentId}/questionnaire`}
+          className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+        >
+          <FileText className="h-4 w-4" />
+          Open Questionnaire
+        </Link>
+      </div>
+    </SectionCard>
+  );
+}
+
+function FindingsAndCipTab({
+  findings,
+  cipCycles,
+  editingFinding,
+  setEditingFinding,
+}: {
+  findings: any[];
+  cipCycles: any[];
+  editingFinding: string | null;
+  setEditingFinding: (id: string | null) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <Alert className="border-primary/20 bg-primary/5">
+        <Info className="h-4 w-4 text-primary" />
+        <AlertDescription>
+          Findings drive the improvement plan: create findings, agree deadlines and owners, then track CIP cycles and evidence reviews from the workflow.
+        </AlertDescription>
+      </Alert>
+
+      <FindingsTab
+        findings={findings}
+        editingFinding={editingFinding}
+        setEditingFinding={setEditingFinding}
+      />
+
+      <SectionCard title="Continuous Improvement Plan" description="CIP cycles connected to findings and corrective actions.">
+        {cipCycles.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No CIP cycles configured"
+            description="Continuous Improvement cycles will appear here once findings move into corrective action tracking."
+          />
+        ) : (
+          <div className="space-y-3">
+            {cipCycles.map((c: any) => (
+              <Card key={c.id}>
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">{c.label}</h4>
+                    <Badge variant={c.status === "ACTIVE" ? "default" : "secondary"}>
+                      {c.status}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground">Period</div>
+                      <div className="font-medium">{c.deadline_period_months} months</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Start Date</div>
+                      <div className="font-medium">
+                        {c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
 
 function FindingsTab({
   findings,
@@ -1266,36 +1452,3 @@ const findingStatusVariant = (s: string) => {
       return "outline";
   }
 };
-
-function PlanDetails({
-  plan,
-  terminology,
-}: {
-  plan: any;
-  terminology: TerminologyLabels;
-}) {
-  return (
-    <div className="space-y-4 text-sm">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <DetailItem label={`${terminology.site} Visit Start`} value={plan.site_assessment_start} />
-        <DetailItem label={`${terminology.site} Visit End`} value={plan.site_assessment_end} />
-        <DetailItem label={`Draft ${terminology.report}`} value={plan.draft_report_deadline} />
-        <DetailItem label={`Final ${terminology.report}`} value={plan.final_report_deadline} />
-      </div>
-      {plan.notes && (
-        <p className="text-sm text-muted-foreground pt-4 border-t">{plan.notes}</p>
-      )}
-    </div>
-  );
-}
-
-function DetailItem({ label, value }: { label: string; value?: string }) {
-  return (
-    <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-medium mt-0.5">
-        {value ? new Date(value).toLocaleDateString() : "—"}
-      </div>
-    </div>
-  );
-}

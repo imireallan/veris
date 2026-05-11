@@ -272,7 +272,29 @@ class FrameworkImportService:
                         text=prov["description"],
                         order=idx,
                         category=category_label,
+                        hierarchy=[
+                            {
+                                "level": "principle",
+                                "code": prov["principle_sequence"],
+                                "label": prov["principle_name"],
+                            },
+                            {
+                                "level": "category",
+                                "code": prov["category_sequence"],
+                                "label": prov["category_name"],
+                            },
+                            {
+                                "level": "provision",
+                                "code": prov["provision_code"],
+                                "label": (
+                                    f"Provision {prov['provision_code']}"
+                                    if prov["provision_code"]
+                                    else "Provision"
+                                ),
+                            },
+                        ],
                         scoring_criteria={
+                            "type": "select_one",
                             "rating_choices": prov["rating_choices"],
                             "provision_code": prov["provision_code"],
                         },

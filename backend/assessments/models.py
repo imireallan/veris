@@ -439,18 +439,29 @@ class AssessmentQuestion(models.Model):
     text = models.TextField()
     order = models.PositiveIntegerField(default=0)
     category = models.CharField(max_length=200, blank=True, default="")
+    hierarchy = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=(
+            "Ordered display hierarchy for large questionnaires, e.g. "
+            "Bettercoal Principle → Category → Provision, EO100 Principle → Objective → PT, "
+            "or CGWG Section → Question. Items use {level, code, label}."
+        ),
+    )
     scoring_criteria = models.JSONField(default=dict)
     is_required = models.BooleanField(default=True)
 
-    # EO100 performance target level
+    # EO100 performance target level. Null for non-EO100 frameworks.
     performance_target_level = models.IntegerField(
-        default=1,
+        null=True,
+        blank=True,
+        default=None,
         choices=[
             (1, "PT1 - Minimum Compliance"),
             (2, "PT2 - Good Practice"),
             (3, "PT3 - Best Practice"),
         ],
-        help_text="EO100 performance target level",
+        help_text="EO100 performance target level; blank for non-EO100 questions",
     )
 
     # External question ID for legacy/migration (e.g., EO100: "100.1.1.1")

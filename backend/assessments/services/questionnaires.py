@@ -55,6 +55,7 @@ def ensure_assessment_questionnaire_snapshots(
                     text=template_question.text,
                     order=template_question.order,
                     category=template_question.category,
+                    hierarchy=template_question.hierarchy,
                     scoring_criteria=template_question.scoring_criteria,
                     is_required=template_question.is_required,
                     performance_target_level=template_question.performance_target_level,
@@ -151,7 +152,7 @@ def _required_answer_counts(assessment: Assessment) -> tuple[int, int, int]:
             assessment=assessment,
             question_id__in=required_question_ids,
         )
-        .exclude(answer_text="")
+        .exclude(answer_text="", operator_answer="")
         .values_list("question_id", flat=True)
     )
     required_total = len(required_questions)

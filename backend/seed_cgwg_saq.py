@@ -264,7 +264,7 @@ def seed_cgwg_saq():
             category=q_data["category"],
             scoring_criteria=q_data["scoring_criteria"],
             is_required=True,
-            performance_target_level=1,  # Default for CGWG
+            performance_target_level=None,
             framework_mappings=[],
         )
         print(f"  [{q_data['category']}] Q{q_data['order']}: {q_data['text'][:60]}...")

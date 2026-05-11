@@ -184,6 +184,7 @@ class AssessmentTemplateViewSet(viewsets.ModelViewSet):
                     text=question.text,
                     order=question.order,
                     category=question.category,
+                    hierarchy=question.hierarchy,
                     scoring_criteria=question.scoring_criteria,
                     is_required=question.is_required,
                     framework_mappings=question.framework_mappings,

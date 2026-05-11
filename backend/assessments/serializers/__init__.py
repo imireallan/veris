@@ -189,6 +189,7 @@ class AssessmentQuestionSerializer(serializers.ModelSerializer):
             "text",
             "order",
             "category",
+            "hierarchy",
             "scoring_criteria",
             "is_required",
             "performance_target_level",
@@ -320,6 +321,20 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             "assessment": {"required": False},
         }
+
+    def validate(self, attrs):
+        """Treat answer_text and operator_answer as aliases for MVP saves.
+
+        Legacy questionnaire code paths and AI validation still read/write answer_text,
+        while the durable Veris response model has explicit operator fields. Keep both
+        populated until role-specific response UIs are split.
+        """
+        attrs = super().validate(attrs)
+        if "answer_text" in attrs and "operator_answer" not in attrs:
+            attrs["operator_answer"] = attrs.get("answer_text") or ""
+        elif "operator_answer" in attrs and "answer_text" not in attrs:
+            attrs["answer_text"] = attrs.get("operator_answer") or ""
+        return attrs
 
 
 class AIInsightSerializer(serializers.ModelSerializer):

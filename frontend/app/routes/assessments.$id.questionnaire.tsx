@@ -25,6 +25,8 @@ import {
   CardContent, 
   Badge, 
   Button,
+  Input,
+  Textarea,
   Progress,
   Separator,
   Breadcrumb,
@@ -50,6 +52,7 @@ interface QuestionnaireQuestion {
   text: string;
   description?: string | null;
   category?: string | null;
+  hierarchy?: Array<{ level?: string; code?: string | number | null; label?: string | null }>;
   scoring_criteria?: Record<string, unknown> | null;
   framework_mappings?: FrameworkMapping[];
   external_question_id?: string | null;
@@ -61,6 +64,7 @@ interface QuestionnaireResponse {
   id?: string;
   question: string;
   answer_text?: string;
+  operator_answer?: string;
   validation_status?: string;
   confidence_score?: number | null;
   ai_score_suggestion?: number | null;
@@ -101,13 +105,121 @@ function getQuestionCode(question: QuestionnaireQuestion, index: number) {
   return question.external_question_id || `Q${index + 1}`;
 }
 
+type QuestionGroup = {
+  key: string;
+  title: string;
+  subtitle?: string;
+  questions: QuestionnaireQuestion[];
+};
+
+function formatHierarchyItem(item: { code?: string | number | null; label?: string | null }) {
+  const code = item.code == null ? "" : String(item.code).trim();
+  const label = (item.label || "").trim();
+  if (code && label) return `${code}. ${label}`;
+  return label || code;
+}
+
+function getQuestionGroups(questions: QuestionnaireQuestion[]): QuestionGroup[] {
+  const groups = new Map<string, QuestionGroup>();
+
+  for (const question of questions) {
+    const hierarchy = Array.isArray(question.hierarchy) ? question.hierarchy : [];
+    const primary = hierarchy[0];
+    const secondary = hierarchy[1];
+    const fallbackCategory = question.category || "General";
+    const title = primary ? formatHierarchyItem(primary) : fallbackCategory;
+    const subtitle = secondary ? formatHierarchyItem(secondary) : undefined;
+    const key = [primary?.level, primary?.code, primary?.label, secondary?.level, secondary?.code, secondary?.label, fallbackCategory]
+      .filter((part) => part != null && String(part).trim() !== "")
+      .join("|") || fallbackCategory;
+
+    if (!groups.has(key)) {
+      groups.set(key, { key, title, subtitle, questions: [] });
+    }
+    groups.get(key)!.questions.push(question);
+  }
+
+  return Array.from(groups.values());
+}
+
+type QuestionnaireInputType = "text" | "short_text" | "integer" | "number" | "date" | "select_one" | "select_multiple" | "files";
+
+function normalizeInputType(question: QuestionnaireQuestion): QuestionnaireInputType {
+  const criteria = question.scoring_criteria || {};
+  const rawType = criteria.type || criteria.input_type || criteria.response_type || criteria.question_type;
+  const normalized = typeof rawType === "string" ? rawType.toLowerCase().replace(/[\s-]/g, "_") : "";
+
+  if (["select_one", "select", "choice", "yes_no", "single_choice", "select_one_checkbox"].includes(normalized)) {
+    return "select_one";
+  }
+  if (["select_multiple", "multi_select", "multiple_choice", "checkboxes"].includes(normalized)) {
+    return "select_multiple";
+  }
+  if (["integer", "number", "score"].includes(normalized)) return normalized === "integer" ? "integer" : "number";
+  if (normalized === "date") return "date";
+  if (normalized === "files" || normalized === "file") return "files";
+  if (normalized === "short_text") return "short_text";
+  if (Array.isArray(criteria.choices) || Array.isArray(criteria.options) || Array.isArray(criteria.rating_choices)) return "select_one";
+  if (criteria.min != null || criteria.max != null) return "number";
+  return "text";
+}
+
+function getQuestionChoices(question: QuestionnaireQuestion): Array<{ value: string; label: string }> {
+  const criteria = question.scoring_criteria || {};
+  const rawChoices = criteria.choices || criteria.options || criteria.rating_choices;
+  if (!Array.isArray(rawChoices)) return [];
+
+  return rawChoices
+    .map((choice) => {
+      if (choice && typeof choice === "object") {
+        const item = choice as Record<string, unknown>;
+        const value = item.value ?? item.id ?? item.name ?? item.label;
+        const label = item.label ?? item.name ?? item.value ?? item.id;
+        return value == null ? null : { value: String(value), label: String(label ?? value) };
+      }
+      return choice == null ? null : { value: String(choice), label: String(choice) };
+    })
+    .filter((choice): choice is { value: string; label: string } => Boolean(choice));
+}
+
+function getResponseAnswer(response?: QuestionnaireResponse) {
+  return response?.operator_answer || response?.answer_text || "";
+}
+
+function formatStoredAnswer(answer: string) {
+  if (!answer) return "";
+  try {
+    const parsed = JSON.parse(answer);
+    if (Array.isArray(parsed)) return parsed.join(", ");
+  } catch {
+    // Stored as plain text.
+  }
+  return answer;
+}
+
 function getScoringType(question: QuestionnaireQuestion) {
   const criteria = question.scoring_criteria || {};
-  const type = criteria.type || criteria.input_type || criteria.response_type;
-  if (typeof type === "string") return type.replace(/_/g, " ");
-  if (Array.isArray(criteria.choices) || Array.isArray(criteria.options)) return "choice";
-  if (criteria.min != null || criteria.max != null) return "score";
-  return "narrative";
+  const type = normalizeInputType(question);
+  if (Array.isArray(criteria.rating_choices)) return "rating";
+  if (type === "select_one") return "single choice";
+  if (type === "select_multiple") return "multiple choice";
+  if (type === "integer" || type === "number") return "score";
+  if (type === "short_text") return "short text";
+  return type === "text" ? "narrative" : type.replace(/_/g, " ");
+}
+
+function shouldShowPerformanceTarget(question: QuestionnaireQuestion) {
+  if (!question.performance_target_level) return false;
+
+  const hasPtHierarchy = (question.hierarchy || []).some((item) => {
+    const level = (item.level || "").toLowerCase();
+    return level === "pt" || level === "performance_target" || level === "performance target";
+  });
+
+  const externalId = question.external_question_id || "";
+  const looksLikeEo100Id = /^\d+\.\d+\.\d+\.\d+$/.test(externalId);
+
+  return hasPtHierarchy || looksLikeEo100Id;
 }
 
 function getFrameworkTone(frameworkName?: string | null) {
@@ -317,7 +429,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         return !responses.some(
           (response) =>
             String(response.question) === String(question.id) &&
-            Boolean((response.answer_text || "").trim()),
+            Boolean(getResponseAnswer(response).trim()),
         );
       });
 
@@ -390,7 +502,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       if (targetResponseId) {
         savedResponse = await api.withOrganization.patch(
           `/api/responses/${targetResponseId}/`,
-          { answer_text: answer },
+          { answer_text: answer, operator_answer: answer },
           orgId,
           token,
           request,
@@ -401,6 +513,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           {
             question: questionId,
             answer_text: answer,
+            operator_answer: answer,
           },
           orgId,
           token,
@@ -484,6 +597,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
             assessment: assessmentId,
             question: questionId,
             answer_text: "",
+            operator_answer: "",
             evidence_files: [{
               url: uploadData.url,
               file_name: uploadData.file_name,
@@ -520,6 +634,119 @@ export async function action({ request, params }: ActionFunctionArgs) {
   return { error: "Unknown intent" };
 }
 
+function QuestionnaireAnswerInput({
+  question,
+  value,
+  onChange,
+}: {
+  question: QuestionnaireQuestion;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const inputType = normalizeInputType(question);
+  const choices = getQuestionChoices(question);
+  const criteria = question.scoring_criteria || {};
+  const inputClassName = "w-full px-3 py-2 border rounded-lg text-sm bg-background";
+
+  if (inputType === "select_one" && choices.length > 0) {
+    return (
+      <select
+        name="answer"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={inputClassName}
+      >
+        <option value="">Select an answer...</option>
+        {choices.map((choice) => (
+          <option key={choice.value} value={choice.value}>{choice.label}</option>
+        ))}
+      </select>
+    );
+  }
+
+  if (inputType === "select_multiple" && choices.length > 0) {
+    let selected = new Set<string>();
+    try {
+      const parsed = JSON.parse(value || "[]");
+      selected = new Set(Array.isArray(parsed) ? parsed.map(String) : []);
+    } catch {
+      selected = new Set(value ? value.split(",").map((item) => item.trim()).filter(Boolean) : []);
+    }
+
+    const toggleChoice = (choiceValue: string) => {
+      const next = new Set(selected);
+      if (next.has(choiceValue)) next.delete(choiceValue);
+      else next.add(choiceValue);
+      onChange(JSON.stringify(Array.from(next)));
+    };
+
+    return (
+      <div className="space-y-2 rounded-lg border bg-background p-3">
+        <input type="hidden" name="answer" value={value} />
+        {choices.map((choice) => (
+          <label key={choice.value} className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={selected.has(choice.value)}
+              onChange={() => toggleChoice(choice.value)}
+              className="h-4 w-4 rounded border-muted text-primary focus:ring-primary"
+            />
+            <span>{choice.label}</span>
+          </label>
+        ))}
+      </div>
+    );
+  }
+
+  if (inputType === "integer" || inputType === "number") {
+    return (
+      <Input
+        name="answer"
+        type="number"
+        step={inputType === "integer" ? "1" : "any"}
+        min={criteria.min != null ? String(criteria.min) : undefined}
+        max={criteria.max != null ? String(criteria.max) : undefined}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Enter a score or number..."
+      />
+    );
+  }
+
+  if (inputType === "date") {
+    return (
+      <Input
+        name="answer"
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  }
+
+  if (inputType === "short_text") {
+    return (
+      <Input
+        name="answer"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Provide your answer..."
+      />
+    );
+  }
+
+  return (
+    <Textarea
+      name="answer"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      rows={3}
+      className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
+      placeholder={inputType === "files" ? "Describe the evidence you are uploading..." : "Provide your answer..."}
+    />
+  );
+}
+
 function QuestionCard({
   question,
   index,
@@ -548,7 +775,7 @@ function QuestionCard({
   canEditResponses: boolean;
 }) {
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
-  const [localAnswer, setLocalAnswer] = useState(existingResponse?.answer_text || "");
+  const [localAnswer, setLocalAnswer] = useState(getResponseAnswer(existingResponse));
   const saveFetcher = useFetcher<typeof action>();
   const navigation = useNavigation();
   const { success: toastSuccess, error: toastError, loading: toastLoading, dismiss: dismissToast } = useToast();
@@ -559,8 +786,9 @@ function QuestionCard({
   const isValidating = navigation.state === "submitting" && navigation.formData?.get("intent") === "validate-response";
 
   useEffect(() => {
-    if (isEditing && !localAnswer && existingResponse?.answer_text) {
-      setLocalAnswer(existingResponse.answer_text);
+    const existingAnswer = getResponseAnswer(existingResponse);
+    if (isEditing && !localAnswer && existingAnswer) {
+      setLocalAnswer(existingAnswer);
     }
   }, [isEditing, existingResponse]);
 
@@ -626,7 +854,7 @@ function QuestionCard({
               <Badge variant="outline" className="text-[10px] capitalize">
                 {getScoringType(question)}
               </Badge>
-              {question.performance_target_level ? (
+              {shouldShowPerformanceTarget(question) ? (
                 <Badge variant="outline" className="text-[10px]">
                   PT{question.performance_target_level}
                 </Badge>
@@ -683,7 +911,7 @@ function QuestionCard({
                   variant="outline"
                   size="sm"
                   className="h-7 px-2 text-xs bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50"
-                  disabled={isValidating || !existingResponse.answer_text || !canEditResponses}
+                  disabled={isValidating || !getResponseAnswer(existingResponse) || !canEditResponses}
                 >
                   {isValidating ? (
                     <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -751,14 +979,14 @@ function QuestionCard({
         )}
 
         {/* Read-only view of saved response */}
-        {existingResponse?.answer_text && !isEditing && (
+        {getResponseAnswer(existingResponse) && !isEditing && (
           <div className="p-4 bg-muted/30 rounded-lg text-sm space-y-2 border border-muted">
             <div className="flex items-center gap-2 mb-2">
               <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground">Answer</span>
             </div>
-            <p className="text-sm text-foreground whitespace-pre-wrap">{existingResponse.answer_text}</p>
-            {existingResponse.evidence_files && existingResponse.evidence_files.length > 0 && (
+            <p className="text-sm text-foreground whitespace-pre-wrap">{formatStoredAnswer(getResponseAnswer(existingResponse))}</p>
+            {existingResponse?.evidence_files && existingResponse.evidence_files.length > 0 && (
               <div className="pt-2 border-t border-muted/50">
                 <span className="text-xs font-medium text-muted-foreground">Evidence ({existingResponse.evidence_files.length} file{existingResponse.evidence_files.length === 1 ? "" : "s"}):</span>
                 <ul className="text-xs text-muted-foreground mt-1">
@@ -792,13 +1020,10 @@ function QuestionCard({
             <div className="space-y-3">
               <div className="space-y-1">
                 <label className="text-sm font-medium mb-1 block">Answer</label>
-                <textarea
-                  name="answer"
+                <QuestionnaireAnswerInput
+                  question={question}
                   value={localAnswer}
-                  onChange={(e) => setLocalAnswer(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border rounded-lg text-sm bg-background"
-                  placeholder="Provide your answer..."
+                  onChange={setLocalAnswer}
                 />
               </div>
 
@@ -858,11 +1083,11 @@ export default function QuestionnaireRoute() {
   const terminology = terminologyFromUser(user);
   const assessmentLabel = terminology.assessment;
   const answeredCount = localQuestions.filter((question) =>
-    localResponses.some((response) => String(response.question) === String(question.id) && Boolean(response.answer_text))
+    localResponses.some((response) => String(response.question) === String(question.id) && Boolean(getResponseAnswer(response)))
   ).length;
   const requiredQuestions = localQuestions.filter((question) => question.is_required !== false);
   const unansweredRequiredCount = requiredQuestions.filter((question) =>
-    !localResponses.some((response) => String(response.question) === String(question.id) && Boolean((response.answer_text || "").trim()))
+    !localResponses.some((response) => String(response.question) === String(question.id) && Boolean(getResponseAnswer(response).trim()))
   ).length;
   const questionnaireWorkflowAction = findQuestionnaireWorkflowAction(workflow);
   const fallbackReadiness: QuestionnaireReadiness = {
@@ -917,12 +1142,7 @@ export default function QuestionnaireRoute() {
   const totalPages = Math.max(1, Math.ceil(localQuestions.length / QUESTIONS_PER_PAGE));
   const pageStart = (currentPage - 1) * QUESTIONS_PER_PAGE;
   const paginatedQuestions = localQuestions.slice(pageStart, pageStart + QUESTIONS_PER_PAGE);
-  const questionsByCategory = paginatedQuestions.reduce<Record<string, QuestionnaireQuestion[]>>((acc, question) => {
-    const category = question.category || "General";
-    acc[category] = acc[category] || [];
-    acc[category].push(question);
-    return acc;
-  }, {});
+  const questionGroups = getQuestionGroups(paginatedQuestions);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
@@ -971,6 +1191,7 @@ export default function QuestionnaireRoute() {
       id: responseId,
       question: questionId,
       answer_text: answer,
+      operator_answer: answer,
     });
   };
 
@@ -1139,14 +1360,21 @@ export default function QuestionnaireRoute() {
             <span>Page {currentPage} of {totalPages}</span>
           </div>
 
-          {Object.entries(questionsByCategory).map(([category, categoryQuestions]) => (
-            <section key={category} className="space-y-3">
-              <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">{category}</h3>
-                <Separator className="flex-1" />
+          {questionGroups.map((group) => (
+            <section key={group.key} className="space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="min-w-0 space-y-1">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group.title}
+                  </h3>
+                  {group.subtitle && (
+                    <p className="text-xs text-muted-foreground">{group.subtitle}</p>
+                  )}
+                </div>
+                <Separator className="mt-3 flex-1" />
               </div>
               <div className="grid gap-4">
-                {categoryQuestions.map((q: QuestionnaireQuestion) => {
+                {group.questions.map((q: QuestionnaireQuestion) => {
                   const absoluteIndex = localQuestions.findIndex((question) => question.id === q.id);
                   const response = localResponses.find((r: QuestionnaireResponse) => String(r.question) === String(q.id));
                   return (

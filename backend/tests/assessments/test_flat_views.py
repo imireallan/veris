@@ -222,6 +222,10 @@ class TestFlatAssessmentViewSet:
             organization=self.org1,
             text="Does the supplier have a due diligence policy?",
             category="Governance",
+            hierarchy=[
+                {"level": "section", "code": "A", "label": "Governance"},
+                {"level": "topic", "code": "A1", "label": "Due diligence"},
+            ],
             order=1,
             scoring_criteria={"type": "yes_no"},
             external_question_id="CGWG-1",
@@ -251,6 +255,7 @@ class TestFlatAssessmentViewSet:
         assert snapshot_question.template is None
         assert snapshot_question.source_template_question == template_question
         assert snapshot_question.text == template_question.text
+        assert snapshot_question.hierarchy == template_question.hierarchy
         assert AssessmentResponse.objects.filter(
             assessment=assessment,
             question=snapshot_question,
@@ -768,6 +773,22 @@ class TestFlatAssessmentWorkflowActionRoles:
             data["blocking_prerequisites"][0]["title"]
             == "Site assessment scope submitted"
         )
+
+    def test_questionnaire_readiness_counts_operator_answer_as_answered(self):
+        """Typed questionnaire saves can use operator_answer while legacy paths use answer_text."""
+        self.response.operator_answer = "Meets"
+        self.response.save(update_fields=["operator_answer", "updated_at"])
+        self.client.force_authenticate(user=self.operator)
+
+        response = self.client.get(
+            f"/api/assessments/{self.assessment.id}/questionnaire-readiness/",
+            HTTP_X_ORGANIZATION_ID=str(self.org.id),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["required_answered"] == 1
+        assert data["missing_required_count"] == 0
 
 
 @pytest.mark.django_db

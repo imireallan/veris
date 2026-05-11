@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useLoaderData, Link, Form, redirect, useNavigation, useFetcher, useActionData } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
@@ -15,7 +15,9 @@ import {
   Layers,
   ListChecks,
   Lock,
-  AlertTriangle
+  AlertTriangle,
+  FolderTree,
+  CircleDot,
 } from "lucide-react";
 import { 
   Card, 
@@ -45,6 +47,7 @@ import { FrameworkMappingBadge, type FrameworkMapping } from "~/components/Frame
 import { FrameworkMappingModal } from "~/components/FrameworkMappingModal";
 import { useToast } from "~/hooks/use-toast";
 import { terminologyFromUser, lowerFirst } from "~/lib/terminology";
+import { cn } from "~/lib/utils";
 import type { User } from "~/types";
 
 interface QuestionnaireQuestion {
@@ -112,11 +115,161 @@ type QuestionGroup = {
   questions: QuestionnaireQuestion[];
 };
 
+type HierarchyItem = { level?: string; code?: string | number | null; label?: string | null };
+
+type NavigationScopeType = "all" | "principle" | "category" | "provision";
+
+type NavigationScope = {
+  type: NavigationScopeType;
+  key: string;
+  title: string;
+  subtitle?: string;
+  questionIds: string[];
+};
+
+type ProvisionNode = {
+  key: string;
+  title: string;
+  subtitle?: string;
+  questionIds: string[];
+  order: number;
+};
+
+type CategoryNode = {
+  key: string;
+  title: string;
+  subtitle?: string;
+  questionIds: string[];
+  provisions: ProvisionNode[];
+  order: number;
+};
+
+type PrincipleNode = {
+  key: string;
+  title: string;
+  subtitle?: string;
+  questionIds: string[];
+  categories: CategoryNode[];
+  order: number;
+};
+
+type QuestionnaireNavigationTree = {
+  principles: PrincipleNode[];
+  allQuestionIds: string[];
+};
+
 function formatHierarchyItem(item: { code?: string | number | null; label?: string | null }) {
   const code = item.code == null ? "" : String(item.code).trim();
   const label = (item.label || "").trim();
   if (code && label) return `${code}. ${label}`;
   return label || code;
+}
+
+function findHierarchyItem(hierarchy: HierarchyItem[], level: string, fallbackIndex: number) {
+  const normalizedLevel = level.toLowerCase();
+  return hierarchy.find((item) => (item.level || "").toLowerCase() === normalizedLevel) || hierarchy[fallbackIndex];
+}
+
+function makeHierarchyKey(prefix: string, item: HierarchyItem | undefined, fallback: string) {
+  const level = item?.level || prefix;
+  const code = item?.code == null ? "" : String(item.code).trim();
+  const label = (item?.label || "").trim();
+  return [prefix, level, code, label, fallback]
+    .filter((part) => String(part).trim() !== "")
+    .join("|");
+}
+
+function getQuestionAnsweredCount(questionIds: string[], responses: QuestionnaireResponse[]) {
+  const answeredIds = new Set(
+    responses
+      .filter((response) => Boolean(getResponseAnswer(response).trim()))
+      .map((response) => String(response.question)),
+  );
+  return questionIds.filter((id) => answeredIds.has(String(id))).length;
+}
+
+function getQuestionnaireNavigationTree(questions: QuestionnaireQuestion[]): QuestionnaireNavigationTree {
+  const principleMap = new Map<string, PrincipleNode>();
+  const categoryMaps = new Map<string, Map<string, CategoryNode>>();
+  const provisionMaps = new Map<string, Map<string, ProvisionNode>>();
+
+  questions.forEach((question, index) => {
+    const hierarchy = Array.isArray(question.hierarchy) ? question.hierarchy : [];
+    const fallbackCategory = question.category || "General";
+    const principle = findHierarchyItem(hierarchy, "principle", 0);
+    const category = findHierarchyItem(hierarchy, "category", 1);
+    const provision = findHierarchyItem(hierarchy, "provision", 2);
+
+    const principleTitle = principle ? formatHierarchyItem(principle) : fallbackCategory;
+    const categoryTitle = category ? formatHierarchyItem(category) : fallbackCategory;
+    const provisionTitle = provision ? formatHierarchyItem(provision) : getQuestionCode(question, index);
+    const principleKey = makeHierarchyKey("principle", principle, fallbackCategory);
+    const categoryKey = `${principleKey}::${makeHierarchyKey("category", category, fallbackCategory)}`;
+    const provisionKey = `${categoryKey}::${makeHierarchyKey("provision", provision, getQuestionCode(question, index))}`;
+
+    if (!principleMap.has(principleKey)) {
+      principleMap.set(principleKey, {
+        key: principleKey,
+        title: principleTitle,
+        questionIds: [],
+        categories: [],
+        order: index,
+      });
+      categoryMaps.set(principleKey, new Map());
+    }
+
+    const principleNode = principleMap.get(principleKey)!;
+    principleNode.questionIds.push(question.id);
+
+    const categoryMap = categoryMaps.get(principleKey)!;
+    if (!categoryMap.has(categoryKey)) {
+      categoryMap.set(categoryKey, {
+        key: categoryKey,
+        title: categoryTitle,
+        subtitle: category && principle ? undefined : fallbackCategory,
+        questionIds: [],
+        provisions: [],
+        order: index,
+      });
+      provisionMaps.set(categoryKey, new Map());
+    }
+
+    const categoryNode = categoryMap.get(categoryKey)!;
+    categoryNode.questionIds.push(question.id);
+
+    const provisionMap = provisionMaps.get(categoryKey)!;
+    if (!provisionMap.has(provisionKey)) {
+      provisionMap.set(provisionKey, {
+        key: provisionKey,
+        title: provisionTitle,
+        subtitle: provision && provisionTitle !== question.text ? question.text : undefined,
+        questionIds: [],
+        order: index,
+      });
+    }
+
+    provisionMap.get(provisionKey)!.questionIds.push(question.id);
+  });
+
+  const principles = Array.from(principleMap.values()).sort((a, b) => a.order - b.order);
+  principles.forEach((principle) => {
+    const categories = Array.from(categoryMaps.get(principle.key)?.values() || []).sort((a, b) => a.order - b.order);
+    categories.forEach((category) => {
+      category.provisions = Array.from(provisionMaps.get(category.key)?.values() || []).sort((a, b) => a.order - b.order);
+    });
+    principle.categories = categories;
+  });
+
+  return {
+    principles,
+    allQuestionIds: questions.map((question) => question.id),
+  };
+}
+
+function getScopeQuestions(questions: QuestionnaireQuestion[], selectedScope: NavigationScope) {
+  if (selectedScope.type === "all") return questions;
+  const allowedIds = new Set(selectedScope.questionIds.map(String));
+  return questions.filter((question) => allowedIds.has(String(question.id)));
 }
 
 function getQuestionGroups(questions: QuestionnaireQuestion[]): QuestionGroup[] {
@@ -1068,6 +1221,166 @@ function QuestionCard({
   );
 }
 
+function TreeScopeButton({
+  scope,
+  depth = 0,
+  activeScopeKey,
+  responses,
+  onSelectScope,
+}: {
+  scope: NavigationScope;
+  depth?: number;
+  activeScopeKey: string;
+  responses: QuestionnaireResponse[];
+  onSelectScope: (scope: NavigationScope) => void;
+}) {
+  const isActive = activeScopeKey === scope.key;
+  const answeredCount = getQuestionAnsweredCount(scope.questionIds, responses);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelectScope(scope)}
+      className={cn(
+        "group flex w-full items-start justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+        isActive
+          ? "bg-primary/10 text-primary ring-1 ring-primary/20"
+          : "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
+      )}
+      style={{ paddingLeft: `${0.5 + depth * 0.75}rem` }}
+    >
+      <span className="min-w-0 flex-1">
+        <span className={cn("block truncate", isActive ? "font-semibold" : "font-medium")}>{scope.title}</span>
+        {scope.subtitle && (
+          <span className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">{scope.subtitle}</span>
+        )}
+      </span>
+      <span className="shrink-0 rounded-full border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground">
+        {answeredCount}/{scope.questionIds.length}
+      </span>
+    </button>
+  );
+}
+
+function QuestionnaireTreeSidebar({
+  tree,
+  selectedScope,
+  responses,
+  onSelectScope,
+}: {
+  tree: QuestionnaireNavigationTree;
+  selectedScope: NavigationScope;
+  responses: QuestionnaireResponse[];
+  onSelectScope: (scope: NavigationScope) => void;
+}) {
+  const allScope: NavigationScope = {
+    type: "all",
+    key: "all",
+    title: "All provisions",
+    subtitle: "Full questionnaire",
+    questionIds: tree.allQuestionIds,
+  };
+
+  return (
+    <aside className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:overflow-y-auto">
+      <Card className="border-primary/10">
+        <CardHeader className="space-y-2 p-4">
+          <div className="flex items-center gap-2">
+            <FolderTree className="h-4 w-4 text-primary" />
+            <CardTitle className="text-base">Question tree</CardTitle>
+          </div>
+          <CardDescription className="text-xs">
+            Navigate by Principle → Category → Provision.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 p-4 pt-0">
+          <TreeScopeButton
+            scope={allScope}
+            activeScopeKey={selectedScope.key}
+            responses={responses}
+            onSelectScope={onSelectScope}
+          />
+
+          <Separator />
+
+          <div className="space-y-2">
+            {tree.principles.map((principle) => (
+              <details key={principle.key} open className="group/principle space-y-1">
+                <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold text-foreground hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
+                  <CircleDot className="h-3 w-3 text-primary" />
+                  <span className="min-w-0 flex-1 truncate">{principle.title}</span>
+                  <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                    {principle.questionIds.length}
+                  </Badge>
+                </summary>
+
+                <TreeScopeButton
+                  scope={{
+                    type: "principle",
+                    key: principle.key,
+                    title: `All in ${principle.title}`,
+                    questionIds: principle.questionIds,
+                  }}
+                  depth={1}
+                  activeScopeKey={selectedScope.key}
+                  responses={responses}
+                  onSelectScope={onSelectScope}
+                />
+
+                <div className="space-y-1 border-l border-border/70 pl-2 ml-3">
+                  {principle.categories.map((category) => (
+                    <details key={category.key} open className="space-y-1">
+                      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-primary/5 hover:text-foreground [&::-webkit-details-marker]:hidden">
+                        <span className="min-w-0 flex-1 truncate">{category.title}</span>
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                          {category.questionIds.length}
+                        </Badge>
+                      </summary>
+
+                      <TreeScopeButton
+                        scope={{
+                          type: "category",
+                          key: category.key,
+                          title: `All in ${category.title}`,
+                          subtitle: principle.title,
+                          questionIds: category.questionIds,
+                        }}
+                        depth={2}
+                        activeScopeKey={selectedScope.key}
+                        responses={responses}
+                        onSelectScope={onSelectScope}
+                      />
+
+                      <div className="space-y-1 border-l border-border/60 pl-2 ml-3">
+                        {category.provisions.map((provision) => (
+                          <TreeScopeButton
+                            key={provision.key}
+                            scope={{
+                              type: "provision",
+                              key: provision.key,
+                              title: provision.title,
+                              subtitle: provision.subtitle,
+                              questionIds: provision.questionIds,
+                            }}
+                            depth={3}
+                            activeScopeKey={selectedScope.key}
+                            responses={responses}
+                            onSelectScope={onSelectScope}
+                          />
+                        ))}
+                      </div>
+                    </details>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </aside>
+  );
+}
+
 export default function QuestionnaireRoute() {
   const { assessmentId, assessment, orgId, questions, responses, workflow, readiness, user } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -1079,6 +1392,14 @@ export default function QuestionnaireRoute() {
   const [localQuestions, setLocalQuestions] = useState<QuestionnaireQuestion[]>(questions);
   const [localResponses, setLocalResponses] = useState<QuestionnaireResponse[]>(responses);
   const [currentPage, setCurrentPage] = useState(1);
+  const navigationTree = useMemo(() => getQuestionnaireNavigationTree(localQuestions), [localQuestions]);
+  const [selectedScope, setSelectedScope] = useState<NavigationScope>({
+    type: "all",
+    key: "all",
+    title: "All provisions",
+    subtitle: "Full questionnaire",
+    questionIds: questions.map((question: QuestionnaireQuestion) => question.id),
+  });
 
   const terminology = terminologyFromUser(user);
   const assessmentLabel = terminology.assessment;
@@ -1139,14 +1460,45 @@ export default function QuestionnaireRoute() {
   const canSubmitQuestionnaire = localQuestions.length > 0 && Boolean(readinessState.can_submit);
   const isSubmittingQuestionnaire = navigation.state === "submitting" && navigation.formData?.get("intent") === "submit-questionnaire";
   const completionPercent = localQuestions.length ? Math.round((answeredCount / localQuestions.length) * 100) : 0;
-  const totalPages = Math.max(1, Math.ceil(localQuestions.length / QUESTIONS_PER_PAGE));
+  const scopedQuestions = getScopeQuestions(localQuestions, selectedScope);
+  const navigationQuestionIdsKey = navigationTree.allQuestionIds.join("|");
+  const totalPages = Math.max(1, Math.ceil(scopedQuestions.length / QUESTIONS_PER_PAGE));
   const pageStart = (currentPage - 1) * QUESTIONS_PER_PAGE;
-  const paginatedQuestions = localQuestions.slice(pageStart, pageStart + QUESTIONS_PER_PAGE);
+  const paginatedQuestions = scopedQuestions.slice(pageStart, pageStart + QUESTIONS_PER_PAGE);
   const questionGroups = getQuestionGroups(paginatedQuestions);
 
   useEffect(() => {
     if (currentPage > totalPages) setCurrentPage(totalPages);
   }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    if (selectedScope.type === "all") {
+      const isCurrent = selectedScope.questionIds.join("|") === navigationQuestionIdsKey;
+      if (!isCurrent) {
+        setSelectedScope((scope) => ({ ...scope, questionIds: navigationTree.allQuestionIds }));
+      }
+      return;
+    }
+
+    const knownQuestionIds = new Set(navigationTree.allQuestionIds.map(String));
+    const scopeStillValid = selectedScope.questionIds.some((id) => knownQuestionIds.has(String(id)));
+    if (!scopeStillValid) {
+      setSelectedScope({
+        type: "all",
+        key: "all",
+        title: "All provisions",
+        subtitle: "Full questionnaire",
+        questionIds: navigationTree.allQuestionIds,
+      });
+      setCurrentPage(1);
+    }
+  }, [navigationQuestionIdsKey, navigationTree.allQuestionIds, selectedScope]);
+
+  const handleSelectScope = (scope: NavigationScope) => {
+    setSelectedScope(scope);
+    setCurrentPage(1);
+    setEditingIndex(null);
+  };
 
   const handleAddMapping = (questionId: string) => {
     setSelectedQuestionId(questionId);
@@ -1208,7 +1560,7 @@ export default function QuestionnaireRoute() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto py-8 space-y-6">
+    <div className="mx-auto max-w-7xl py-8 space-y-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -1352,97 +1704,134 @@ export default function QuestionnaireRoute() {
           <p className="text-muted-foreground">No questions associated with this {lowerFirst(assessmentLabel)}.</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              Showing {pageStart + 1}-{Math.min(pageStart + QUESTIONS_PER_PAGE, localQuestions.length)} of {localQuestions.length}
-            </span>
-            <span>Page {currentPage} of {totalPages}</span>
-          </div>
+        <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">
+          <QuestionnaireTreeSidebar
+            tree={navigationTree}
+            selectedScope={selectedScope}
+            responses={localResponses}
+            onSelectScope={handleSelectScope}
+          />
 
-          {questionGroups.map((group) => (
-            <section key={group.key} className="space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="min-w-0 space-y-1">
-                  <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {group.title}
-                  </h3>
-                  {group.subtitle && (
-                    <p className="text-xs text-muted-foreground">{group.subtitle}</p>
-                  )}
+          <div className="min-w-0 space-y-6">
+            <div className="flex flex-col gap-2 rounded-lg border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Current scope
+                </p>
+                <h2 className="truncate text-lg font-semibold">{selectedScope.title}</h2>
+                {selectedScope.subtitle && (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{selectedScope.subtitle}</p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
+                <Badge variant="outline">
+                  {getQuestionAnsweredCount(scopedQuestions.map((question) => question.id), localResponses)}/{scopedQuestions.length} answered
+                </Badge>
+                <span>Page {currentPage} of {totalPages}</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>
+                Showing {scopedQuestions.length === 0 ? 0 : pageStart + 1}-{Math.min(pageStart + QUESTIONS_PER_PAGE, scopedQuestions.length)} of {scopedQuestions.length}
+              </span>
+              {selectedScope.type !== "all" && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => handleSelectScope({
+                  type: "all",
+                  key: "all",
+                  title: "All provisions",
+                  subtitle: "Full questionnaire",
+                  questionIds: navigationTree.allQuestionIds,
+                })}>
+                  Clear scope
+                </Button>
+              )}
+            </div>
+
+            {questionGroups.map((group) => (
+              <section key={group.key} className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="min-w-0 space-y-1">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      {group.title}
+                    </h3>
+                    {group.subtitle && (
+                      <p className="text-xs text-muted-foreground">{group.subtitle}</p>
+                    )}
+                  </div>
+                  <Separator className="mt-3 flex-1" />
                 </div>
-                <Separator className="mt-3 flex-1" />
-              </div>
-              <div className="grid gap-4">
-                {group.questions.map((q: QuestionnaireQuestion) => {
-                  const absoluteIndex = localQuestions.findIndex((question) => question.id === q.id);
-                  const response = localResponses.find((r: QuestionnaireResponse) => String(r.question) === String(q.id));
-                  return (
-                    <QuestionCard
-                      key={q.id}
-                      index={absoluteIndex + 1}
-                      question={q}
-                      existingResponse={response}
-                      isEditing={editingIndex === absoluteIndex}
-                      onEdit={() => setEditingIndex(editingIndex === absoluteIndex ? null : absoluteIndex)}
-                      onSaved={upsertLocalResponse}
-                      onSaveFailed={handleSaveFailed}
-                      onOptimisticSave={handleOptimisticSave}
-                      assessmentId={assessmentId || ""}
-                      orgId={orgId || ""}
-                      onAddMapping={handleAddMapping}
-                      canEditResponses={canEditResponses}
-                    />
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+                <div className="grid gap-4">
+                  {group.questions.map((q: QuestionnaireQuestion) => {
+                    const absoluteIndex = localQuestions.findIndex((question) => question.id === q.id);
+                    const response = localResponses.find((r: QuestionnaireResponse) => String(r.question) === String(q.id));
+                    return (
+                      <QuestionCard
+                        key={q.id}
+                        index={absoluteIndex + 1}
+                        question={q}
+                        existingResponse={response}
+                        isEditing={editingIndex === absoluteIndex}
+                        onEdit={() => setEditingIndex(editingIndex === absoluteIndex ? null : absoluteIndex)}
+                        onSaved={upsertLocalResponse}
+                        onSaveFailed={handleSaveFailed}
+                        onOptimisticSave={handleOptimisticSave}
+                        assessmentId={assessmentId || ""}
+                        orgId={orgId || ""}
+                        onAddMapping={handleAddMapping}
+                        canEditResponses={canEditResponses}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
 
-          {totalPages > 1 && (
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  >
-                    Previous
-                  </Button>
-                </PaginationItem>
-                {Array.from({ length: totalPages }).map((_, index) => {
-                  const page = index + 1;
-                  return (
-                    <PaginationItem key={page}>
-                      <Button
-                        type="button"
-                        variant={page === currentPage ? "default" : "ghost"}
-                        size="icon"
-                        onClick={() => setCurrentPage(page)}
-                        aria-label={`Go to page ${page}`}
-                      >
-                        {page}
-                      </Button>
-                    </PaginationItem>
-                  );
-                })}
-                <PaginationItem>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  >
-                    Next
-                  </Button>
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          )}
+            {totalPages > 1 && (
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                    >
+                      Previous
+                    </Button>
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }).map((_, index) => {
+                    const page = index + 1;
+                    return (
+                      <PaginationItem key={page}>
+                        <Button
+                          type="button"
+                          variant={page === currentPage ? "default" : "ghost"}
+                          size="icon"
+                          onClick={() => setCurrentPage(page)}
+                          aria-label={`Go to page ${page}`}
+                        >
+                          {page}
+                        </Button>
+                      </PaginationItem>
+                    );
+                  })}
+                  <PaginationItem>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                    >
+                      Next
+                    </Button>
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </div>
         </div>
       )}
 

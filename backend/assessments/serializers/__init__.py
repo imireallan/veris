@@ -291,6 +291,12 @@ class AssessmentSerializer(serializers.ModelSerializer):
 
 
 class AssessmentResponseSerializer(serializers.ModelSerializer):
+    question = serializers.PrimaryKeyRelatedField(
+        queryset=AssessmentQuestion.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = AssessmentResponse
         fields = [
@@ -320,7 +326,9 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "organization", "created_at", "updated_at"]
         extra_kwargs = {
             "assessment": {"required": False},
+            "question": {"required": False, "allow_null": True},
         }
+        validators = []
 
     def validate(self, attrs):
         """Treat answer_text and operator_answer as aliases for MVP saves.

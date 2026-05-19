@@ -4,6 +4,7 @@ Parses hierarchy: Principle → Category → Provision
 Creates Framework + AssessmentTemplate + AssessmentQuestions
 """
 
+import re
 import uuid
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -12,6 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
+from assessments.services.hierarchy import build_bettercoal_hierarchy
 
 
 class FrameworkImportService:
@@ -50,6 +52,13 @@ class FrameworkImportService:
         wb = openpyxl.load_workbook(self.file_path, read_only=True, data_only=True)
         ws = wb.active
 
+        rows = list(ws.iter_rows(values_only=True))
+        if rows and self._looks_like_bettercoal_summary(rows):
+            try:
+                return self._parse_bettercoal_summary_rows(rows)
+            finally:
+                wb.close()
+
         provisions = []
         principles_seen = set()
         categories_seen = set()
@@ -66,7 +75,7 @@ class FrameworkImportService:
         current_principle = None
         current_category = None
 
-        for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
+        for row_idx, row in enumerate(rows, start=1):
             if row_idx == 1:
                 # Skip header row
                 continue
@@ -127,6 +136,97 @@ class FrameworkImportService:
             "total_provisions": len(provisions),
         }
 
+        return metadata, provisions
+
+    def _looks_like_bettercoal_summary(self, rows) -> bool:
+        """Detect Bettercoal provision summary sheets.
+
+        These exports are not the generic 7-column import format. Rows commonly
+        look like:
+        Principle text | principle total | principle max score | provision code |
+        provision name | provision total | provision max score
+        """
+        for row in rows[1:8]:
+            cells = [str(cell).strip() if cell is not None else "" for cell in row]
+            if len(cells) >= 5 and cells[0].upper().startswith("PRINCIPLE"):
+                return True
+        return False
+
+    def _parse_principle_number(self, value: str, fallback: int) -> str:
+        match = re.search(r"PRINCIPLE\s+(\d+)", value or "", flags=re.IGNORECASE)
+        if match:
+            return match.group(1)
+        return str(fallback)
+
+    def _parse_bettercoal_summary_rows(self, rows) -> Tuple[Dict, List[Dict]]:
+        """Parse Bettercoal Provision Summary & Rating System spreadsheets.
+
+        This is the format behind files such as "Bettercoal Code 2.0 Provision
+        Summary & Rating System". It has one row per provision and numeric
+        summary columns; those numeric columns must not be rendered as question
+        text or rating choices.
+        """
+        provisions = []
+        principles_seen = set()
+        categories_seen = set()
+        current_principle_label = ""
+        current_principle_code = ""
+
+        for row_idx, raw_row in enumerate(rows, start=1):
+            if row_idx == 1:
+                continue
+
+            cells = [str(cell).strip() if cell is not None else "" for cell in raw_row]
+            if len(cells) < 5 or not any(cells):
+                continue
+            if cells[0].strip().upper() == "TOTAL":
+                continue
+
+            principle_label = cells[0] or current_principle_label
+            if cells[0]:
+                current_principle_label = cells[0]
+                current_principle_code = self._parse_principle_number(
+                    current_principle_label,
+                    len(principles_seen) + 1,
+                )
+
+            provision_code = cells[3]
+            provision_name = cells[4]
+            if not provision_code and not provision_name:
+                continue
+
+            principle_code = current_principle_code or self._parse_principle_number(
+                principle_label,
+                len(principles_seen) + 1,
+            )
+            category_code = provision_code or str(len(categories_seen) + 1)
+            category_name = provision_name or category_code
+            question_text = provision_name or provision_code
+
+            principles_seen.add(principle_code)
+            categories_seen.add(category_code)
+            provisions.append(
+                {
+                    "principle_sequence": principle_code,
+                    "principle_name": principle_label or f"Principle {principle_code}",
+                    "category_sequence": category_code,
+                    "category_name": category_name,
+                    "provision_code": provision_code or category_code,
+                    "description": question_text,
+                    "rating_choices": [0, 1, 2, 3, 4],
+                }
+            )
+
+        name_from_file = self.original_filename.rsplit(".", 1)[0]
+        framework_name = name_from_file.replace("_", " ").replace("-", " ").title()
+        metadata = {
+            "framework_name": framework_name,
+            "framework_version": "1.0.0",
+            "framework_description": f"Imported from {self.original_filename}",
+            "total_principles": len(principles_seen),
+            "total_categories": len(categories_seen),
+            "total_provisions": len(provisions),
+        }
         return metadata, provisions
 
     def _parse_csv(self) -> Tuple[Dict, List[Dict]]:
@@ -272,32 +372,20 @@ class FrameworkImportService:
                         text=prov["description"],
                         order=idx,
                         category=category_label,
-                        hierarchy=[
-                            {
-                                "level": "principle",
-                                "code": prov["principle_sequence"],
-                                "label": prov["principle_name"],
-                            },
-                            {
-                                "level": "category",
-                                "code": prov["category_sequence"],
-                                "label": prov["category_name"],
-                            },
-                            {
-                                "level": "provision",
-                                "code": prov["provision_code"],
-                                "label": (
-                                    f"Provision {prov['provision_code']}"
-                                    if prov["provision_code"]
-                                    else "Provision"
-                                ),
-                            },
-                        ],
+                        hierarchy=build_bettercoal_hierarchy(
+                            principle_code=prov["principle_sequence"],
+                            principle_label=prov["principle_name"],
+                            category_code=prov["category_sequence"],
+                            category_label=prov["category_name"],
+                            provision_code=prov["provision_code"],
+                            provision_label=prov["description"],
+                        ),
                         scoring_criteria={
                             "type": "select_one",
                             "rating_choices": prov["rating_choices"],
                             "provision_code": prov["provision_code"],
                         },
+                        external_question_id=prov["provision_code"],
                         framework_mappings=[
                             {
                                 "framework_id": str(framework.id),

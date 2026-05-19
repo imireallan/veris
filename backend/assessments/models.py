@@ -1,6 +1,7 @@
 import uuid
 
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -602,6 +603,13 @@ class AssessmentResponse(models.Model):
     class Meta:
         db_table = "assessment_responses"
         ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["assessment", "question"],
+                condition=Q(question__isnull=False),
+                name="uniq_assessment_response_per_question",
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if not self.organization_id and self.assessment_id:

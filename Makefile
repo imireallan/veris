@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
 .PHONY: help setup up up-build down down-clean db-up \
-        backend-makemigrations backend-migrate backend-seed backend-shell backend-bash backend-test create-superuser import-framework-dump \
+        backend-makemigrations backend-migrate backend-seed-frameworks backend-backfill-questionnaires backend-backfill-questionnaires-dry-run backend-seed backend-shell backend-bash backend-test create-superuser import-framework-dump \
         frontend-install frontend-logs \
         ai-shell ai-bash ai-test \
         logs logs-backend logs-frontend logs-ai clean \
@@ -81,6 +81,10 @@ full-reset: down-clean ## Wipe everything, rebuild from scratch, migrate + seed
 	docker compose run --rm backend python manage.py seed
 	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
 	$(MAKE) import-framework-dump
+	@echo "\033[33m>>> Seeding framework-specific questionnaires...\033[0m"
+	$(MAKE) backend-seed-frameworks
+	@echo "\033[33m>>> Backfilling assessment questionnaires...\033[0m"
+	$(MAKE) backend-backfill-questionnaires
 	@echo ""
 	@echo "\033[32m========================================\033[0m"
 	@echo "\033[32m  Full reset complete!\033[0m"
@@ -102,6 +106,10 @@ wire: ## Full end-to-end setup: DB → migrations → seed → framework import 
 	docker compose run --rm backend python manage.py seed
 	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
 	$(MAKE) import-framework-dump
+	@echo "\033[33m>>> Seeding framework-specific questionnaires...\033[0m"
+	$(MAKE) backend-seed-frameworks
+	@echo "\033[33m>>> Backfilling assessment questionnaires...\033[0m"
+	$(MAKE) backend-backfill-questionnaires
 	@echo ""
 	@echo "\033[32m========================================\033[0m"
 	@echo "\033[32m  Wire complete! App is ready.\033[0m"
@@ -142,6 +150,10 @@ prod-wire: check-prod-env ## Full production setup: DB → migrations → seed �
 	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py seed
 	@echo "\033[33m>>> Importing legacy framework data...\033[0m"
 	$(MAKE) prod-import-framework-dump
+	@echo "\033[33m>>> Seeding framework-specific questionnaires...\033[0m"
+	$(MAKE) prod-seed-frameworks
+	@echo "\033[33m>>> Backfilling assessment questionnaires...\033[0m"
+	$(MAKE) prod-backfill-questionnaires
 	@echo ""
 	@echo "\033[32m========================================\033[0m"
 	@echo "\033[32m  Production wire complete!\033[0m"
@@ -177,6 +189,15 @@ prod-bash: check-prod-env ## Bash into backend production container
 prod-migrate: check-prod-env ## Run migrations in production
 	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py migrate
 
+prod-seed-frameworks: check-prod-env ## Seed EO100/CGWG framework-specific questionnaire templates in production
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py seed_frameworks
+
+prod-backfill-questionnaires: check-prod-env ## Backfill assessment questionnaire snapshots/responses in production
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py backfill_assessment_questionnaires
+
+prod-backfill-questionnaires-dry-run: check-prod-env ## Preview production questionnaire backfill without writing
+	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py backfill_assessment_questionnaires --dry-run
+
 prod-seed: check-prod-env ## Seed data in production
 	docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend python manage.py seed
 
@@ -194,6 +215,15 @@ backend-makemigrations: ## Create migrations
 
 backend-migrate: ## Apply migrations
 	docker compose run --rm backend python manage.py migrate
+
+backend-seed-frameworks: ## Seed EO100/CGWG framework-specific questionnaire templates
+	docker compose run --rm backend python manage.py seed_frameworks
+
+backend-backfill-questionnaires: ## Backfill assessment questionnaire snapshots/responses
+	docker compose run --rm backend python manage.py backfill_assessment_questionnaires
+
+backend-backfill-questionnaires-dry-run: ## Preview questionnaire backfill without writing
+	docker compose run --rm backend python manage.py backfill_assessment_questionnaires --dry-run
 
 backend-seed: ## Seed DB
 	docker compose run --rm backend python manage.py seed

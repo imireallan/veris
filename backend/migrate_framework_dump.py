@@ -20,6 +20,8 @@ import psycopg2  # noqa: E402
 import psycopg2.extras  # noqa: E402
 from django.utils import timezone  # noqa: E402
 
+from assessments.services.hierarchy import build_bettercoal_hierarchy  # noqa: E402
+
 _db_url = os.environ.get("DATABASE_URL", "postgresql://postgres:***@db:5432/veris")
 _parsed = urlparse(_db_url)
 _PG = {
@@ -54,8 +56,9 @@ def main():
     vc.execute(
         """
         INSERT INTO frameworks (id, name, version, description, categories,
-                                scoring_methodology, reporting_period, created_at, updated_at)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+                                scoring_methodology, reporting_period, metadata,
+                                created_at, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
         ON CONFLICT (id) DO NOTHING""",
         (
             fw_id,
@@ -65,6 +68,7 @@ def main():
             "{}",
             "{}",
             "",
+            json.dumps({"source": "legacy_framework_dump"}),
         ),
     )
     total += 1
@@ -133,7 +137,9 @@ def main():
 
     tc.execute(
         """
-        SELECT cp.id, cp.description, ccp.name as principle, cpcc.name as category,
+        SELECT cp.id, cp.description, ccp.name as principle,
+               ccp.sequence_number as principle_sequence,
+               cpcc.name as category, cpcc.sequence_number as category_sequence,
                cp.sequence_number
         FROM cip_code_cipprovision cp
         JOIN cip_code_cipcategory cpcc ON cp.category_id = cpcc.id
@@ -143,13 +149,21 @@ def main():
     )
     provisions = tc.fetchall()
     for p in provisions:
+        provision_code = f"{p['principle_sequence']}.{p['sequence_number']}"
+        hierarchy = build_bettercoal_hierarchy(
+            principle_code=p["principle_sequence"],
+            principle_label=p["principle"],
+            category_code=p["category_sequence"],
+            category_label=p["category"],
+            provision_code=provision_code,
+        )
         vc.execute(
             """
             INSERT INTO assessment_questions (
-                id, template_id, text, "order", category, scoring_criteria,
-                framework_mappings, is_required
+                id, template_id, text, "order", category, hierarchy,
+                scoring_criteria, external_question_id, framework_mappings, is_required
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, true)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, true)
             ON CONFLICT (id) DO NOTHING""",
             (
                 uuid.uuid4(),
@@ -157,7 +171,9 @@ def main():
                 p["description"] or "",
                 p["sequence_number"],
                 f"{p['principle']} – {p['category']}".strip(),
-                "{}",
+                json.dumps(hierarchy),
+                json.dumps({"type": "select_one", "provision_code": provision_code}),
+                provision_code,
                 "[]",
             ),
         )
@@ -490,9 +506,9 @@ def main():
                 overall_score, risk_level, ai_summary,
                 created_by_id, assigned_to_id, site_id,
                 organization_id, framework_id, template_id, template_version,
-                created_at, updated_at
+                review_stage, created_at, updated_at
             )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),NOW())
             ON CONFLICT (id) DO NOTHING""",
             (
                 aid,
@@ -513,6 +529,7 @@ def main():
                 fw_id,
                 tmpl_id,
                 "1.0.0",
+                "COMPLETED",
             ),
         )
         total += 1

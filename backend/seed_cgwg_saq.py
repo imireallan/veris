@@ -13,6 +13,7 @@ This creates:
 from django.utils import timezone
 
 from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
+from assessments.services.hierarchy import build_cgwg_hierarchy
 
 
 def seed_cgwg_saq():
@@ -262,9 +263,16 @@ def seed_cgwg_saq():
             text=q_data["text"],
             order=q_data["order"],
             category=q_data["category"],
+            hierarchy=build_cgwg_hierarchy(
+                questionnaire_code="cgwg-saq",
+                questionnaire_label="CGWG SAQ",
+                section_code=q_data["category"].lower(),
+                section_label=q_data["category"],
+                question_code=q_data["order"],
+            ),
             scoring_criteria=q_data["scoring_criteria"],
             is_required=True,
-            performance_target_level=None,
+            external_question_id=f"CGWG-{q_data['order']}",
             framework_mappings=[],
         )
         print(f"  [{q_data['category']}] Q{q_data['order']}: {q_data['text'][:60]}...")

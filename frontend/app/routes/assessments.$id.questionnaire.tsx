@@ -133,6 +133,7 @@ type ProvisionNode = {
   subtitle?: string;
   questionIds: string[];
   order: number;
+  sortParts: number[];
 };
 
 type CategoryNode = {
@@ -142,6 +143,7 @@ type CategoryNode = {
   questionIds: string[];
   provisions: ProvisionNode[];
   order: number;
+  sortParts: number[];
 };
 
 type PrincipleNode = {
@@ -151,6 +153,7 @@ type PrincipleNode = {
   questionIds: string[];
   categories: CategoryNode[];
   order: number;
+  sortParts: number[];
 };
 
 type QuestionnaireNavigationTree = {
@@ -170,13 +173,43 @@ function findHierarchyItem(hierarchy: HierarchyItem[], level: string, fallbackIn
   return hierarchy.find((item) => (item.level || "").toLowerCase() === normalizedLevel) || hierarchy[fallbackIndex];
 }
 
-function makeHierarchyKey(prefix: string, item: HierarchyItem | undefined, fallback: string) {
-  const level = item?.level || prefix;
+function normalizeHierarchyPart(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getHierarchyIdentity(prefix: string, item: HierarchyItem | undefined, fallback: string) {
+  const level = normalizeHierarchyPart(item?.level || prefix);
   const code = item?.code == null ? "" : String(item.code).trim();
   const label = (item?.label || "").trim();
-  return [prefix, level, code, label, fallback]
-    .filter((part) => String(part).trim() !== "")
-    .join("|");
+
+  // Prefer level + code for identity. Labels can vary across imported rows for the
+  // same legacy node; including them creates duplicate sidebar entries.
+  if (code) return `${prefix}|${level}|code:${normalizeHierarchyPart(code)}`;
+  if (label) return `${prefix}|${level}|label:${normalizeHierarchyPart(label)}`;
+  return `${prefix}|${level}|fallback:${normalizeHierarchyPart(fallback)}`;
+}
+
+function parseHierarchySortParts(item: HierarchyItem | undefined, fallbackOrder: number) {
+  const raw = item?.code == null ? "" : String(item.code).trim();
+  const matches = raw.match(/\d+(?:\.\d+)*/g);
+  if (!matches?.length) return [fallbackOrder];
+  return matches[0].split(".").map((part) => Number(part));
+}
+
+function compareSortParts(a: number[], b: number[]) {
+  const maxLength = Math.max(a.length, b.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const left = a[index] ?? -1;
+    const right = b[index] ?? -1;
+    if (left !== right) return left - right;
+  }
+  return 0;
+}
+
+function pushUniqueQuestionId(questionIds: string[], questionId: string) {
+  if (!questionIds.some((existingId) => String(existingId) === String(questionId))) {
+    questionIds.push(questionId);
+  }
 }
 
 function getQuestionAnsweredCount(questionIds: string[], responses: QuestionnaireResponse[]) {
@@ -203,9 +236,9 @@ function getQuestionnaireNavigationTree(questions: QuestionnaireQuestion[]): Que
     const principleTitle = principle ? formatHierarchyItem(principle) : fallbackCategory;
     const categoryTitle = category ? formatHierarchyItem(category) : fallbackCategory;
     const provisionTitle = provision ? formatHierarchyItem(provision) : getQuestionCode(question, index);
-    const principleKey = makeHierarchyKey("principle", principle, fallbackCategory);
-    const categoryKey = `${principleKey}::${makeHierarchyKey("category", category, fallbackCategory)}`;
-    const provisionKey = `${categoryKey}::${makeHierarchyKey("provision", provision, getQuestionCode(question, index))}`;
+    const principleKey = getHierarchyIdentity("principle", principle, fallbackCategory);
+    const categoryKey = `${principleKey}::${getHierarchyIdentity("category", category, fallbackCategory)}`;
+    const provisionKey = `${categoryKey}::${getHierarchyIdentity("provision", provision, getQuestionCode(question, index))}`;
 
     if (!principleMap.has(principleKey)) {
       principleMap.set(principleKey, {
@@ -214,12 +247,13 @@ function getQuestionnaireNavigationTree(questions: QuestionnaireQuestion[]): Que
         questionIds: [],
         categories: [],
         order: index,
+        sortParts: parseHierarchySortParts(principle, index),
       });
       categoryMaps.set(principleKey, new Map());
     }
 
     const principleNode = principleMap.get(principleKey)!;
-    principleNode.questionIds.push(question.id);
+    pushUniqueQuestionId(principleNode.questionIds, question.id);
 
     const categoryMap = categoryMaps.get(principleKey)!;
     if (!categoryMap.has(categoryKey)) {
@@ -230,12 +264,13 @@ function getQuestionnaireNavigationTree(questions: QuestionnaireQuestion[]): Que
         questionIds: [],
         provisions: [],
         order: index,
+        sortParts: parseHierarchySortParts(category, index),
       });
       provisionMaps.set(categoryKey, new Map());
     }
 
     const categoryNode = categoryMap.get(categoryKey)!;
-    categoryNode.questionIds.push(question.id);
+    pushUniqueQuestionId(categoryNode.questionIds, question.id);
 
     const provisionMap = provisionMaps.get(categoryKey)!;
     if (!provisionMap.has(provisionKey)) {
@@ -245,24 +280,28 @@ function getQuestionnaireNavigationTree(questions: QuestionnaireQuestion[]): Que
         subtitle: provision && provisionTitle !== question.text ? question.text : undefined,
         questionIds: [],
         order: index,
+        sortParts: parseHierarchySortParts(provision, index),
       });
     }
 
-    provisionMap.get(provisionKey)!.questionIds.push(question.id);
+    pushUniqueQuestionId(provisionMap.get(provisionKey)!.questionIds, question.id);
   });
 
-  const principles = Array.from(principleMap.values()).sort((a, b) => a.order - b.order);
+  const compareNodes = (a: { sortParts: number[]; order: number }, b: { sortParts: number[]; order: number }) =>
+    compareSortParts(a.sortParts, b.sortParts) || a.order - b.order;
+
+  const principles = Array.from(principleMap.values()).sort(compareNodes);
   principles.forEach((principle) => {
-    const categories = Array.from(categoryMaps.get(principle.key)?.values() || []).sort((a, b) => a.order - b.order);
+    const categories = Array.from(categoryMaps.get(principle.key)?.values() || []).sort(compareNodes);
     categories.forEach((category) => {
-      category.provisions = Array.from(provisionMaps.get(category.key)?.values() || []).sort((a, b) => a.order - b.order);
+      category.provisions = Array.from(provisionMaps.get(category.key)?.values() || []).sort(compareNodes);
     });
     principle.categories = categories;
   });
 
   return {
     principles,
-    allQuestionIds: questions.map((question) => question.id),
+    allQuestionIds: Array.from(new Set(questions.map((question) => String(question.id)))),
   };
 }
 
@@ -717,33 +756,53 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
       const uploadData = await uploadResponse.json();
 
-      // Attach to response (update evidence_files array)
-      if (responseId) {
-        // Update existing response
+      // Attach to response (update evidence_files array). Keep this idempotent:
+      // snapshot-backed questionnaires already create blank responses, so a missing
+      // response_id from stale UI should reuse the existing assessment/question row.
+      if (!orgId) {
+        return { error: "Organization ID is required" };
+      }
+
+      let targetResponseId = responseId;
+      if (!targetResponseId) {
+        const existingResponses = await api.withOrganization.get<any[]>(
+          `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
+          orgId,
+          token,
+          request,
+        );
+        const responsesList = Array.isArray(existingResponses)
+          ? existingResponses
+          : (existingResponses as any)?.results ?? [];
+        const existingResponse = responsesList.find(
+          (response: any) => String(response.question) === String(questionId),
+        );
+        targetResponseId = existingResponse?.id ?? "";
+      }
+
+      const evidenceFile = {
+        url: uploadData.url,
+        file_name: uploadData.file_name,
+        file_size: uploadData.file_size,
+      };
+
+      if (targetResponseId) {
         const response = await api.withOrganization.get<any>(
-          `/api/responses/${responseId}/`,
+          `/api/responses/${targetResponseId}/`,
           orgId,
           token,
           request,
         );
         const evidenceFiles = response.evidence_files || [];
-        evidenceFiles.push({
-          url: uploadData.url,
-          file_name: uploadData.file_name,
-          file_size: uploadData.file_size,
-        });
+        evidenceFiles.push(evidenceFile);
         await api.withOrganization.patch(
-          `/api/responses/${responseId}/`,
+          `/api/responses/${targetResponseId}/`,
           { evidence_files: evidenceFiles },
           orgId,
           token,
           request,
         );
       } else {
-        // Create a new response with the evidence file
-        if (!orgId) {
-          return { error: "Organization ID is required" };
-        }
         await api.withOrganization.post(
           `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
           {
@@ -751,11 +810,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
             question: questionId,
             answer_text: "",
             operator_answer: "",
-            evidence_files: [{
-              url: uploadData.url,
-              file_name: uploadData.file_name,
-              file_size: uploadData.file_size,
-            }],
+            evidence_files: [evidenceFile],
           },
           orgId,
           token,

@@ -63,3 +63,5 @@ frontend/build/
 # Terraform plan files
 *.tfplan
 tfplan
+
+.hermes/

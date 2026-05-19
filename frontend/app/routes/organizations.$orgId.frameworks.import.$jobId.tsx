@@ -46,8 +46,9 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   }
 
   // Fetch job status
-  const response = await api.get<any>(
+  const response = await api.withOrganization.get<any>(
     `/api/frameworks/import/${jobId}/status/`,
+    orgId!,
     token,
     request
   ).catch(() => null);

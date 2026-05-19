@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from django.db import transaction
+from django.utils import timezone
+from django.utils.text import slugify
 from rest_framework.exceptions import PermissionDenied
 
 from assessments.models import (
@@ -12,6 +14,7 @@ from assessments.models import (
     AssessmentActionInstance,
     AssessmentQuestion,
     AssessmentResponse,
+    AssessmentTemplate,
 )
 
 QUESTIONNAIRE_WORKFLOW_ACTION_CODES = (
@@ -19,6 +22,85 @@ QUESTIONNAIRE_WORKFLOW_ACTION_CODES = (
     "questionnaire_submitted",
     "self_assessment_submitted",
 )
+
+
+def _framework_template_slug(framework) -> str:
+    base_slug = slugify(framework.slug or framework.name or str(framework.id))
+    return f"{base_slug}-default-template"
+
+
+def _get_or_create_framework_default_template(
+    assessment: Assessment,
+) -> AssessmentTemplate | None:
+    """Resolve a questionnaire template for framework-only assessments.
+
+    Legacy/demo assessments can be created with `framework` but no `template`. The
+    questionnaire engine works from frozen assessment snapshots, so create a small
+    deterministic default template from framework categories when no imported template
+    exists yet.
+    """
+    if not assessment.framework_id:
+        return None
+
+    template_qs = AssessmentTemplate.objects.filter(
+        framework_id=assessment.framework_id,
+        status=AssessmentTemplate.Status.PUBLISHED,
+    ).order_by("-is_public", "organization_id", "created_at")
+    template = template_qs.filter(organization=assessment.organization).first()
+    if not template:
+        template = template_qs.filter(is_public=True).first() or template_qs.first()
+    if template:
+        return template
+
+    framework = assessment.framework
+    categories = framework.categories or {}
+    if not categories:
+        return None
+
+    template, created = AssessmentTemplate.objects.get_or_create(
+        slug=_framework_template_slug(framework),
+        defaults={
+            "name": f"{framework.name} Template",
+            "description": framework.description,
+            "framework": framework,
+            "version": framework.version or "1.0.0",
+            "is_public": True,
+            "status": AssessmentTemplate.Status.PUBLISHED,
+            "published_at": timezone.now(),
+        },
+    )
+    if not created and template.status != AssessmentTemplate.Status.PUBLISHED:
+        template.status = AssessmentTemplate.Status.PUBLISHED
+        template.published_at = template.published_at or timezone.now()
+        template.save(update_fields=["status", "published_at", "updated_at"])
+
+    if template.assessment_questions.exists():
+        return template
+
+    for order, (category_key, category_label) in enumerate(categories.items(), start=1):
+        code = str(category_key).replace("principle_", "P").replace("_", "-").upper()
+        label = str(category_label)
+        AssessmentQuestion.objects.create(
+            template=template,
+            text=f"Does the site meet the framework requirements for {label}?",
+            category=label,
+            hierarchy=[
+                {
+                    "level": "principle",
+                    "code": code,
+                    "label": label,
+                }
+            ],
+            order=order,
+            scoring_criteria={
+                "type": "select_one",
+                "choices": ["Yes", "No", "N/A"],
+            },
+            is_required=True,
+            external_question_id=code,
+        )
+
+    return template
 
 
 @transaction.atomic
@@ -35,7 +117,15 @@ def ensure_assessment_questionnaire_snapshots(
     response exists for each assessment-owned question.
     """
     if not assessment.template_id:
-        return list(assessment.assessment_questions.all().order_by("order"))
+        fallback_template = _get_or_create_framework_default_template(assessment)
+        if fallback_template:
+            assessment.template = fallback_template
+            assessment.template_version = fallback_template.version
+            assessment.save(
+                update_fields=["template", "template_version", "updated_at"]
+            )
+        else:
+            return list(assessment.assessment_questions.all().order_by("order"))
 
     existing_snapshots = list(assessment.assessment_questions.all().order_by("order"))
     if existing_snapshots:
@@ -83,6 +173,9 @@ def _get_questionnaire_questions(assessment: Assessment) -> list[AssessmentQuest
         return snapshot_questions
     if assessment.template_id:
         return list(assessment.template.assessment_questions.all().order_by("order"))
+    fallback_template = _get_or_create_framework_default_template(assessment)
+    if fallback_template:
+        return list(fallback_template.assessment_questions.all().order_by("order"))
     return []
 
 

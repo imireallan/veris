@@ -24,6 +24,54 @@ from pathlib import Path
 from django.utils import timezone
 
 from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
+from assessments.services.hierarchy import build_eo100_hierarchy
+
+
+def iter_eo100_questions(questions_data):
+    """Yield normalized EO100 question records from nested or flat JSON exports."""
+    for first_key, first_value in questions_data.items():
+        # Legacy files are nested: supplement → principle → objective → question.
+        if isinstance(first_value, dict) and "text" not in first_value:
+            supplement_id = first_key
+            for principle_id, objectives in first_value.items():
+                for objective_id, questions in objectives.items():
+                    for question_id, question in questions.items():
+                        pt_level = int(question.get("pt") or question_id)
+                        external_id = f"{supplement_id}.{principle_id}.{objective_id}.{question_id}"
+                        yield {
+                            "external_id": external_id,
+                            "principle_num": int(principle_id),
+                            "objective_num": int(objective_id),
+                            "pt_level": pt_level,
+                            "text": question.get("text", ""),
+                            "description": question.get("description", ""),
+                        }
+            continue
+
+        # Some exported/transformed files may already be flat by external ID.
+        q_id = first_key
+        q_data = first_value
+        parts = q_id.split(".")
+        if len(parts) == 4:
+            principle_num = int(parts[1])
+            objective_num = int(parts[2])
+            pt_level = int(q_data.get("pt") or parts[3])
+        elif len(parts) == 3:
+            principle_num = int(parts[0])
+            objective_num = int(parts[1])
+            pt_level = int(q_data.get("pt") or parts[2])
+        else:
+            print(f"  ⚠️  Skipping invalid ID: {q_id}")
+            continue
+
+        yield {
+            "external_id": q_id,
+            "principle_num": principle_num,
+            "objective_num": objective_num,
+            "pt_level": pt_level,
+            "text": q_data.get("text", ""),
+            "description": q_data.get("description", ""),
+        }
 
 
 def seed_eo100_saq():
@@ -124,20 +172,11 @@ def seed_eo100_saq():
 
         # Parse and create questions
         question_count = 0
-        for q_id, q_data in questions_data.items():
-            # Parse EO100 question ID format: supplement.principle.objective.PT
-            parts = q_id.split(".")
-            if len(parts) == 4:
-                principle_num = int(parts[1])
-                objective_num = int(parts[2])
-                pt_level = int(parts[3])
-            elif len(parts) == 3:
-                principle_num = int(parts[0])
-                objective_num = int(parts[1])
-                pt_level = int(parts[2])
-            else:
-                print(f"  ⚠️  Skipping invalid ID: {q_id}")
-                continue
+        for question in iter_eo100_questions(questions_data):
+            principle_num = question["principle_num"]
+            objective_num = question["objective_num"]
+            pt_level = question["pt_level"]
+            external_id = question["external_id"]
 
             # Map performance target to score
             pt_scores = {1: 33, 2: 66, 3: 100}
@@ -149,17 +188,23 @@ def seed_eo100_saq():
                 "PT3": 100,
                 "current_pt": pt_level,
                 "max_score": pt_scores.get(pt_level, 33),
+                "documentary_evidence": question.get("description", ""),
             }
 
             AssessmentQuestion.objects.create(
                 template=template,
-                text=q_data.get("text", ""),
-                order=objective_num,
-                category=f"Principle {principle_num}",
+                text=question.get("text", ""),
+                order=question_count + 1,
+                category=f"Principle {principle_num} / Objective {objective_num}",
+                hierarchy=build_eo100_hierarchy(
+                    principle_number=principle_num,
+                    objective_number=objective_num,
+                    performance_target_level=pt_level,
+                ),
                 scoring_criteria=scoring_criteria,
                 is_required=True,
                 performance_target_level=pt_level,
-                external_question_id=q_id,
+                external_question_id=external_id,
                 framework_mappings=[],
             )
             question_count += 1

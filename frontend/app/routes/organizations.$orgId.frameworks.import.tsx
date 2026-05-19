@@ -72,8 +72,8 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
     };
   }
 
-  const response = await api
-    .get<any>("/api/frameworks/import/", token, request)
+  const response = await api.withOrganization
+    .get<any>("/api/frameworks/import/", orgId!, token, request)
     .catch(() => ({ results: [] }));
 
   const recentJobs = Array.isArray(response) ? response : response?.results || [];
@@ -136,7 +136,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
     }
 
     try {
-      const response = await api.post<any>(
+      const response = await api.withOrganization.post<any>(
         "/api/frameworks/import/create/",
         {
           framework_name: frameworkName,
@@ -145,6 +145,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           create_template: createTemplate,
           temp_file_path: tempFilePath,
         },
+        orgId!,
         token,
         request,
       );

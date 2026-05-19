@@ -29,6 +29,7 @@ def migrate_cgwg_questionnaires():
         SAQResponse,
         SAQToken,
     )
+    from assessments.services.hierarchy import build_cgwg_hierarchy
 
     export_dir = Path(__file__).parent / "cgwg_exports"
 
@@ -40,9 +41,11 @@ def migrate_cgwg_questionnaires():
     # Load exports
     print("Loading CGWG exports...")
     questionnaires_data = load_json(export_dir / "questionnaires.json")
+    sections_data = load_json(export_dir / "sections.json")
     questions_data = load_json(export_dir / "questions.json")
     responses_data = load_json(export_dir / "responses.json")
     answers_data = load_json(export_dir / "answers.json")
+    section_map = {section["id"]: section for section in sections_data}
 
     # Step 1: Create Framework
     print("\n✓ Creating CGWG Framework...")
@@ -86,6 +89,21 @@ def migrate_cgwg_questionnaires():
             continue
 
         template = template_map[old_questionnaire_id]
+        section = section_map.get(q_data.get("section")) or {}
+        questionnaire_label = template.name
+        questionnaire_code = template.slug
+        section_label = (
+            section.get("name")
+            or q_data.get("section_name")
+            or q_data.get("category")
+            or "General"
+        )
+        section_code = (
+            section.get("sequence_number") or q_data.get("section") or section_label
+        )
+        question_code = (
+            q_data.get("label") or q_data.get("sequence_number") or q_data["id"]
+        )
 
         # Map question type
         question_type = q_data.get("question_type", "text")
@@ -103,7 +121,15 @@ def migrate_cgwg_questionnaires():
             template=template,
             text=q_data["text"],
             order=q_data.get("sequence_number", 0),
-            category=q_data.get("category", "General"),
+            category=section_label,
+            hierarchy=build_cgwg_hierarchy(
+                questionnaire_code=questionnaire_code,
+                questionnaire_label=questionnaire_label,
+                section_code=section_code,
+                section_label=section_label,
+                question_code=question_code,
+                question_label=q_data.get("label") or None,
+            ),
             scoring_criteria=scoring_criteria,
             is_required=q_data.get("is_required", True),
             framework_mappings=[],

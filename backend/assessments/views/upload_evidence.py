@@ -125,11 +125,36 @@ def upload_evidence_document(request):
     file_path = default_storage.save(upload_path, uploaded_file)
     file_url = default_storage.url(file_path)
 
+    knowledge_document_id = None
+    processing_status = "uploaded"
+    try:
+        from knowledge.models import KnowledgeDocument
+
+        document = KnowledgeDocument._default_manager.create(
+            organization_id=org_id,
+            title=uploaded_file.name,
+            description="Questionnaire response evidence awaiting processing/indexing.",
+            file_url=file_url,
+            file_type=ext.lstrip(".").upper() or "FILE",
+            file_size=uploaded_file.size,
+            category="assessment_evidence",
+            embeddings_indexed=False,
+            framework_tags=[],
+            created_by=request.user,
+        )
+        knowledge_document_id = str(document.id)
+    except Exception:
+        # Upload should still succeed even if the knowledge-library record cannot be
+        # created. The response evidence metadata will make the processing gap clear.
+        processing_status = "failed"
+
     return Response(
         {
             "url": file_url,
             "file_name": uploaded_file.name,
             "file_size": uploaded_file.size,
             "content_type": uploaded_file.content_type,
+            "knowledge_document_id": knowledge_document_id,
+            "processing_status": processing_status,
         }
     )

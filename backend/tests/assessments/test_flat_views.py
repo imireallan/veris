@@ -16,6 +16,7 @@ from assessments.models import (
     AssessmentResponse,
     AssessmentTemplate,
     AssessmentWorkflowInstance,
+    EvidenceCheckRun,
     Framework,
     WorkflowTemplate,
 )
@@ -431,6 +432,12 @@ class TestFlatAssessmentResponseViewSet:
             start_date="2024-01-01T00:00:00Z",
             due_date="2024-12-31T23:59:59Z",
         )
+        self.question1 = AssessmentQuestion.objects.create(
+            assessment=self.assessment1,
+            organization=self.org1,
+            text="Allowed questionnaire question",
+            order=1,
+        )
         self.response1 = AssessmentResponse.objects.create(
             assessment=self.assessment1,
             organization=self.org1,
@@ -485,18 +492,64 @@ class TestFlatAssessmentResponseViewSet:
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_nested_create_updates_existing_assessment_question_response(self):
+        self.client.force_authenticate(user=self.user)
+        url = f"/api/organizations/{self.org1.id}/assessments/{self.assessment1.id}/responses/"
+
+        first = self.client.post(
+            url,
+            {
+                "question": str(self.question1.id),
+                "answer_text": "Initial answer",
+                "operator_answer": "Initial answer",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+        second = self.client.post(
+            url,
+            {
+                "question": str(self.question1.id),
+                "answer_text": "Updated answer",
+                "operator_answer": "Updated answer",
+            },
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert first.status_code == status.HTTP_201_CREATED
+        assert second.status_code == status.HTTP_201_CREATED
+        responses = AssessmentResponse.objects.filter(
+            assessment=self.assessment1,
+            question=self.question1,
+        )
+        assert responses.count() == 1
+        saved_response = responses.get()
+        assert saved_response.answer_text == "Updated answer"
+        assert second.data["id"] == str(saved_response.id)
+
     def test_validate_uses_detail_scope_without_assessment_query(self, monkeypatch):
         self.client.force_authenticate(user=self.user)
 
         def fake_validate_response(**kwargs):
             assert kwargs["response_text"] == "Allowed response"
             assert kwargs["organization_id"] == str(self.org1.id)
+            assert kwargs["assessment_id"] == str(self.assessment1.id)
             return SimpleNamespace(
-                validation_status="validated",
+                validation_status="supported",
                 confidence_score=0.91,
-                citations=["doc-1"],
+                citations=[{"document_id": "doc-1", "chunk_id": "chunk-1"}],
                 similar_chunks=[{"id": "chunk-1"}],
                 feedback="Supported by attached evidence.",
+                result_json={
+                    "status": "supported",
+                    "summary": "Supported by attached evidence.",
+                    "citations": [{"document_id": "doc-1", "chunk_id": "chunk-1"}],
+                },
+                evidence_snapshot={"attached_count": 1},
+                model_provider="test-provider",
+                model_name="test-model",
+                prompt_version="evidence-check-test",
             )
 
         monkeypatch.setattr(
@@ -512,10 +565,15 @@ class TestFlatAssessmentResponseViewSet:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.data["validation_status"] == "validated"
+        assert response.data["validation_status"] == "supported"
         self.response1.refresh_from_db()
-        assert self.response1.validation_status == "validated"
+        assert self.response1.validation_status == "supported"
         assert self.response1.confidence_score == 0.91
+        run = EvidenceCheckRun.objects.get(response=self.response1)
+        assert run.status == "supported"
+        assert run.result_json["summary"] == "Supported by attached evidence."
+        assert run.retrieved_evidence_snapshot == {"attached_count": 1}
+        assert run.model_provider == "test-provider"
 
     def test_validate_service_failure_returns_json_error(self, monkeypatch):
         self.client.force_authenticate(user=self.user)

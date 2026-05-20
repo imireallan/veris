@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useLoaderData, Link, Form, redirect, useNavigation, useFetcher, useActionData } from "react-router";
+import { useLoaderData, Link, Form, redirect, useNavigation, useFetcher, useActionData, useRevalidator } from "react-router";
 import type { LoaderFunctionArgs, ActionFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
@@ -479,6 +479,14 @@ function getEvidenceCheckErrorMessage(err: any) {
   return rawMessage;
 }
 
+function formatEvidenceStatus(status?: string | null) {
+  if (!status) return "Not checked";
+  return status
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 function UploadEvidenceButton({
   responseId,
   questionId,
@@ -491,6 +499,7 @@ function UploadEvidenceButton({
   orgId: string;
 }) {
   const fetcher = useFetcher();
+  const revalidator = useRevalidator();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isUploading = fetcher.state === "submitting";
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -501,6 +510,7 @@ function UploadEvidenceButton({
     if (fetcher.state === "idle" && fetcher.data) {
       if ("success" in fetcher.data && fetcher.data.success) {
         setLastUploadedFileName(selectedFile?.name ?? null);
+        revalidator.revalidate();
       }
 
       setSelectedFile(null);
@@ -508,7 +518,7 @@ function UploadEvidenceButton({
         fileInputRef.current.value = "";
       }
     }
-  }, [fetcher.state, fetcher.data, selectedFile]);
+  }, [fetcher.state, fetcher.data, selectedFile, revalidator]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -733,7 +743,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           {
             answer_text: answer,
             operator_answer: answer,
-            validation_status: "pending",
+            validation_status: "not_checked",
             confidence_score: null,
             ai_feedback: "",
             ai_validated: false,
@@ -828,8 +838,12 @@ export async function action({ request, params }: ActionFunctionArgs) {
         url: uploadData.url,
         file_name: uploadData.file_name,
         file_size: uploadData.file_size,
+        content_type: uploadData.content_type,
+        knowledge_document_id: uploadData.knowledge_document_id,
+        processing_status: uploadData.processing_status ?? "uploaded",
       };
 
+      let savedResponseId = targetResponseId;
       if (targetResponseId) {
         const response = await api.withOrganization.get<any>(
           `/api/responses/${targetResponseId}/`,
@@ -843,7 +857,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           `/api/responses/${targetResponseId}/`,
           {
             evidence_files: evidenceFiles,
-            validation_status: "pending",
+            validation_status: "not_checked",
             confidence_score: null,
             ai_feedback: "",
             ai_validated: false,
@@ -854,7 +868,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
           request,
         );
       } else {
-        await api.withOrganization.post(
+        const createdResponse = await api.withOrganization.post<any>(
           `/api/organizations/${orgId}/assessments/${assessmentId}/responses/`,
           {
             assessment: assessmentId,
@@ -867,9 +881,16 @@ export async function action({ request, params }: ActionFunctionArgs) {
           token,
           request,
         );
+        savedResponseId = createdResponse?.id ?? savedResponseId;
       }
 
-      return redirect(`/assessments/${assessmentId}/questionnaire`);
+      return {
+        success: true,
+        intent: "upload-evidence",
+        message: "Evidence uploaded. It may take a moment before it is searchable by AI evidence checks.",
+        response_id: savedResponseId || null,
+        evidence_file: evidenceFile,
+      };
     } catch (err: any) {
       return { error: getApiErrorMessage(err, "Upload failed") };
     }
@@ -903,7 +924,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         confidence_score: result.confidence_score,
         citations: result.citations,
         ai_feedback: result.feedback,
-        message: `Evidence check: ${result.validation_status.toUpperCase()} (${(result.confidence_score * 100).toFixed(0)}% confidence)`
+        message: `Evidence check: ${formatEvidenceStatus(result.validation_status)} (${(result.confidence_score * 100).toFixed(0)}% confidence)`
       };
     } catch (err: any) {
       return {
@@ -1156,6 +1177,15 @@ function QuestionCard({
   };
 
   const validationStatusColors: Record<string, string> = {
+    supported: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+    partially_supported: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
+    unsupported: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    contradictory: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    needs_evidence: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+    evidence_processing: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
+    needs_answer: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+    not_checked: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
+    reviewer_override: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
     validated: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
     flagged: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
     insufficient_evidence: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
@@ -1163,10 +1193,19 @@ function QuestionCard({
   };
 
   const validationStatusLabels: Record<string, string> = {
-    validated: "Validated",
-    flagged: "Needs Review",
-    insufficient_evidence: "No Evidence",
-    pending: "Not Validated",
+    supported: "Evidence supported",
+    partially_supported: "Partially supported",
+    unsupported: "Unsupported",
+    contradictory: "Contradictory",
+    needs_evidence: "Needs evidence",
+    evidence_processing: "Evidence processing",
+    needs_answer: "Needs answer",
+    not_checked: "Not checked",
+    reviewer_override: "Reviewer override",
+    validated: "Evidence supported",
+    flagged: "Partially supported",
+    insufficient_evidence: "Needs evidence",
+    pending: "Not checked",
   };
 
   return (
@@ -1193,7 +1232,7 @@ function QuestionCard({
                 <CheckCircle className="w-4 h-4 text-green-500" />
               )}
               {existingResponse?.validation_status && (
-                <Badge className={`text-[10px] ${validationStatusColors[existingResponse.validation_status]}`}>
+                <Badge className={`text-[10px] ${validationStatusColors[existingResponse.validation_status] ?? "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"}`}>
                   <ShieldCheck className="w-3 h-3 mr-1" />
                   {validationStatusLabels[existingResponse.validation_status] || existingResponse.validation_status}
                 </Badge>
@@ -1227,7 +1266,7 @@ function QuestionCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {existingResponse && existingResponse.validation_status !== "validated" && (
+            {existingResponse && !["supported", "validated"].includes(existingResponse.validation_status ?? "") && (
               <validateFetcher.Form method="post">
                 <input type="hidden" name="intent" value="validate-response" />
                 <input type="hidden" name="response_id" value={existingResponse.id || ""} />
@@ -1329,6 +1368,11 @@ function QuestionCard({
                     <li key={i} className="flex items-center gap-2">
                       <Paperclip className="w-3 h-3" />
                       <span className="truncate max-w-[200px]">{file.file_name || file.url}</span>
+                      {file.processing_status && (
+                        <Badge variant="outline" className="text-[10px] capitalize">
+                          {String(file.processing_status).replace(/_/g, " ")}
+                        </Badge>
+                      )}
                     </li>
                   ))}
                 </ul>

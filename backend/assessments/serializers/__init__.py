@@ -344,6 +344,25 @@ class AssessmentResponseSerializer(serializers.ModelSerializer):
             attrs["answer_text"] = attrs.get("operator_answer") or ""
         return attrs
 
+    def update(self, instance, validated_data):
+        """Clear stale evidence checks when answer text or evidence changes."""
+        answer_changed = any(
+            field in validated_data
+            and getattr(instance, field) != validated_data[field]
+            for field in ("answer_text", "operator_answer", "evidence_files")
+        )
+        if answer_changed:
+            validated_data.update(
+                {
+                    "validation_status": "not_checked",
+                    "confidence_score": None,
+                    "citations": [],
+                    "ai_feedback": "",
+                    "ai_validated": False,
+                }
+            )
+        return super().update(instance, validated_data)
+
 
 class AIInsightSerializer(serializers.ModelSerializer):
     class Meta:

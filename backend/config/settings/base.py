@@ -169,6 +169,14 @@ if USE_S3:
     )
     MEDIA_URL = f"https://{s3_host.rstrip('/')}/media/" if s3_host else "/media/"
     MEDIA_ROOT = None
+    STORAGES = {
+        "default": {
+            "BACKEND": "config.storage.S3MediaStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
 else:
     MEDIA_URL = "/media/"
     MEDIA_ROOT = BASE_DIR / "media"

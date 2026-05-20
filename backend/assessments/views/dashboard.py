@@ -86,7 +86,20 @@ class DashboardSummaryView(APIView):
             documents=documents,
         )
         scoped_assessment_ids = list(assessments.values_list("id", flat=True))
-        pending_review_responses = responses.filter(validation_status="pending")
+        pending_review_responses = responses.filter(
+            validation_status__in=[
+                "not_checked",
+                "needs_answer",
+                "needs_evidence",
+                "evidence_processing",
+                "partially_supported",
+                "unsupported",
+                "contradictory",
+                "pending",
+                "flagged",
+                "insufficient_evidence",
+            ]
+        )
         reports = (
             AssessmentReport.objects.filter(
                 organization_id__in=org_ids,

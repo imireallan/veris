@@ -89,10 +89,16 @@ async function apiRequest(
     }
 
     let body: unknown;
+    const responseText = await res.text();
     try {
-      body = await res.json();
+      body = responseText ? JSON.parse(responseText) : null;
     } catch {
-      body = null;
+      body = {
+        error: `Backend returned non-JSON response (${res.status}): ${responseText
+          .slice(0, 120)
+          .replace(/\s+/g, " ")
+          .trim()}`,
+      };
     }
 
     const message =

@@ -49,7 +49,20 @@ export async function uploadFile<T>(
   const response = await uploadFileToApi(file, endpoint, options);
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
+    const responseText = await response.text();
+    let errorBody: any = {};
+
+    try {
+      errorBody = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      const preview = responseText.slice(0, 120).replace(/\s+/g, " ").trim();
+      throw new Error(
+        preview
+          ? `Upload failed (${response.status}): backend returned non-JSON response: ${preview}`
+          : `Upload failed (${response.status})`,
+      );
+    }
+
     const error = errorBody?.error || errorBody?.detail || "Upload failed";
     throw new Error(error);
   }

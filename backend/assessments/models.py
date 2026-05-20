@@ -568,19 +568,29 @@ class AssessmentResponse(models.Model):
     answer_score = models.FloatField(default=0.0)
     evidence_files = models.JSONField(default=list)
 
-    # AI Validation Fields (Phase 2)
+    # AI evidence-check fields. AI is a reviewer aid, not a final assurance decision.
     ai_score_suggestion = models.FloatField(null=True, blank=True)
     ai_feedback = models.TextField(blank=True, default="")
     ai_validated = models.BooleanField(default=False)
     validation_status = models.CharField(
-        max_length=25,
+        max_length=30,
         choices=[
+            ("not_checked", "Not Checked"),
+            ("needs_answer", "Needs Answer"),
+            ("needs_evidence", "Needs Evidence"),
+            ("evidence_processing", "Evidence Processing"),
+            ("supported", "Supported"),
+            ("partially_supported", "Partially Supported"),
+            ("unsupported", "Unsupported"),
+            ("contradictory", "Contradictory"),
+            ("reviewer_override", "Reviewer Override"),
+            # Legacy values retained while older clients/tests are phased out.
             ("pending", "Pending"),
             ("validated", "Validated"),
             ("flagged", "Flagged"),
             ("insufficient_evidence", "Insufficient Evidence"),
         ],
-        default="pending",
+        default="not_checked",
     )
     confidence_score = models.FloatField(
         null=True, blank=True, help_text="AI confidence 0-1"
@@ -618,6 +628,68 @@ class AssessmentResponse(models.Model):
 
     def __str__(self):
         return f"Response {self.id} - Assessment {self.assessment_id}"
+
+
+class EvidenceCheckRun(models.Model):
+    """Auditable AI evidence-check run for a single questionnaire response."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    response = models.ForeignKey(
+        "assessments.AssessmentResponse",
+        on_delete=models.CASCADE,
+        related_name="evidence_check_runs",
+    )
+    assessment = models.ForeignKey(
+        "assessments.Assessment",
+        on_delete=models.CASCADE,
+        related_name="evidence_check_runs",
+    )
+    organization = models.ForeignKey(
+        "organizations.Organization",
+        on_delete=models.CASCADE,
+        related_name="evidence_check_runs",
+    )
+    site = models.ForeignKey(
+        "assessments.Site",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="evidence_check_runs",
+    )
+    framework = models.ForeignKey(
+        "assessments.Framework",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="evidence_check_runs",
+    )
+    triggered_by = models.ForeignKey(
+        "users.User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="triggered_evidence_check_runs",
+    )
+    status = models.CharField(max_length=30)
+    confidence_score = models.FloatField(null=True, blank=True)
+    result_json = models.JSONField(default=dict)
+    model_provider = models.CharField(max_length=100, blank=True, default="")
+    model_name = models.CharField(max_length=200, blank=True, default="")
+    prompt_version = models.CharField(max_length=100, blank=True, default="")
+    retrieved_evidence_snapshot = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "evidence_check_runs"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["response", "-created_at"]),
+            models.Index(fields=["assessment", "status"]),
+            models.Index(fields=["organization", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Evidence check {self.id} - {self.status}"
 
 
 class AIInsight(models.Model):

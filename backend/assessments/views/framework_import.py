@@ -21,6 +21,7 @@ from assessments.serializers import (
     FrameworkImportPreviewSerializer,
 )
 from assessments.services.framework_import import FrameworkImportService
+from organizations.models import Organization, OrganizationMembership
 from users.permissions import IsOrganizationMember
 
 
@@ -35,6 +36,39 @@ class FrameworkImportViewSet(viewsets.ViewSet):
     """
 
     permission_classes = [IsAuthenticated, IsOrganizationMember]
+
+    def _get_request_organization(self, request):
+        """Return active organization for import actions.
+
+        Platform admins can operate on org-scoped endpoints without tenant
+        membership. If DRF authentication did not attach request.organization
+        but the X-Organization-Id header is present, resolve it explicitly.
+        """
+        org = getattr(request, "organization", None)
+        if org:
+            return org
+
+        org_id = request.META.get("HTTP_X_ORGANIZATION_ID")
+        if not org_id:
+            return None
+
+        if request.user.is_superuser:
+            return Organization.objects.filter(id=org_id).first()
+
+        membership = getattr(request, "membership", None)
+        if membership and str(membership.organization_id) == str(org_id):
+            return membership.organization
+
+        membership = (
+            OrganizationMembership.objects.select_related("organization")
+            .filter(
+                user=request.user,
+                organization_id=org_id,
+                status=OrganizationMembership.Status.ACTIVE,
+            )
+            .first()
+        )
+        return membership.organization if membership else None
 
     @action(
         detail=False,
@@ -59,23 +93,10 @@ class FrameworkImportViewSet(viewsets.ViewSet):
             - validation_errors: list
             - temp_file_path: str (server path, for submit step)
         """
-        org = getattr(request, "organization", None)
+        org = self._get_request_organization(request)
         if not org:
-            # Debug: log what we received
             return Response(
-                {
-                    "error": "Organization context required",
-                    "debug": {
-                        "user": str(getattr(request, "user", None)),
-                        "user_is_authenticated": getattr(
-                            request.user, "is_authenticated", "N/A"
-                        ),
-                        "meta_org": request.META.get("HTTP_X_ORGANIZATION_ID"),
-                        "request_organization": str(
-                            getattr(request, "organization", "NOTSET")
-                        ),
-                    },
-                },
+                {"error": "Organization context required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -182,23 +203,10 @@ class FrameworkImportViewSet(viewsets.ViewSet):
         Response:
             - Full FrameworkImportJob data
         """
-        org = getattr(request, "organization", None)
+        org = self._get_request_organization(request)
         if not org:
-            # Debug: log what we received
             return Response(
-                {
-                    "error": "Organization context required",
-                    "debug": {
-                        "user": str(getattr(request, "user", None)),
-                        "user_is_authenticated": getattr(
-                            request.user, "is_authenticated", "N/A"
-                        ),
-                        "meta_org": request.META.get("HTTP_X_ORGANIZATION_ID"),
-                        "request_organization": str(
-                            getattr(request, "organization", "NOTSET")
-                        ),
-                    },
-                },
+                {"error": "Organization context required"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         # request.organization is an Organization instance, extract the UUID
@@ -215,8 +223,12 @@ class FrameworkImportViewSet(viewsets.ViewSet):
             )
 
         # Extract metadata
-        framework_name = request.data.get("framework_name")
-        framework_version = request.data.get("framework_version", "1.0.0")
+        framework_name = (request.data.get("framework_name") or "Imported Framework")[
+            :200
+        ]
+        framework_version = (request.data.get("framework_version", "1.0.0") or "1.0.0")[
+            :50
+        ]
         framework_description = request.data.get("framework_description", "")
         create_template = request.data.get("create_template", True)
 

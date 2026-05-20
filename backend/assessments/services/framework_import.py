@@ -11,6 +11,7 @@ from typing import Dict, List, Tuple
 
 from django.db import transaction
 from django.utils import timezone
+from django.utils.text import slugify
 
 from assessments.models import AssessmentQuestion, AssessmentTemplate, Framework
 from assessments.services.hierarchy import build_bettercoal_hierarchy
@@ -27,6 +28,20 @@ class FrameworkImportService:
         self.extension = self.file_path.suffix.lower()
         # Use original filename for deriving framework name, fallback to temp path
         self.original_filename = original_filename or self.file_path.name
+
+    def _truncate(self, value: str, max_length: int) -> str:
+        """Trim values before writing into bounded CharFields."""
+        return (value or "")[:max_length]
+
+    def _make_unique_template_slug(self, name: str) -> str:
+        base_slug = slugify(name)[:185] or "imported-framework"
+        slug = f"{base_slug}-template"[:200]
+        counter = 1
+        while AssessmentTemplate.objects.filter(slug=slug).exists():
+            suffix = f"-{counter}"
+            slug = f"{base_slug[: 200 - len(suffix)]}{suffix}"
+            counter += 1
+        return slug
 
     def parse_file(self) -> Tuple[Dict, List[Dict]]:
         """
@@ -331,9 +346,11 @@ class FrameworkImportService:
                 principles_map[p_seq]["categories"].append(categories_map[c_seq])
 
         # Create Framework
+        safe_name = self._truncate(name, 200)
+        safe_version = self._truncate(version, 50)
         framework = Framework.objects.create(
-            name=name,
-            version=version,
+            name=safe_name,
+            version=safe_version,
             description=description,
             categories=categories_tree,
             scoring_methodology={"type": "provision_based", "rating_scale": "0-4"},
@@ -346,10 +363,11 @@ class FrameworkImportService:
 
         if create_template:
             # Create AssessmentTemplate
+            template_name = self._truncate(f"{safe_name} Template", 200)
             template = AssessmentTemplate.objects.create(
-                name=f"{name} Template",
-                slug=f"{name.lower().replace(' ', '-').replace('.', '')}-template",
-                description=f"Template for {name} assessments",
+                name=template_name,
+                slug=self._make_unique_template_slug(safe_name),
+                description=f"Template for {safe_name} assessments",
                 framework=framework,
                 version="1.0.0",
                 version_notes="Initial import",
@@ -362,9 +380,11 @@ class FrameworkImportService:
             # Create AssessmentQuestions (one per provision)
             questions = []
             for idx, prov in enumerate(provisions, start=1):
-                category_label = (
-                    f"{prov['principle_name']} – {prov['category_name']}".strip(" –")
+                category_label = self._truncate(
+                    f"{prov['principle_name']} – {prov['category_name']}".strip(" –"),
+                    200,
                 )
+                external_question_id = self._truncate(prov["provision_code"], 50)
                 questions.append(
                     AssessmentQuestion(
                         template=template,
@@ -385,11 +405,11 @@ class FrameworkImportService:
                             "rating_choices": prov["rating_choices"],
                             "provision_code": prov["provision_code"],
                         },
-                        external_question_id=prov["provision_code"],
+                        external_question_id=external_question_id,
                         framework_mappings=[
                             {
                                 "framework_id": str(framework.id),
-                                "provision_code": prov["provision_code"],
+                                "provision_code": external_question_id,
                                 "provision_name": prov["description"][:100],
                             }
                         ],

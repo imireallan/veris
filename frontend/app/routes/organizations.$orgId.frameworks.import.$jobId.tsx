@@ -1,4 +1,4 @@
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData, Link, useRevalidator } from "react-router";
 import type { LoaderFunctionArgs } from "react-router";
 import { requireUser, getUserToken } from "~/.server/sessions";
 import { api } from "~/.server/lib/api";
@@ -63,43 +63,29 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
 }
 
 export default function FrameworkImportJobStatusRoute() {
-  const { user, orgId, jobId, accessDenied, job } = useLoaderData<typeof loader>();
+  const { orgId, accessDenied, job } = useLoaderData<typeof loader>();
+  const revalidator = useRevalidator();
   const [jobStatus, setJobStatus] = useState(job);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Auto-poll every 3 seconds if job is still processing
+  useEffect(() => {
+    setJobStatus(job);
+  }, [job]);
+
+  // Auto-refresh through the React Router loader so polling goes through the
+  // server-side API helper with auth/org headers instead of fetching the backend
+  // directly from the browser and accidentally parsing the app HTML as JSON.
   useEffect(() => {
     if (!jobStatus || jobStatus.status === "COMPLETED" || jobStatus.status === "FAILED") {
       return;
     }
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const token = await getToken();
-        const response = await fetch(`/api/frameworks/import/${jobId}/status/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "X-Organization-ID": orgId!,
-          },
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          setJobStatus(data);
-        }
-      } catch (err) {
-        console.error("Polling failed:", err);
-      }
+    const pollInterval = setInterval(() => {
+      revalidator.revalidate();
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [jobStatus, jobId, orgId]);
-
-  // Helper to get token (simplified - in real app, use proper auth context)
-  const getToken = async () => {
-    // This is a placeholder - in React Router v7, you'd use the proper auth pattern
-    return "";
-  };
+  }, [jobStatus, revalidator]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);

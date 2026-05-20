@@ -31,6 +31,8 @@ import {
   Textarea,
   Progress,
   Separator,
+  Alert,
+  AlertDescription,
   Breadcrumb,
   BreadcrumbList,
   BreadcrumbItem,
@@ -72,6 +74,7 @@ interface QuestionnaireResponse {
   confidence_score?: number | null;
   ai_score_suggestion?: number | null;
   ai_feedback?: string | null;
+  citations?: Array<unknown>;
   evidence_files?: Array<unknown>;
 }
 
@@ -443,6 +446,39 @@ function flattenApiList<T = any>(value: any): T[] {
   return [];
 }
 
+function getApiErrorMessage(err: any, fallback: string) {
+  const body = err?.body;
+  if (typeof body === "string") return body;
+  if (body?.detail) return String(body.detail);
+  if (body?.error) return String(body.error);
+  if (body && typeof body === "object") {
+    const fieldErrors = Object.entries(body)
+      .map(([field, value]) => `${field}: ${Array.isArray(value) ? value.join(", ") : String(value)}`)
+      .join("; ");
+    if (fieldErrors) return fieldErrors;
+  }
+  return err?.message ?? fallback;
+}
+
+function getEvidenceCheckErrorMessage(err: any) {
+  const rawMessage = getApiErrorMessage(err, "Evidence check failed");
+  const normalizedMessage = rawMessage.toLowerCase();
+
+  if (normalizedMessage.includes("incorrect api key") || normalizedMessage.includes("invalid_api_key")) {
+    return "Evidence check is not configured correctly. The backend OpenAI API key is invalid. Update the local credentials and try again.";
+  }
+
+  if (normalizedMessage.includes("pinecone") && (normalizedMessage.includes("unauthorized") || normalizedMessage.includes("api key") || normalizedMessage.includes("authentication"))) {
+    return "Evidence search is not configured correctly. Check the Pinecone credentials and try again.";
+  }
+
+  if (normalizedMessage.includes("evidence check failed:")) {
+    return rawMessage.replace(/^Evidence check failed:\s*/i, "Evidence check failed. ");
+  }
+
+  return rawMessage;
+}
+
 function UploadEvidenceButton({
   responseId,
   questionId,
@@ -654,7 +690,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
         readiness: result?.readiness,
       };
     } catch (err: any) {
-      return { error: err?.body?.detail ?? err?.body?.error ?? err.message ?? "Failed to submit questionnaire" };
+      return { error: getApiErrorMessage(err, "Failed to submit questionnaire") };
     }
   }
 
@@ -694,7 +730,15 @@ export async function action({ request, params }: ActionFunctionArgs) {
       if (targetResponseId) {
         savedResponse = await api.withOrganization.patch(
           `/api/responses/${targetResponseId}/`,
-          { answer_text: answer, operator_answer: answer },
+          {
+            answer_text: answer,
+            operator_answer: answer,
+            validation_status: "pending",
+            confidence_score: null,
+            ai_feedback: "",
+            ai_validated: false,
+            citations: [],
+          },
           orgId,
           token,
           request,
@@ -720,7 +764,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
       };
     } catch (err: any) {
       if (err instanceof Response && err.status === 302) throw err;
-      return { error: err?.body?.detail ?? err.message ?? "Failed to save response" };
+      return { error: getApiErrorMessage(err, "Failed to save response") };
     }
   }
 
@@ -797,7 +841,14 @@ export async function action({ request, params }: ActionFunctionArgs) {
         evidenceFiles.push(evidenceFile);
         await api.withOrganization.patch(
           `/api/responses/${targetResponseId}/`,
-          { evidence_files: evidenceFiles },
+          {
+            evidence_files: evidenceFiles,
+            validation_status: "pending",
+            confidence_score: null,
+            ai_feedback: "",
+            ai_validated: false,
+            citations: [],
+          },
           orgId,
           token,
           request,
@@ -820,22 +871,46 @@ export async function action({ request, params }: ActionFunctionArgs) {
 
       return redirect(`/assessments/${assessmentId}/questionnaire`);
     } catch (err: any) {
-      return { error: err.message ?? "Upload failed" };
+      return { error: getApiErrorMessage(err, "Upload failed") };
     }
   }
 
   if (intent === "validate-response") {
     const responseId = formData.get("response_id") as string;
+    const orgId = formData.get("org_id") as string;
+
+    if (!responseId) {
+      return { error: "Save the answer before running an evidence check" };
+    }
+
+    if (!orgId) {
+      return { error: "Organization ID is required to check evidence" };
+    }
 
     try {
-      const result = await api.post<any>(`/api/responses/${responseId}/validate/`, {}, token, request);
-      // Return success message to be shown via loader
+      const result = await api.withOrganization.post<any>(
+        `/api/responses/${responseId}/validate/`,
+        {},
+        orgId,
+        token,
+        request,
+      );
       return { 
-        redirect: `/assessments/${assessmentId}/questionnaire`,
-        message: `Validation: ${result.validation_status.toUpperCase()} (${(result.confidence_score * 100).toFixed(0)}% confidence)`
+        success: true,
+        intent: "validate-response",
+        response_id: responseId,
+        validation_status: result.validation_status,
+        confidence_score: result.confidence_score,
+        citations: result.citations,
+        ai_feedback: result.feedback,
+        message: `Evidence check: ${result.validation_status.toUpperCase()} (${(result.confidence_score * 100).toFixed(0)}% confidence)`
       };
     } catch (err: any) {
-      return { error: err.message ?? "Validation failed" };
+      return {
+        error: getEvidenceCheckErrorMessage(err),
+        intent: "validate-response",
+        response_id: responseId,
+      };
     }
   }
 
@@ -962,6 +1037,7 @@ function QuestionCard({
   isEditing,
   onEdit,
   onSaved,
+  onValidated,
   onSaveFailed,
   onOptimisticSave,
   assessmentId,
@@ -975,6 +1051,7 @@ function QuestionCard({
   isEditing: boolean;
   onEdit: () => void;
   onSaved: (response: QuestionnaireResponse) => void;
+  onValidated: (response: QuestionnaireResponse) => void;
   onSaveFailed: (questionId: string, previousResponse?: QuestionnaireResponse) => void;
   onOptimisticSave: (questionId: string, answer: string, responseId?: string) => void;
   assessmentId: string;
@@ -985,13 +1062,16 @@ function QuestionCard({
   const hasAI = existingResponse?.ai_score_suggestion != null || existingResponse?.ai_feedback;
   const [localAnswer, setLocalAnswer] = useState(getResponseAnswer(existingResponse));
   const saveFetcher = useFetcher<typeof action>();
-  const navigation = useNavigation();
+  const validateFetcher = useFetcher<typeof action>();
   const { success: toastSuccess, error: toastError, loading: toastLoading, dismiss: dismissToast } = useToast();
   const saveToastIdRef = useRef<string | number | null>(null);
+  const validateToastIdRef = useRef<string | number | null>(null);
   const handledSaveResultRef = useRef(false);
+  const handledValidateResultRef = useRef(false);
   const previousResponseRef = useRef<QuestionnaireResponse | undefined>(undefined);
+  const [evidenceCheckError, setEvidenceCheckError] = useState<string | null>(null);
   const isSaving = saveFetcher.state === "submitting";
-  const isValidating = navigation.state === "submitting" && navigation.formData?.get("intent") === "validate-response";
+  const isValidating = validateFetcher.state === "submitting";
 
   useEffect(() => {
     const existingAnswer = getResponseAnswer(existingResponse);
@@ -1031,6 +1111,43 @@ function QuestionCard({
       }
     }
   }, [saveFetcher.state, saveFetcher.data, toastLoading, dismissToast, toastSuccess, toastError, onSaved, onSaveFailed, onEdit, isEditing, question.id]);
+
+  useEffect(() => {
+    if (validateFetcher.state === "submitting") {
+      handledValidateResultRef.current = false;
+      setEvidenceCheckError(null);
+      if (!validateToastIdRef.current) {
+        validateToastIdRef.current = toastLoading("Checking evidence...", "Comparing this answer against uploaded evidence.");
+      }
+    }
+
+    if (validateFetcher.state === "idle" && validateFetcher.data && !handledValidateResultRef.current) {
+      handledValidateResultRef.current = true;
+
+      if (validateToastIdRef.current) {
+        dismissToast(validateToastIdRef.current);
+        validateToastIdRef.current = null;
+      }
+
+      if ("success" in validateFetcher.data && validateFetcher.data.success) {
+        const data = validateFetcher.data as any;
+        onValidated({
+          ...(existingResponse ?? { question: question.id }),
+          id: data.response_id ?? existingResponse?.id,
+          question: existingResponse?.question ?? question.id,
+          validation_status: data.validation_status,
+          confidence_score: data.confidence_score,
+          citations: data.citations ?? existingResponse?.citations,
+          ai_feedback: data.ai_feedback,
+        } as QuestionnaireResponse);
+        toastSuccess("Evidence check complete", data.message ?? "Evidence check completed.");
+      } else if ("error" in validateFetcher.data && validateFetcher.data.error) {
+        const message = String(validateFetcher.data.error);
+        setEvidenceCheckError(message);
+        toastError("Evidence check failed", message);
+      }
+    }
+  }, [validateFetcher.state, validateFetcher.data, toastLoading, dismissToast, toastSuccess, toastError, onValidated, existingResponse, question.id]);
 
   const acceptAISuggestion = () => {
     if (existingResponse?.ai_feedback) {
@@ -1111,9 +1228,10 @@ function QuestionCard({
           </div>
           <div className="flex items-center gap-2">
             {existingResponse && existingResponse.validation_status !== "validated" && (
-              <Form method="post">
+              <validateFetcher.Form method="post">
                 <input type="hidden" name="intent" value="validate-response" />
                 <input type="hidden" name="response_id" value={existingResponse.id || ""} />
+                <input type="hidden" name="org_id" value={orgId} />
                 <Button
                   type="submit"
                   variant="outline"
@@ -1126,9 +1244,9 @@ function QuestionCard({
                   ) : (
                     <ShieldCheck className="w-3 h-3 mr-1" />
                   )}
-                  {isValidating ? "Validating..." : "Validate"}
+                  {isValidating ? "Checking..." : "Check evidence"}
                 </Button>
-              </Form>
+              </validateFetcher.Form>
             )}
             {!isEditing && canEditResponses && (
               <button
@@ -1141,6 +1259,15 @@ function QuestionCard({
             )}
           </div>
         </div>
+
+        {evidenceCheckError && (
+          <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-800 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              {evidenceCheckError}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {question.scoring_criteria && (
           <div className="p-3 bg-muted/50 rounded-lg text-xs space-y-1">
@@ -1829,6 +1956,7 @@ export default function QuestionnaireRoute() {
                         isEditing={editingIndex === absoluteIndex}
                         onEdit={() => setEditingIndex(editingIndex === absoluteIndex ? null : absoluteIndex)}
                         onSaved={upsertLocalResponse}
+                        onValidated={upsertLocalResponse}
                         onSaveFailed={handleSaveFailed}
                         onOptimisticSave={handleOptimisticSave}
                         assessmentId={assessmentId || ""}

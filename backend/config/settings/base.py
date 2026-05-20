@@ -185,6 +185,8 @@ AWS_QUERYSTRING_AUTH = True  # Use signed URLs
 PINECONE_API_KEY = env("PINECONE_API_KEY", default="")
 PINECONE_ENVIRONMENT = env("PINECONE_ENVIRONMENT", default="us-east1-gcp")
 PINECONE_INDEX_NAME = env("PINECONE_INDEX_NAME", default="sustainability-ai")
+PINECONE_CLOUD = env.str("PINECONE_CLOUD", "aws")
+PINECONE_REGION = env.str("PINECONE_REGION", "us-east-1")
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
 HUGGINGFACE_API_KEY = env("HUGGINGFACE_API_KEY", default="")
 
@@ -193,8 +195,9 @@ HUGGINGFACE_API_KEY = env("HUGGINGFACE_API_KEY", default="")
 EMBEDDING_MODEL_PROVIDER = env("EMBEDDING_MODEL_PROVIDER", default="openai")
 EMBEDDING_MODEL_NAME = env(
     "EMBEDDING_MODEL_NAME",
-    default="sentence-transformers/all-MiniLM-L6-v2",  # Free HuggingFace model
+    default="text-embedding-3-small",
 )
+EMBEDDING_DIMENSION = env.int("EMBEDDING_DIMENSION", default=0)
 
 # Logging
 LOGGING = {

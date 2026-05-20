@@ -4,6 +4,8 @@ from knowledge.models import KnowledgeDocument
 
 
 class KnowledgeDocumentSerializer(serializers.ModelSerializer):
+    file_url = serializers.CharField(max_length=1000)
+
     class Meta:
         model = KnowledgeDocument
         fields = [
@@ -25,8 +27,11 @@ class KnowledgeDocumentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = [
             "id",
+            "organization",
+            "created_by",
             "created_at",
             "updated_at",
+            "embeddings_indexed",
             "chunk_count",
             "vector_ids",
         ]

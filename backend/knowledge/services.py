@@ -17,11 +17,19 @@ from typing import List
 
 import requests
 from django.conf import settings
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone, ServerlessSpec
 from pypdf import PdfReader
+
+
+EMBEDDING_MODEL_DIMENSIONS = {
+    "text-embedding-3-small": 1536,
+    "sentence-transformers/all-MiniLM-L6-v2": 384,
+    "llama-text-embed-v2": 1024,
+    "multilingual-e5-large": 1024,
+}
 
 
 @dataclass
@@ -53,7 +61,7 @@ def get_embedding_model():
 
     Supports:
     - OpenAI (paid, fast, reliable): text-embedding-3-small
-    - HuggingFace (free, rate-limited): sentence-transformers/all-MiniLM-L6-v2
+    - HuggingFace Inference API: sentence-transformers/all-MiniLM-L6-v2
     """
     provider = settings.EMBEDDING_MODEL_PROVIDER.lower()
 
@@ -61,15 +69,18 @@ def get_embedding_model():
         model_name = settings.EMBEDDING_MODEL_NAME
         api_key = settings.HUGGINGFACE_API_KEY
 
-        # HuggingFace Inference API (serverless)
-        if api_key:
-            return HuggingFaceEmbeddings(
-                model_name=model_name,
-                model_kwargs={"token": api_key},
+        if not api_key:
+            raise ValueError(
+                "HUGGINGFACE_API_KEY is required when EMBEDDING_MODEL_PROVIDER=huggingface. "
+                "Local sentence-transformers embeddings are intentionally not used in the "
+                "Django container because they require heavy torch/model dependencies."
             )
-        else:
-            # Local model (requires transformers + torch, slower on CPU)
-            return HuggingFaceEmbeddings(model_name=model_name)
+
+        return HuggingFaceEndpointEmbeddings(
+            model=model_name,
+            task="feature-extraction",
+            huggingfacehub_api_token=api_key,
+        )
 
     elif provider == "openai":
         api_key = settings.OPENAI_API_KEY
@@ -82,6 +93,22 @@ def get_embedding_model():
             f"Unknown EMBEDDING_MODEL_PROVIDER: {provider}. "
             "Must be 'openai' or 'huggingface'"
         )
+
+
+def get_embedding_dimension() -> int:
+    """Return the Pinecone vector dimension required by the configured model."""
+    configured_dimension = getattr(settings, "EMBEDDING_DIMENSION", 0)
+    if configured_dimension:
+        return int(configured_dimension)
+
+    model_name = settings.EMBEDDING_MODEL_NAME
+    try:
+        return EMBEDDING_MODEL_DIMENSIONS[model_name]
+    except KeyError as exc:
+        raise ValueError(
+            "EMBEDDING_DIMENSION must be configured for unknown embedding model "
+            f"'{model_name}'. Known models: {', '.join(sorted(EMBEDDING_MODEL_DIMENSIONS))}"
+        ) from exc
 
 
 def extract_text_from_pdf(file_path: str) -> str:
@@ -176,9 +203,12 @@ def embed_and_store(
         if index_name not in existing_indexes:
             pc.create_index(
                 name=index_name,
-                dimension=1536,  # text-embedding-3-small dimension
+                dimension=get_embedding_dimension(),
                 metric="cosine",
-                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+                spec=ServerlessSpec(
+                    cloud=settings.PINECONE_CLOUD,
+                    region=settings.PINECONE_REGION,
+                ),
             )
 
         index = pc.Index(index_name)

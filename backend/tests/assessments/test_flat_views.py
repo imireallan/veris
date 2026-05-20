@@ -485,6 +485,82 @@ class TestFlatAssessmentResponseViewSet:
 
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
+    def test_validate_uses_detail_scope_without_assessment_query(self, monkeypatch):
+        self.client.force_authenticate(user=self.user)
+
+        def fake_validate_response(**kwargs):
+            assert kwargs["response_text"] == "Allowed response"
+            assert kwargs["organization_id"] == str(self.org1.id)
+            return SimpleNamespace(
+                validation_status="validated",
+                confidence_score=0.91,
+                citations=["doc-1"],
+                similar_chunks=[{"id": "chunk-1"}],
+                feedback="Supported by attached evidence.",
+            )
+
+        monkeypatch.setattr(
+            "assessments.services.validation.validate_response",
+            fake_validate_response,
+        )
+
+        response = self.client.post(
+            f"/api/responses/{self.response1.id}/validate/",
+            {},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data["validation_status"] == "validated"
+        self.response1.refresh_from_db()
+        assert self.response1.validation_status == "validated"
+        assert self.response1.confidence_score == 0.91
+
+    def test_validate_service_failure_returns_json_error(self, monkeypatch):
+        self.client.force_authenticate(user=self.user)
+
+        def fake_validate_response(**kwargs):
+            raise RuntimeError("Pinecone authentication failed")
+
+        monkeypatch.setattr(
+            "assessments.services.validation.validate_response",
+            fake_validate_response,
+        )
+
+        response = self.client.post(
+            f"/api/responses/{self.response1.id}/validate/",
+            {},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        assert "Evidence check failed" in response.data["error"]
+
+    def test_validate_does_not_leak_response_from_inaccessible_org(self, monkeypatch):
+        self.client.force_authenticate(user=self.user)
+        called = False
+
+        def fake_validate_response(**kwargs):
+            nonlocal called
+            called = True
+
+        monkeypatch.setattr(
+            "assessments.services.validation.validate_response",
+            fake_validate_response,
+        )
+
+        response = self.client.post(
+            f"/api/responses/{self.response2.id}/validate/",
+            {},
+            format="json",
+            HTTP_X_ORGANIZATION_ID=str(self.org1.id),
+        )
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert called is False
+
 
 @pytest.mark.django_db
 class TestFlatAssessmentWorkflowActionRoles:

@@ -417,7 +417,7 @@ class FlatAssessmentResponseViewSet(
     def get_queryset(self):
         qs = AssessmentResponse.objects.select_related("assessment", "organization")
 
-        if self.action in ["retrieve", "update", "partial_update", "destroy"]:
+        if self.action in ["retrieve", "update", "partial_update", "destroy", "validate"]:
             return self.filter_detail_queryset(qs)
 
         return self.filter_by_assessment(qs)

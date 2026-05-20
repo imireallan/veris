@@ -13,7 +13,12 @@ from dataclasses import dataclass
 from typing import List
 
 from django.conf import settings
-from pinecone import NotFoundException, PineconeApiException, Pinecone, UnauthorizedException
+from pinecone import (
+    NotFoundException,
+    Pinecone,
+    PineconeApiException,
+    UnauthorizedException,
+)
 
 from knowledge.services import get_embedding_model
 

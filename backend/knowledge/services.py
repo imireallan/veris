@@ -23,7 +23,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone, ServerlessSpec
 from pypdf import PdfReader
 
-
 EMBEDDING_MODEL_DIMENSIONS = {
     "text-embedding-3-small": 1536,
     "sentence-transformers/all-MiniLM-L6-v2": 384,

@@ -43,7 +43,9 @@ def test_create_document_uses_request_org_and_accepts_relative_file_url(org_clie
 
 
 @pytest.mark.django_db
-def test_process_document_indexes_relative_local_file_path(settings, monkeypatch, org_client):
+def test_process_document_indexes_relative_local_file_path(
+    settings, monkeypatch, org_client
+):
     client, org = org_client
     document = KnowledgeDocument._default_manager.create(
         organization=org,
@@ -74,7 +76,9 @@ def test_process_document_indexes_relative_local_file_path(settings, monkeypatch
     assert document.embeddings_indexed is True
     assert document.chunk_count == 1
     assert document.vector_ids == ["vector-1"]
-    assert captured["file_path"] == f"{settings.BASE_DIR}/media/evidence/safety-policy.txt"
+    assert (
+        captured["file_path"] == f"{settings.BASE_DIR}/media/evidence/safety-policy.txt"
+    )
     assert captured["file_type"] == "TXT"
     assert captured["document_id"] == str(document.id)
     assert captured["organization_id"] == str(org.id)

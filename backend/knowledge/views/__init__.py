@@ -91,7 +91,9 @@ class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
                 }
             )
 
-        document_ids = [match["document_id"] for match in matches if match.get("document_id")]
+        document_ids = [
+            match["document_id"] for match in matches if match.get("document_id")
+        ]
         documents = {
             str(document.id): document
             for document in KnowledgeDocument._default_manager.filter(

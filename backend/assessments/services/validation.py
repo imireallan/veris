@@ -38,7 +38,12 @@ LEGACY_STATUS_MAP = {
     "insufficient_evidence": "needs_evidence",
 }
 
-PROCESSING_EVIDENCE_STATES = {"uploaded", "pending", "processing", "queued"}
+PROCESSING_EVIDENCE_STATES = {
+    "uploaded",  # legacy alias retained for previously uploaded evidence
+    "pending",
+    "processing",
+    "queued",
+}
 
 
 @dataclass

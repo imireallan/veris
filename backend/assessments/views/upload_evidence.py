@@ -17,6 +17,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from knowledge.services import process_document
+
 ALLOWED_EXTENSIONS = {
     # Documents
     ".pdf",
@@ -93,9 +95,9 @@ def upload_evidence_document(request):
         or request.data.get("organization_id")
     )
     assessment_id = request.data.get("assessment_id")
-    response_id = (
-        request.data.get("response_id") or request.data.get("question_id") or "pending"
-    )
+    response_id = request.data.get("response_id")
+    question_id = request.data.get("question_id")
+    evidence_path_segment = response_id or question_id or "pending"
 
     if not org_id:
         return Response(
@@ -117,16 +119,15 @@ def upload_evidence_document(request):
     # Generate unique filename under tenant/assessment scoped path
     safe_name = os.path.basename(uploaded_file.name)
     unique_name = f"{uuid.uuid4().hex}_{safe_name}"
-    upload_path = (
-        f"evidence/{org_id}/{assessment_id or 'unassigned'}/{response_id}/{unique_name}"
-    )
+    upload_path = f"evidence/{org_id}/{assessment_id or 'unassigned'}/{evidence_path_segment}/{unique_name}"
 
     # Save file using configured storage (local or S3)
     file_path = default_storage.save(upload_path, uploaded_file)
     file_url = default_storage.url(file_path)
 
     knowledge_document_id = None
-    processing_status = "uploaded"
+    processing_status = "queued"
+    processing_error = None
     try:
         from knowledge.models import KnowledgeDocument
 
@@ -143,10 +144,38 @@ def upload_evidence_document(request):
             created_by=request.user,
         )
         knowledge_document_id = str(document.id)
-    except Exception:
+        processing_result = process_document(
+            file_path=_resolve_processing_path(file_path, file_url),
+            file_type=document.file_type,
+            document_id=str(document.id),
+            organization_id=str(org_id),
+            index_name=settings.PINECONE_INDEX_NAME,
+            framework_tags=document.framework_tags,
+            assessment_id=str(assessment_id) if assessment_id else None,
+            response_id=str(response_id) if response_id else None,
+            question_id=str(question_id) if question_id else None,
+            source_type="assessment_evidence",
+        )
+        if processing_result.success:
+            processing_status = "processed"
+            document.embeddings_indexed = True
+            document.chunk_count = processing_result.chunk_count
+            document.vector_ids = processing_result.vector_ids
+            document.save(
+                update_fields=["embeddings_indexed", "chunk_count", "vector_ids"]
+            )
+        else:
+            processing_status = "failed"
+            processing_error = processing_result.error
+            document.embeddings_indexed = False
+            document.description = f"Processing failed: {processing_result.error}"
+            document.save(update_fields=["embeddings_indexed", "description"])
+    except Exception as exc:
         # Upload should still succeed even if the knowledge-library record cannot be
-        # created. The response evidence metadata will make the processing gap clear.
+        # created or processed. The response evidence metadata will make the
+        # processing gap clear to the questionnaire UI.
         processing_status = "failed"
+        processing_error = str(exc)
 
     return Response(
         {
@@ -156,5 +185,14 @@ def upload_evidence_document(request):
             "content_type": uploaded_file.content_type,
             "knowledge_document_id": knowledge_document_id,
             "processing_status": processing_status,
+            "error": processing_error,
         }
     )
+
+
+def _resolve_processing_path(stored_path: str, file_url: str) -> str:
+    """Return a path/URL that the evidence processing pipeline can read."""
+    try:
+        return default_storage.path(stored_path)
+    except (NotImplementedError, AttributeError, ValueError):
+        return file_url

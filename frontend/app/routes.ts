@@ -42,6 +42,7 @@ export default [
   ),
   // Resource routes (outside layout - no auth required)
   route("resources/reports/:id/pdf", "routes/resources.reports.$id.pdf.tsx"),
+  route("media/*", "routes/resources.media.$.tsx"),
   // Public routes (no auth/layout required)
   route("invitations/:token", "routes/invitations.$token.tsx"),
   route("onboarding/set-password/:token", "routes/onboarding.set-password.$token.tsx"),

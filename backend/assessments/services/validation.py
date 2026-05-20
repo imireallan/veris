@@ -13,7 +13,12 @@ from dataclasses import dataclass
 from typing import List
 
 from django.conf import settings
-from pinecone import Pinecone
+from pinecone import (
+    NotFoundException,
+    Pinecone,
+    PineconeApiException,
+    UnauthorizedException,
+)
 
 from knowledge.services import get_embedding_model
 
@@ -60,16 +65,28 @@ def query_similar_evidence(
     Returns:
         List of matching chunks with metadata
     """
-    index = get_pinecone_index()
+    try:
+        index = get_pinecone_index()
 
-    # Query with organization filter
-    response = index.query(
-        vector=embedding,
-        top_k=top_k,
-        filter={"organization_id": organization_id},
-        include_metadata=True,
-        include_values=False,
-    )
+        # Query with organization filter
+        response = index.query(
+            vector=embedding,
+            top_k=top_k,
+            filter={"organization_id": organization_id},
+            include_metadata=True,
+            include_values=False,
+        )
+    except NotFoundException:
+        # A missing Pinecone index means no evidence has been indexed yet for this
+        # environment. Treat it as no supporting evidence instead of failing the
+        # reviewer-facing evidence check.
+        return []
+    except UnauthorizedException:
+        raise
+    except PineconeApiException as exc:
+        if getattr(exc, "status", None) == 404 or "NOT_FOUND" in str(exc):
+            return []
+        raise
 
     # Filter by threshold
     matches = []

@@ -6,7 +6,7 @@ from rest_framework.response import Response
 
 class ResponseValidationMixin:
     @action(detail=True, methods=["post"])
-    def validate(self, request, pk=None):
+    def validate(self, request, pk=None, **kwargs):
         from assessments.services.validation import validate_response
 
         response_obj = self.get_object()
@@ -17,11 +17,17 @@ class ResponseValidationMixin:
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        result = validate_response(
-            response_text=response_obj.answer_text,
-            organization_id=str(response_obj.assessment.organization_id),
-            existing_evidence_ids=response_obj.evidence_files,
-        )
+        try:
+            result = validate_response(
+                response_text=response_obj.answer_text,
+                organization_id=str(response_obj.assessment.organization_id),
+                existing_evidence_ids=response_obj.evidence_files,
+            )
+        except Exception as exc:
+            return Response(
+                {"error": f"Evidence check failed: {exc}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         response_obj.validation_status = result.validation_status
         response_obj.confidence_score = result.confidence_score

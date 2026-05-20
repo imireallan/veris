@@ -1,9 +1,10 @@
-from rest_framework import viewsets
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from assessments.services.validation import embed_text, query_similar_evidence
 from knowledge.models import KnowledgeDocument
 from knowledge.serializers import KnowledgeDocumentSerializer
 from knowledge.services import delete_from_pinecone, process_document
@@ -35,6 +36,101 @@ class KnowledgeDocumentViewSet(viewsets.ModelViewSet):
         serializer.save(
             organization=organization,
             created_by=self.request.user,
+        )
+
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def chat(self, request):
+        """Answer a knowledge-library question using indexed evidence chunks."""
+        organization = getattr(request, "organization", None)
+        if not organization:
+            return Response(
+                {"error": "Select an organization before asking knowledge questions."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        query = str(request.data.get("query", "")).strip()
+        if not query:
+            return Response(
+                {"error": "Question is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        indexed_count = KnowledgeDocument._default_manager.filter(
+            organization=organization,
+            embeddings_indexed=True,
+        ).count()
+        if indexed_count == 0:
+            return Response(
+                {
+                    "answer": "No indexed knowledge documents are available yet. Upload and process at least one document, then ask again.",
+                    "sources": [],
+                    "confidence": 0.0,
+                }
+            )
+
+        try:
+            embedding = embed_text(query)
+            matches = query_similar_evidence(
+                embedding=embedding,
+                organization_id=str(organization.id),
+                top_k=5,
+                threshold=0.25,
+            )
+        except Exception as exc:
+            return Response(
+                {"error": f"Knowledge search failed: {exc}"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        if not matches:
+            return Response(
+                {
+                    "answer": "I could not find relevant indexed evidence for that question. Try asking with terms from the uploaded documents, or process more documents first.",
+                    "sources": [],
+                    "confidence": 0.0,
+                }
+            )
+
+        document_ids = [
+            match["document_id"] for match in matches if match.get("document_id")
+        ]
+        documents = {
+            str(document.id): document
+            for document in KnowledgeDocument._default_manager.filter(
+                organization=organization,
+                id__in=document_ids,
+            )
+        }
+
+        sources = []
+        evidence_lines = []
+        for index, match in enumerate(matches, start=1):
+            document = documents.get(str(match.get("document_id")))
+            source = {
+                "document_id": match.get("document_id"),
+                "title": document.title if document else "Unknown document",
+                "chunk_index": match.get("chunk_index"),
+                "score": round(float(match.get("score", 0)), 3),
+                "text_preview": match.get("text_preview", ""),
+            }
+            sources.append(source)
+            evidence_lines.append(
+                f"{index}. {source['title']} — {source['text_preview']}"
+            )
+
+        best_score = max(float(match.get("score", 0)) for match in matches)
+        answer = (
+            "I found relevant indexed evidence. Here are the strongest matches:\n\n"
+            + "\n".join(evidence_lines)
+            + "\n\nUse these sources as evidence; review the document text before relying on them for final assessment decisions."
+        )
+
+        return Response(
+            {
+                "answer": answer,
+                "sources": sources,
+                "confidence": round(best_score, 3),
+            }
         )
 
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])

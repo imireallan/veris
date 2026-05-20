@@ -190,6 +190,10 @@ def embed_and_store(
     index_name: str,
     document_id: str,
     organization_id: str,
+    assessment_id: str | None = None,
+    response_id: str | None = None,
+    question_id: str | None = None,
+    source_type: str = "knowledge_library",
     metadata_extra: dict | None = None,
 ) -> EmbeddingResult:
     """Embed chunks and store in Pinecone."""
@@ -230,7 +234,14 @@ def embed_and_store(
                 "organization_id": str(organization_id),
                 "chunk_index": chunk.chunk_index,
                 "text": chunk.text[:500],  # Store preview
+                "source_type": source_type,
             }
+            if assessment_id:
+                metadata["assessment_id"] = str(assessment_id)
+            if response_id:
+                metadata["response_id"] = str(response_id)
+            if question_id:
+                metadata["question_id"] = str(question_id)
             if metadata_extra:
                 metadata.update(metadata_extra)
 
@@ -281,6 +292,10 @@ def process_document(
     organization_id: str,
     index_name: str = "sustainability-ai",
     framework_tags: List[str] | None = None,
+    assessment_id: str | None = None,
+    response_id: str | None = None,
+    question_id: str | None = None,
+    source_type: str = "knowledge_library",
 ) -> EmbeddingResult:
     """
     Full pipeline: Extract → Chunk → Embed → Store
@@ -316,6 +331,10 @@ def process_document(
             index_name=index_name,
             document_id=document_id,
             organization_id=organization_id,
+            assessment_id=assessment_id,
+            response_id=response_id,
+            question_id=question_id,
+            source_type=source_type,
             metadata_extra=metadata_extra,
         )
 

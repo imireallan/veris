@@ -109,3 +109,54 @@ def test_embed_and_store_creates_index_with_configured_embedding_dimension(
     assert created_indexes[0]["dimension"] == 384
     assert created_indexes[0]["metric"] == "cosine"
     assert upserted_vectors[0]["values"] == [0.1, 0.2, 0.3]
+
+
+def test_embed_and_store_includes_assessment_response_metadata(settings, monkeypatch):
+    upserted_vectors = []
+
+    class FakeIndexList:
+        def names(self):
+            return ["veris"]
+
+    class FakeIndex:
+        def upsert(self, vectors):
+            upserted_vectors.extend(vectors)
+
+    class FakePinecone:
+        def list_indexes(self):
+            return FakeIndexList()
+
+        def Index(self, index_name):
+            return FakeIndex()
+
+    class FakeEmbeddings:
+        def embed_query(self, text):
+            return [0.1, 0.2, 0.3]
+
+    settings.PINECONE_CLOUD = "aws"
+    settings.PINECONE_REGION = "us-east-1"
+    monkeypatch.setattr(
+        "knowledge.services.get_pinecone_client", lambda: FakePinecone()
+    )
+    monkeypatch.setattr(
+        "knowledge.services.get_embedding_model", lambda: FakeEmbeddings()
+    )
+
+    result = embed_and_store(
+        chunks=[ChunkResult(text="evidence text", chunk_index=0, vector_id="chunk_0")],
+        index_name="veris",
+        document_id="doc-1",
+        organization_id="org-1",
+        assessment_id="assessment-1",
+        response_id="response-1",
+        question_id="question-1",
+        source_type="assessment_evidence",
+    )
+
+    assert result.success is True
+    metadata = upserted_vectors[0]["metadata"]
+    assert metadata["organization_id"] == "org-1"
+    assert metadata["assessment_id"] == "assessment-1"
+    assert metadata["response_id"] == "response-1"
+    assert metadata["question_id"] == "question-1"
+    assert metadata["source_type"] == "assessment_evidence"
